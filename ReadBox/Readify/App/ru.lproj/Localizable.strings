@@ -1,0 +1,89 @@
+/* 
+  Localizable.strings
+  Readify
+
+  Created by Тимофей Юдин on 13.11.2024.
+  
+*/
+"signInLabel" = "Вход";
+"passwordTFPlaceholder" = "Пароль";
+"signInButton" = "Войти";
+"signUpLabel" = "Регистрация";
+"forgotPasswordButton" = "Забыли пароль?";
+"resetPasswordLink" = "Ссылка для восстановления пароля отправлена вам на почту";
+"nameTFPlaceholder" = "Ваше Имя";
+"signUpButton" = "Зарегистрироваться";
+"resetPasswordLabel" = "Восстановление пароля";
+"resetButton" = "Восстановить";
+"descriptionLabel" = "Описание 📘";
+"readButton" = "Читать 📖";
+"nameChangeLabel" = "Изменение имени";
+"changeButton" = "Изменить";
+"nameChangedAlert" = "Ваше Имя успешно изменено";
+"passwordChangeLabel" = "Смена пароля";
+"newPasswordTFP" = "Новый пароль";
+"oldPasswordTFP" = "Старый пароль";
+"newPasswordAgainTFP" = "Новый пароль еще раз";
+"passwordChangedAlert" = "Ваш пароль успешно изменен";
+"passwordsMustMuchAlert" = "Пароли должны совпадать";
+"settingsLabel" = "Настройки";
+"nameLabel" = "Имя";
+"signOutLabel" = "Выйти";
+"deleteLabel" = "Удалить";
+"cancelButton" = "Отменить";
+"youSureToSingOut" = "Вы действительно хотите выйти?";
+"youSureToDeleteAcc" = "Вы действительно хотите удалить аккаунт?";
+"youWithUsLabel" = "Вы с нами уже";
+"readArticlesLabel" = "Прочитано";
+"languageLabel" = "Язык";
+"chooseLanguageLabel" = "Выберите язык:";
+"favoritesLabel" = "Избранное";
+"noArticlesAddedLabel" = "Пока что вы не добавили ни одной статьи";
+"loadMore" = "Загрузить еще";
+"memorySettingsLabel" = "Память и данные";
+"dataInMemoryLabel" = "Использование памяти";
+"clearCacheButton" = "Очистить весь кэш";
+"cacheClearedAlert" = "Кэш успешно очищен";
+"someArticlesNotFoundLabel" = "Некоторые статьи не найдены";
+"fontLabel" = "Размер шрифта";
+"loadDataErrorText" = "Не удалось загрузить данные";
+"fontSizeChangedAlert" = "Размер шрифта успешно изменен";
+"moreLabel" = "Ещё";
+"writeToDeveloperLabel" = "Написать разработчику";
+"yourPostsLabel" = "Ваши посты";
+"notFoundLabel" = "Не найдено";
+"newPublicationLabel" = "Новая публикация +";
+"newAuthorName" = "Новое имя автора";
+"enterNameLabel" = "Введите имя";
+"nameErrorLabel" = "Такое имя недопустимо";
+"authorNameChangeLabel" = "Имя автора успешно изменено";
+"titlePlaceholder" = "Название...";
+"descriptionPlaceholder" = "Описание...";
+"creationLabel" = "Создание";
+"titleTEError" = "Заголовок должен быть длиной не более 100 символов";
+"uploadPhotoError" = "Не удалось загрузить фото";
+"descriptionTEError" = "Такое описание недопустимо";
+"imageError" = "Выберите изображение для вашей публикации";
+"nextLabel" = "Далее →";
+"titleLabel" = "Заголовок";
+"quoteLabel" = "Цитата";
+"strikeThroughLabel" = "Зачеркнутый";
+"titleLabel" = "Название";
+"descriptionLabel" = "Описание";
+"codeLabel" = "Код";
+"linkLabel" = "Ссылка";
+"publishItLabel" = "Публикуем?";
+"saveToArchiveLabel" = "Сохранить в архив";
+"publishLabel" = "Опубликовать";
+"previewLabel" = "Предпросмотр";
+"editingLabel" = "Редактирование";
+"articleErrorLabel" = "Статья не найдена. Возможно, она удалена";
+"archiveArticleLabel" = "Автор ограничил доступ к этой публикации";
+"deletePostError" = "Не удалось удалить пост";
+"becomeAuthorLabel" = "Стать автором";
+"addPostToFavoritesLabel" = "Невозможно добавить публикацию в избранное ";
+"addPhotoLabel" = "Добавить фото";
+"addDescriptionLabel" = "Добавить описание +";
+"removePhotoLabel" = "Удалить фото";
+"loadingLabel" = "Загрузка";
+

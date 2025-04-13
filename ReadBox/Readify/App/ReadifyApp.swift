@@ -1,0 +1,91 @@
+//
+//  ReadifyApp.swift
+//  Readify
+//
+//  Created by Тимофей Юдин on 27.10.2024.
+//
+
+import SwiftUI
+import FirebaseCore
+import FirebaseFirestore
+import FirebaseMessaging
+import UserNotifications
+
+class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate, MessagingDelegate {
+    
+    // Вызывается при запуске приложения
+    func application(
+        _ application: UIApplication,
+        didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
+    ) -> Bool {
+        FirebaseApp.configure()
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
+            print("Permission granted: \(granted)")
+        }
+        
+        UNUserNotificationCenter.current().delegate = self
+        Messaging.messaging().delegate = self
+        
+        application.registerForRemoteNotifications()
+        
+        return true
+    }
+
+    func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
+        print("Device Token: \(deviceToken.map { String(format: "%02.2hhx", $0) }.joined())")
+        Messaging.messaging().apnsToken = deviceToken
+    }
+    
+    func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
+        completionHandler([.banner, .list, .sound])
+    }
+    
+    func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
+        let userInfo = response.notification.request.content.userInfo
+        NotificationCenter.default.post(name: Notification.Name("didReceiveRemoteNotification"), object: nil, userInfo: userInfo)
+        completionHandler()
+    }
+    
+    @objc func messaging(_ messaging: Messaging, didReceiveRegistrationToken fcmToken: String?) {
+        print("Firebase token: \(String(describing: fcmToken))")
+        Messaging.messaging().subscribe(toTopic: Locale.preferredLanguages.first?.components(separatedBy: "-").first ?? "en")
+    }
+}
+
+
+
+// MARK: - Точка входа в SwiftUI-приложение
+@main
+struct YourApp: App {
+    
+    // Регистрируем AppDelegate для Firebase
+    @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
+    @Environment(\.scenePhase) private var scenePhase
+    
+    var body: some Scene {
+        WindowGroup {
+            NavigationView {
+                RootView()
+                    .onAppear {
+                        // Пример: установка языка в зависимости от системы
+                        DispatchQueue.main.async {
+                            StorageManager.shared.setLanguage(
+                                to: Locale.preferredLanguages.first?.components(separatedBy: "-").first ?? "en"
+                            )
+                        }
+                        
+                        // Пример: очистка кеша Firestore
+                        let db = Firestore.firestore()
+                        db.clearPersistence()
+                    }
+                    .onChange(of: scenePhase) { newValue in
+                        // При сворачивании/завершении приложения можно снова очистить кеш
+                        if scenePhase == .inactive || scenePhase == .background {
+                            let db = Firestore.firestore()
+                            db.clearPersistence()
+                        }
+                    }
+            }
+        }
+    }
+}

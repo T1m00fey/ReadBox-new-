@@ -1,0 +1,496 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		C49684412DABF0E0004ED3AB /* PopupView in Frameworks */ = {isa = PBXBuildFile; productRef = C49684402DABF0E0004ED3AB /* PopupView */; };
+		C49684442DABF0F0004ED3AB /* SwiftfulLoadingIndicators in Frameworks */ = {isa = PBXBuildFile; productRef = C49684432DABF0F0004ED3AB /* SwiftfulLoadingIndicators */; };
+		C49684472DABF112004ED3AB /* MarkdownUI in Frameworks */ = {isa = PBXBuildFile; productRef = C49684462DABF112004ED3AB /* MarkdownUI */; };
+		C496844A2DABF1E4004ED3AB /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = C49684492DABF1E4004ED3AB /* FirebaseAnalytics */; };
+		C496844D2DABF1EE004ED3AB /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = C496844C2DABF1EE004ED3AB /* FirebaseAuth */; };
+		C496844F2DABF1F2004ED3AB /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = C496844E2DABF1F2004ED3AB /* FirebaseCore */; };
+		C49684512DABF1F7004ED3AB /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = C49684502DABF1F7004ED3AB /* FirebaseFirestore */; };
+		C49684532DABF200004ED3AB /* FirebaseMessaging in Frameworks */ = {isa = PBXBuildFile; productRef = C49684522DABF200004ED3AB /* FirebaseMessaging */; };
+		C49684552DABF20B004ED3AB /* FirebaseStorage in Frameworks */ = {isa = PBXBuildFile; productRef = C49684542DABF20B004ED3AB /* FirebaseStorage */; };
+		C49684592DABF26F004ED3AB /* SwiftUIMailView in Frameworks */ = {isa = PBXBuildFile; productRef = C49684582DABF26F004ED3AB /* SwiftUIMailView */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		C49683D52DABF067004ED3AB /* ReadBox.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ReadBox.app; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		C49684562DABF21E004ED3AB /* Exceptions for "ReadBox" folder in "ReadBox" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Readify/App/Info.plist,
+			);
+			target = C49683D42DABF067004ED3AB /* ReadBox */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		C49683D72DABF067004ED3AB /* ReadBox */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				C49684562DABF21E004ED3AB /* Exceptions for "ReadBox" folder in "ReadBox" target */,
+			);
+			path = ReadBox;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		C49683D22DABF067004ED3AB /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C49684532DABF200004ED3AB /* FirebaseMessaging in Frameworks */,
+				C49684472DABF112004ED3AB /* MarkdownUI in Frameworks */,
+				C49684552DABF20B004ED3AB /* FirebaseStorage in Frameworks */,
+				C496844D2DABF1EE004ED3AB /* FirebaseAuth in Frameworks */,
+				C49684412DABF0E0004ED3AB /* PopupView in Frameworks */,
+				C496844A2DABF1E4004ED3AB /* FirebaseAnalytics in Frameworks */,
+				C496844F2DABF1F2004ED3AB /* FirebaseCore in Frameworks */,
+				C49684442DABF0F0004ED3AB /* SwiftfulLoadingIndicators in Frameworks */,
+				C49684592DABF26F004ED3AB /* SwiftUIMailView in Frameworks */,
+				C49684512DABF1F7004ED3AB /* FirebaseFirestore in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		C49683CC2DABF067004ED3AB = {
+			isa = PBXGroup;
+			children = (
+				C49683D72DABF067004ED3AB /* ReadBox */,
+				C496844B2DABF1EE004ED3AB /* Frameworks */,
+				C49683D62DABF067004ED3AB /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		C49683D62DABF067004ED3AB /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				C49683D52DABF067004ED3AB /* ReadBox.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		C496844B2DABF1EE004ED3AB /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		C49683D42DABF067004ED3AB /* ReadBox */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = C49683E02DABF068004ED3AB /* Build configuration list for PBXNativeTarget "ReadBox" */;
+			buildPhases = (
+				C49683D12DABF067004ED3AB /* Sources */,
+				C49683D22DABF067004ED3AB /* Frameworks */,
+				C49683D32DABF067004ED3AB /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				C49683D72DABF067004ED3AB /* ReadBox */,
+			);
+			name = ReadBox;
+			packageProductDependencies = (
+				C49684402DABF0E0004ED3AB /* PopupView */,
+				C49684432DABF0F0004ED3AB /* SwiftfulLoadingIndicators */,
+				C49684462DABF112004ED3AB /* MarkdownUI */,
+				C49684492DABF1E4004ED3AB /* FirebaseAnalytics */,
+				C496844C2DABF1EE004ED3AB /* FirebaseAuth */,
+				C496844E2DABF1F2004ED3AB /* FirebaseCore */,
+				C49684502DABF1F7004ED3AB /* FirebaseFirestore */,
+				C49684522DABF200004ED3AB /* FirebaseMessaging */,
+				C49684542DABF20B004ED3AB /* FirebaseStorage */,
+				C49684582DABF26F004ED3AB /* SwiftUIMailView */,
+			);
+			productName = ReadBox;
+			productReference = C49683D52DABF067004ED3AB /* ReadBox.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		C49683CD2DABF067004ED3AB /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1630;
+				LastUpgradeCheck = 1630;
+				TargetAttributes = {
+					C49683D42DABF067004ED3AB = {
+						CreatedOnToolsVersion = 16.3;
+					};
+				};
+			};
+			buildConfigurationList = C49683D02DABF067004ED3AB /* Build configuration list for PBXProject "ReadBox" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = C49683CC2DABF067004ED3AB;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				C496843F2DABF0E0004ED3AB /* XCRemoteSwiftPackageReference "PopupView" */,
+				C49684422DABF0F0004ED3AB /* XCRemoteSwiftPackageReference "SwiftfulLoadingIndicators" */,
+				C49684452DABF112004ED3AB /* XCRemoteSwiftPackageReference "swift-markdown-ui" */,
+				C49684482DABF1E4004ED3AB /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+				C49684572DABF26F004ED3AB /* XCRemoteSwiftPackageReference "swiftui-mail-view" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = C49683D62DABF067004ED3AB /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				C49683D42DABF067004ED3AB /* ReadBox */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		C49683D32DABF067004ED3AB /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		C49683D12DABF067004ED3AB /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		C49683DE2DABF068004ED3AB /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = 7PV9N4T7V4;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.4;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		C49683DF2DABF068004ED3AB /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = 7PV9N4T7V4;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.4;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		C49683E12DABF068004ED3AB /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 7PV9N4T7V4;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				IPHONEOS_DEPLOYMENT_TARGET = 16.1;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = Tim.ReadBox;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		C49683E22DABF068004ED3AB /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 7PV9N4T7V4;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				IPHONEOS_DEPLOYMENT_TARGET = 16.1;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = Tim.ReadBox;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		C49683D02DABF067004ED3AB /* Build configuration list for PBXProject "ReadBox" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C49683DE2DABF068004ED3AB /* Debug */,
+				C49683DF2DABF068004ED3AB /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		C49683E02DABF068004ED3AB /* Build configuration list for PBXNativeTarget "ReadBox" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C49683E12DABF068004ED3AB /* Debug */,
+				C49683E22DABF068004ED3AB /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		C496843F2DABF0E0004ED3AB /* XCRemoteSwiftPackageReference "PopupView" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/exyte/PopupView.git";
+			requirement = {
+				kind = exactVersion;
+				version = 4.1.7;
+			};
+		};
+		C49684422DABF0F0004ED3AB /* XCRemoteSwiftPackageReference "SwiftfulLoadingIndicators" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/SwiftfulThinking/SwiftfulLoadingIndicators";
+			requirement = {
+				kind = exactVersion;
+				version = 0.0.4;
+			};
+		};
+		C49684452DABF112004ED3AB /* XCRemoteSwiftPackageReference "swift-markdown-ui" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/gonzalezreal/swift-markdown-ui";
+			requirement = {
+				kind = exactVersion;
+				version = 2.4.1;
+			};
+		};
+		C49684482DABF1E4004ED3AB /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
+			requirement = {
+				kind = exactVersion;
+				version = 11.11.0;
+			};
+		};
+		C49684572DABF26F004ED3AB /* XCRemoteSwiftPackageReference "swiftui-mail-view" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/globulus/swiftui-mail-view";
+			requirement = {
+				kind = exactVersion;
+				version = 1.0.1;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		C49684402DABF0E0004ED3AB /* PopupView */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C496843F2DABF0E0004ED3AB /* XCRemoteSwiftPackageReference "PopupView" */;
+			productName = PopupView;
+		};
+		C49684432DABF0F0004ED3AB /* SwiftfulLoadingIndicators */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C49684422DABF0F0004ED3AB /* XCRemoteSwiftPackageReference "SwiftfulLoadingIndicators" */;
+			productName = SwiftfulLoadingIndicators;
+		};
+		C49684462DABF112004ED3AB /* MarkdownUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C49684452DABF112004ED3AB /* XCRemoteSwiftPackageReference "swift-markdown-ui" */;
+			productName = MarkdownUI;
+		};
+		C49684492DABF1E4004ED3AB /* FirebaseAnalytics */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C49684482DABF1E4004ED3AB /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAnalytics;
+		};
+		C496844C2DABF1EE004ED3AB /* FirebaseAuth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C49684482DABF1E4004ED3AB /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAuth;
+		};
+		C496844E2DABF1F2004ED3AB /* FirebaseCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C49684482DABF1E4004ED3AB /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseCore;
+		};
+		C49684502DABF1F7004ED3AB /* FirebaseFirestore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C49684482DABF1E4004ED3AB /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseFirestore;
+		};
+		C49684522DABF200004ED3AB /* FirebaseMessaging */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C49684482DABF1E4004ED3AB /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseMessaging;
+		};
+		C49684542DABF20B004ED3AB /* FirebaseStorage */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C49684482DABF1E4004ED3AB /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseStorage;
+		};
+		C49684582DABF26F004ED3AB /* SwiftUIMailView */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C49684572DABF26F004ED3AB /* XCRemoteSwiftPackageReference "swiftui-mail-view" */;
+			productName = SwiftUIMailView;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = C49683CD2DABF067004ED3AB /* Project object */;
+}
