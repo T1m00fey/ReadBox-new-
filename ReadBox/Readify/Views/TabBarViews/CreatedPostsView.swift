@@ -412,7 +412,7 @@ struct CreatedPostsView: View {
                             
                             ZStack {
                                 RoundedRectangle(cornerRadius: 20)
-                                    .frame(width: UIScreen.main.bounds.width, height: 130)
+                                    .frame(width: UIScreen.main.bounds.width, height: 170)
                                     .foregroundStyle(Color(uiColor: .secondarySystemBackground))
                                     .padding(.bottom, 40)
                                     .shadow(radius: 10)
@@ -431,103 +431,148 @@ struct CreatedPostsView: View {
                                         .frame(width: UIScreen.main.bounds.width - 32, alignment: .leading)
                                 } else {
                                     if viewModel.isLoading {
-                                        HStack {
-                                            Text(NSLocalizedString("loadingLabel", comment: ""))
-                                                .font(.largeTitle)
-                                                .fontWeight(.light)
-//                                                .fontDesign(.rounded)
-                                            
-                                            LoadingIndicator(animation: .circleRunner, color: Color(uiColor: .label), size: .small, speed: .fast)
-                                        }
-                                        .frame(width: UIScreen.main.bounds.width - 32, alignment: .leading)
-                                    } else {
-                                        HStack {
-                                            HStack(spacing: 0) {
-                                                Text(viewModel.user?.authorName ?? "")
-                                                    .font(.largeTitle)
-                                                    .fontWeight(.light)
-//                                                    .fontDesign(.rounded)
-                                                
-                                                if viewModel.user?.isCheckmark ?? false {
+                                        VStack(spacing: -30) {
+                                            HStack {
+                                                HStack(spacing: 0) {
+                                                    Text("Hello, World!")
+                                                        .font(.largeTitle)
+                                                        .fontWeight(.light)
+                                                        .redacted(reason: .placeholder)
+                                                    
                                                     Image(systemName: "checkmark.seal.fill")
                                                         .foregroundStyle(Color.blue)
                                                         .font(.footnote)
                                                         .padding(.top, 4)
+                                                        .redacted(reason: .placeholder)
                                                 }
-                                            }
-                                            
-//                                            Button {
-////                                                viewModel.alertText = ""
-////                                                viewModel.isNewNameAlertPresented.toggle()
-//                                                
-//                                                withAnimation {
-//                                                    viewModel.isSettingViewPresented = true
-//                                                }
-//                                            } label: {
-//                                                Image(systemName: "pencil")
-//                                            }
-//                                            .alert(NSLocalizedString("newAuthorName", comment: ""), isPresented: $viewModel.isNewNameAlertPresented) {
-//                                                TextField(NSLocalizedString("enterNameLabel", comment: ""), text: $viewModel.alertText)
-//                                                
-//                                                Button(NSLocalizedString("cancelButton", comment: "")) {
-//                                                    viewModel.isNewNameAlertPresented = false
-//                                                }
-//                                                
-//                                                Button(NSLocalizedString("changeButton", comment: ""), role: .cancel) {
-//                                                    if viewModel.alertText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-//                                                        withAnimation {
-//                                                            viewModel.errorText = NSLocalizedString("nameErrorLabel", comment: "")
-//                                                            viewModel.isErrorPopupPresented = true
-//                                                        }
-//                                                    } else {
-//                                                        Task {
-//                                                            do {
-//                                                                try await viewModel.changeAuthorName(to: viewModel.alertText, description: viewModel.description)
-//                                                                
-//                                                                if viewModel.user?.isCheckmark ?? true {
-//                                                                    try await viewModel.removeCheckmarkStatus()
-//                                                                }
-//                                                            } catch {
-//                                                                withAnimation {
-//                                                                    viewModel.errorText = error.localizedDescription
-//                                                                    viewModel.isErrorPopupPresented = true
-//                                                                }
-//                                                                
-//                                                                return
-//                                                            }
-//                                                            
-//                                                            withAnimation {
-//                                                                viewModel.errorText = NSLocalizedString("authorNameChangeLabel", comment: "")
-//                                                                viewModel.isSuccessPopupPresented = true
-//                                                            }
-//                                                        }
-//                                                    }
-//                                                }
-//                                                
-//                                            }
-                                            
-                                            Spacer()
-                                            
-                                            Button {
-                                                withAnimation {
-                                                    viewModel.isArchivePresented.toggle()
-                                                }
-                                            } label: {
-                                                if viewModel.isArchivePresented {
-                                                    Image(systemName: "rectangle.on.rectangle")
-                                                        .scaleEffect(1.2)
-                                                        .fontWeight(.bold)
+                                                
+                                                
+                                                Spacer()
+                                                
+                                                Button {
+                                                    withAnimation {
+                                                        viewModel.isSettingViewPresented.toggle()
+                                                    }
+                                                } label: {
+                                                    Image(systemName: "gearshape.fill")
                                                         .foregroundStyle(Color.gray)
-                                                } else {
-                                                    Image(systemName: "archivebox")
-                                                        .scaleEffect(1.2)
+                                                        .font(.system(size: 17))
                                                         .fontWeight(.bold)
-                                                        .foregroundStyle(Color.gray)
                                                 }
+                                                .offset(x: 10)
+                                                .redacted(reason: .placeholder)
+                                                
+                                                Button {
+                                                    withAnimation {
+                                                        viewModel.isArchivePresented.toggle()
+                                                    }
+                                                } label: {
+                                                    if viewModel.isArchivePresented {
+                                                        Image(systemName: "rectangle.on.rectangle")
+                                                            .font(.system(size: 19))
+                                                            .fontWeight(.bold)
+                                                            .foregroundStyle(Color.gray)
+                                                    } else {
+                                                        Image(systemName: "archivebox")
+                                                            .font(.system(size: 19))
+                                                            .fontWeight(.bold)
+                                                            .foregroundStyle(Color.gray)
+                                                    }
+                                                }
+                                                .redacted(reason: .placeholder)
+                                                
                                             }
+                                            .frame(width: UIScreen.main.bounds.width - 32, alignment: .leading)
                                             
+                                            HStack {
+                                                Text("\(viewModel.user?.subscribersCount ?? 0) \(NSLocalizedString("subscribersCountLabel", comment: ""))")
+                                                .font(.callout)
+                                                .foregroundStyle(Color.gray)
+                                                    
+                                                Text("•")
+                                                    .font(.title)
+                                                    .foregroundStyle(Color.gray)
+                                                
+                                                Text("\(viewModel.articles.count) \(NSLocalizedString("publicationsCountLabel", comment: ""))")
+                                                .font(.callout)
+                                                .foregroundStyle(Color.gray)
+                                            }
+                                            .frame(width: UIScreen.main.bounds.width - 32, alignment: .leading)
+                                            .offset(y: -50)
                                         }
-                                        .frame(width: UIScreen.main.bounds.width - 32, alignment: .leading)
+                                    } else {
+                                        VStack(spacing: -30) {
+                                            HStack {
+                                                HStack(spacing: 0) {
+                                                    Text(viewModel.user?.authorName ?? "")
+                                                        .font(.largeTitle)
+                                                        .fontWeight(.light)
+    //                                                    .fontDesign(.rounded)
+                                                    
+                                                    if viewModel.user?.isCheckmark ?? false {
+                                                        Image(systemName: "checkmark.seal.fill")
+                                                            .foregroundStyle(Color.blue)
+                                                            .font(.footnote)
+                                                            .padding(.top, 4)
+                                                    }
+                                                }
+                                                
+                                                
+                                                Spacer()
+                                                
+                                                Button {
+                                                    withAnimation {
+                                                        viewModel.isSettingViewPresented.toggle()
+                                                    }
+                                                } label: {
+                                                    Image(systemName: "gearshape.fill")
+                                                        .foregroundStyle(Color.gray)
+                                                        .font(.system(size: 17))
+                                                        .fontWeight(.bold)
+                                                }
+                                                .offset(x: 10)
+                                                
+                                                Button {
+                                                    withAnimation {
+                                                        viewModel.isArchivePresented.toggle()
+                                                    }
+                                                } label: {
+                                                    if viewModel.isArchivePresented {
+                                                        Image(systemName: "rectangle.on.rectangle")
+                                                            .font(.system(size: 19))
+                                                            .fontWeight(.bold)
+                                                            .foregroundStyle(Color.gray)
+                                                    } else {
+                                                        Image(systemName: "archivebox")
+                                                            .font(.system(size: 19))
+                                                            .fontWeight(.bold)
+                                                            .foregroundStyle(Color.gray)
+                                                    }
+                                                }
+                                                
+                                            }
+                                            .frame(width: UIScreen.main.bounds.width - 32, alignment: .leading)
+                                            
+                                            HStack {
+                                                if viewModel.isLoading {
+                                                    
+                                                }
+                                                
+                                                Text("\(viewModel.user?.subscribersCount ?? 0) \(NSLocalizedString("subscribersCountLabel", comment: ""))")
+                                                .font(.callout)
+                                                .foregroundStyle(Color.gray)
+                                                    
+                                                Text("•")
+                                                    .font(.title)
+                                                    .foregroundStyle(Color.gray)
+                                                
+                                                Text("\(viewModel.articles.count) \(NSLocalizedString("publicationsCountLabel", comment: ""))")
+                                                .font(.callout)
+                                                .foregroundStyle(Color.gray)
+                                            }
+                                            .frame(width: UIScreen.main.bounds.width - 32, alignment: .leading)
+                                            .offset(y: -50)
+                                        }
                                     }
                                 }
                             }
@@ -536,110 +581,28 @@ struct CreatedPostsView: View {
                         
                     }
                 
-                if viewModel.user?.authorName ?? "abc" == "" || viewModel.isSettingViewPresented == true {
-                    VStack {
-                        ZStack {
-                            RoundedRectangle(cornerRadius: 30)
-                                .foregroundStyle(Color(uiColor: .secondarySystemBackground))
-                                .frame(width: UIScreen.main.bounds.width - 60, height: 150)
-                                .shadow(radius: 2)
-                            
-                            VStack(spacing: 25) {
-                                VStack {
-                                    TextField(LocalizedStringKey("nameLabel"), text: $viewModel.authorNameText)
-                                        .frame(width: UIScreen.main.bounds.width - 92)
-                                        .font(.title2)
-                                        .focused($isAuthorNameFocused)
-                                        .textInputAutocapitalization(.never)
-                                        .onChange(of: viewModel.authorNameText) { _ in
-                                            viewModel.isButtonEnable()
-                                        }
-                                    
-                                    RoundedRectangle(cornerRadius: 0)
-                                        .frame(width: UIScreen.main.bounds.width - 92, height: 2)
-                                        .foregroundStyle(isAuthorNameFocused ? Color(uiColor: .label) : Color.gray)
-                                }
-                                
-                                VStack {
-                                    TextField(NSLocalizedString("descriptionLabel", comment: ""), text: $viewModel.descriptionText)
-                                        .frame(width: UIScreen.main.bounds.width - 92)
-                                        .font(.title2)
-                                        .focused($isDescriptionFocused)
-                                        .textInputAutocapitalization(.never)
-                                        
-                                    RoundedRectangle(cornerRadius: 0)
-                                        .frame(width: UIScreen.main.bounds.width - 92, height: 2)
-                                        .foregroundStyle(isDescriptionFocused ? Color(uiColor: .label) : Color.gray)
-                                }
-                            }
-                            .frame(height: 150)
-                            .onAppear {
-                                viewModel.isButtonEnable()
-                            }
-                        }
-                        
-                        Button {
-                            if viewModel.authorNameText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                                withAnimation {
-                                    viewModel.errorText = NSLocalizedString("nameErrorLabel", comment: "")
-                                    viewModel.isErrorPopupPresented = true
-                                }
-                            } else {
-                                Task {
-                                    do {
-                                        try await viewModel.changeAuthorName(to: viewModel.authorNameText, description: viewModel.descriptionText)
-                                        
-                                        withAnimation {
-                                            viewModel.isSettingViewPresented = false
-                                            viewModel.user?.authorName = viewModel.authorNameText
-                                            viewModel.isLoading = true
-                                        }
-                                        
-                                        viewModel.articles = []
-                                        viewModel.articlesIndexes = []
-                                        
-                                        Task {
-                                            do {
-                                                try await viewModel.getIndexes()
-                                            } catch {
-                                                withAnimation {
-                                                    viewModel.errorText = error.localizedDescription
-                                                    viewModel.isErrorPopupPresented = true
-                                                }
-                                            }
-                                        }
-                                    } catch {
-                                        withAnimation {
-                                            viewModel.errorText = error.localizedDescription
-                                            viewModel.isErrorPopupPresented = true
-                                        }
-                                    }
-                                }
-                            }
-                        } label: {
-                            HStack {
-                                Text(LocalizedStringKey("nextLabel"))
-                                    .foregroundStyle(
-                                        viewModel.isButtonEnabled
-                                        ? Color(uiColor: .label)
-                                        : Color.gray
-                                    )
-                            }
-                            .frame(width: UIScreen.main.bounds.width - 60, height: 50)
-                            .background(Color(uiColor: .secondarySystemBackground))
-                            .clipShape(RoundedRectangle(cornerRadius: 20))
-                            .font(.title2)
-                            .shadow(radius: viewModel.isButtonEnabled ? 2 : 0)
-                        }
-                        .disabled(!viewModel.isButtonEnabled)
-                        .padding(.top, 10)
-                    }
-                    .padding(.horizontal)
-                } else {
+                if viewModel.isLoading || viewModel.articles.count > 0 || viewModel.archivePosts.count > 0 {
                     
                     ScrollView(showsIndicators: false) {
                         VStack(spacing: 20) {
                             if viewModel.isLoading {
+                                
+                                Text("HelloWorldHelloWorld HelloWorld HelloWorld HelloWorldHelloWorld HelloWorld HelloWorld")
+                                    .padding(.vertical, 20)
+                                    .padding(.horizontal, 16)
+                                    .frame(width: UIScreen.main.bounds.width, alignment: .leading)
+                                    .background(Color(uiColor: .secondarySystemBackground))
+                                    .clipShape(RoundedRectangle(cornerRadius: 20))
+                                    .padding(.top, 50)
+                                    .redacted(reason: .placeholder)
+                                
+                                Text(NSLocalizedString("publicationsLabel", comment: ""))
+                                    .font(.title)
+                                    .fontWeight(.light)
+                                    .fontDesign(.rounded)
+                                    .frame(width: UIScreen.main.bounds.width - 20, alignment: .leading)
+                                    .padding(.top, 20)
+                                    .redacted(reason: .placeholder)
                                 
                                 ForEach(0..<7) { num in
                                     PostView(
@@ -652,12 +615,30 @@ struct CreatedPostsView: View {
                                         postOption: $viewModel.postOption,
                                         selectedId: $viewModel.id
                                     )
-                                    .padding(.top, num == 0 ? 20 : 0)
                                     .padding(.horizontal)
                                     .redacted(reason: .placeholder)
                                 }
                                 
                             } else if viewModel.articles.count > 0 && !viewModel.isArchivePresented {
+                                
+                                if viewModel.user?.authorDescription ?? "" != "" {
+                                    Text(viewModel.user?.authorDescription ?? NSLocalizedString("notFoundLabel", comment: ""))
+                                        .font(.title3)
+                                        .padding(.vertical, 20)
+                                        .padding(.horizontal, 16)
+                                        .frame(width: UIScreen.main.bounds.width, alignment: .leading)
+                                        .background(Color(uiColor: .secondarySystemBackground))
+                                        .clipShape(RoundedRectangle(cornerRadius: 20))
+                                        .padding(.top, 50)
+                                }
+                                
+                                Text(NSLocalizedString("publicationsLabel", comment: ""))
+                                    .font(.title)
+                                    .fontWeight(.light)
+                                    .fontDesign(.rounded)
+                                    .frame(width: UIScreen.main.bounds.width - 20, alignment: .leading)
+                                    .padding(.top, 20)
+                                
                                 ForEach(viewModel.articles) { article in
                                     PostView(
                                         id: article.id,
@@ -669,7 +650,6 @@ struct CreatedPostsView: View {
                                         postOption: $viewModel.postOption,
                                         selectedId: $viewModel.id
                                     )
-                                    .padding(.top, article.id == viewModel.articles[0].id ? 20 : 0)
                                     .padding(.bottom, article.id == viewModel.articles[viewModel.articles.count - 1].id ? 70 : 0)
                                     .onTapGesture {
                                         viewModel.description = article.description ?? NSLocalizedString("notFoundLabel", comment: "")
@@ -706,6 +686,13 @@ struct CreatedPostsView: View {
                                 .padding(.horizontal)
                                 
                             } else if viewModel.isArchivePresented && viewModel.archivePosts.count > 0 {
+                                Text(NSLocalizedString("publicationsLabel", comment: ""))
+                                    .font(.title)
+                                    .fontWeight(.light)
+                                    .fontDesign(.rounded)
+                                    .frame(width: UIScreen.main.bounds.width - 20, alignment: .leading)
+                                    .padding(.top, 20)
+                                
                                 ForEach(viewModel.archivePosts) { article in
                                     PostView(
                                         id: article.id,
@@ -717,7 +704,6 @@ struct CreatedPostsView: View {
                                         postOption: $viewModel.postOption,
                                         selectedId: $viewModel.id
                                     )
-                                    .padding(.top, article.id == viewModel.archivePosts[0].id ? 20 : 0)
                                     .padding(.bottom, article.id == viewModel.archivePosts[viewModel.archivePosts.count - 1].id ? 70 : 0)
                                     .onTapGesture {
                                         viewModel.description = article.description ?? NSLocalizedString("notFoundLabel", comment: "")
@@ -845,6 +831,105 @@ struct CreatedPostsView: View {
                                 }
                         }
                     }
+                } else if viewModel.user?.authorName ?? "" == "" || viewModel.isSettingViewPresented == true {
+                    VStack {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 30)
+                                .foregroundStyle(Color(uiColor: .secondarySystemBackground))
+                                .frame(width: UIScreen.main.bounds.width - 60, height: 150)
+                                .shadow(radius: 2)
+                            
+                            VStack(spacing: 25) {
+                                VStack {
+                                    TextField(LocalizedStringKey("nameLabel"), text: $viewModel.authorNameText)
+                                        .frame(width: UIScreen.main.bounds.width - 92)
+                                        .font(.title2)
+                                        .focused($isAuthorNameFocused)
+                                        .textInputAutocapitalization(.never)
+                                        .onChange(of: viewModel.authorNameText) { _ in
+                                            viewModel.isButtonEnable()
+                                        }
+                                    
+                                    RoundedRectangle(cornerRadius: 0)
+                                        .frame(width: UIScreen.main.bounds.width - 92, height: 2)
+                                        .foregroundStyle(isAuthorNameFocused ? Color(uiColor: .label) : Color.gray)
+                                }
+                                
+                                VStack {
+                                    TextField(NSLocalizedString("descriptionLabel", comment: ""), text: $viewModel.descriptionText)
+                                        .frame(width: UIScreen.main.bounds.width - 92)
+                                        .font(.title2)
+                                        .focused($isDescriptionFocused)
+                                        .textInputAutocapitalization(.never)
+                                        
+                                    RoundedRectangle(cornerRadius: 0)
+                                        .frame(width: UIScreen.main.bounds.width - 92, height: 2)
+                                        .foregroundStyle(isDescriptionFocused ? Color(uiColor: .label) : Color.gray)
+                                }
+                            }
+                            .frame(height: 150)
+                            .onAppear {
+                                viewModel.isButtonEnable()
+                            }
+                        }
+                        
+                        Button {
+                            if viewModel.authorNameText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                                withAnimation {
+                                    viewModel.errorText = NSLocalizedString("nameErrorLabel", comment: "")
+                                    viewModel.isErrorPopupPresented = true
+                                }
+                            } else {
+                                Task {
+                                    do {
+                                        try await viewModel.changeAuthorName(to: viewModel.authorNameText, description: viewModel.descriptionText)
+                                        
+                                        withAnimation {
+                                            viewModel.isSettingViewPresented = false
+                                            viewModel.user?.authorName = viewModel.authorNameText
+                                            viewModel.isLoading = true
+                                        }
+                                        
+                                        viewModel.articles = []
+                                        viewModel.articlesIndexes = []
+                                        
+                                        Task {
+                                            do {
+                                                try await viewModel.getIndexes()
+                                            } catch {
+                                                withAnimation {
+                                                    viewModel.errorText = error.localizedDescription
+                                                    viewModel.isErrorPopupPresented = true
+                                                }
+                                            }
+                                        }
+                                    } catch {
+                                        withAnimation {
+                                            viewModel.errorText = error.localizedDescription
+                                            viewModel.isErrorPopupPresented = true
+                                        }
+                                    }
+                                }
+                            }
+                        } label: {
+                            HStack {
+                                Text(LocalizedStringKey("nextLabel"))
+                                    .foregroundStyle(
+                                        viewModel.isButtonEnabled
+                                        ? Color(uiColor: .label)
+                                        : Color.gray
+                                    )
+                            }
+                            .frame(width: UIScreen.main.bounds.width - 60, height: 50)
+                            .background(Color(uiColor: .secondarySystemBackground))
+                            .clipShape(RoundedRectangle(cornerRadius: 20))
+                            .font(.title2)
+                            .shadow(radius: viewModel.isButtonEnabled ? 2 : 0)
+                        }
+                        .disabled(!viewModel.isButtonEnabled)
+                        .padding(.top, 10)
+                    }
+                    .padding(.horizontal)
                 }
             }
         }
