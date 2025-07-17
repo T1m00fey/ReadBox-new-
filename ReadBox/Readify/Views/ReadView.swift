@@ -23,7 +23,6 @@ struct ReadView: View {
     let isArchive: Bool
     
     @Binding var user: DBUser?
-    @Binding var likedPosts: [String]
     @Binding var isChannelViewPresented: Bool
     
     @State private var isSubscribed = false
@@ -163,7 +162,7 @@ struct ReadView: View {
                                         viewModel.isPostLiked.toggle()
                                     }
                                     
-                                    likedPosts.removeAll {
+                                    user?.likedPosts?.removeAll {
                                         id == $0
                                     
                                     }
@@ -190,7 +189,7 @@ struct ReadView: View {
                                         
                                         viewModel.likesCount += 1
                                         
-                                        likedPosts.append(id)
+                                        user?.likedPosts?.append(id)
                                         
                                         Task {
                                             do {
@@ -244,7 +243,7 @@ struct ReadView: View {
                             isSubscribed = subscribes.contains(authorId)
                         }
                 
-                        viewModel.isPostLiked = likedPosts.contains(id)
+                        viewModel.isPostLiked = (user?.likedPosts ?? []).contains(id)
                         viewModel.fetchImage(byId: id)
                     }
                     

@@ -203,7 +203,6 @@ struct RootView: View {
                 isCheckmark: isCheckmark ?? false,
                 isArchive: prePost?.isArchive ?? true,
                 user: $user,
-                likedPosts: $likedPosts,
                 isChannelViewPresented: $isChannelViewPresented
             )
             .tint(Color(uiColor: .label))

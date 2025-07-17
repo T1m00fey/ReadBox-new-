@@ -114,10 +114,11 @@ final class LikedPostsViewModel: ObservableObject {
         for index in indexesToAdd {
             do {
                 let isArchive = try await ArticlesManager.shared.getIsArchive(of: index)
-                let authorId = try await ArticlesManager.shared.getAuthorId(byPostId: index)
-                let likesCount = try await ArticlesManager.shared.getLikesCount(byPostId: index)
     
                 if isArchive {
+                    let authorId = try await ArticlesManager.shared.getAuthorId(byPostId: index)
+                    let likesCount = try await ArticlesManager.shared.getLikesCount(byPostId: index)
+                    
                     withAnimation {
                         articles.append(
                             PrePost(

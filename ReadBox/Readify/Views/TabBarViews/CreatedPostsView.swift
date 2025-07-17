@@ -86,7 +86,6 @@ struct CreatedPostsView: View {
                             isCheckmark: viewModel.user?.isCheckmark ?? false,
                             isArchive: false,
                             user: $viewModel.user,
-                            likedPosts: $viewModel.likedPosts,
                             isChannelViewPresented: .constant(false)
                         )
                     }

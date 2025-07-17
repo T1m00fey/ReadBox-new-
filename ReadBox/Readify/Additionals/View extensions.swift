@@ -272,25 +272,25 @@ extension View {
                     viewModel.isNeedToReload = true
                 }
             }
-//            .onChange(of: viewModel.likedPosts, perform: { newValue in
-//                if viewModel.likedPosts != [] {
-//                    Task {
-//                        do {
-//                            viewModel.indexesNeedToLoad = viewModel.likedPosts
-//                            try await viewModel.getArticles()
-//                            return
-//                        } catch {
-////                            withAnimation {
-////                                viewModel.errorText = error.localizedDescription
-////                            }
-//                        }
-//                        
-////                        viewModel.isErrorPopupPresented = true
-//                    }
-//                } else {
-//                    viewModel.articles = []
-//                }
-//            })
+            .onChange(of: viewModel.likedPosts) {
+                if viewModel.likedPosts != [] {
+                    Task {
+                        do {
+                            viewModel.indexesNeedToLoad = viewModel.likedPosts
+                            try await viewModel.getArticles()
+                            return
+                        } catch {
+//                            withAnimation {
+//                                viewModel.errorText = error.localizedDescription
+//                            }
+                        }
+                        
+//                        viewModel.isErrorPopupPresented = true
+                    }
+                } else {
+                    viewModel.articles = []
+                }
+            }
         
     }
     

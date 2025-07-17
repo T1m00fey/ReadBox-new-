@@ -134,7 +134,6 @@ struct LikedPostsView: View {
                     isCheckmark: viewModel.authorsCheckmarks[viewModel.authorId] ?? false,
                     isArchive: viewModel.isArchive,
                     user: $viewModel.user,
-                    likedPosts: $viewModel.likedPosts,
                     isChannelViewPresented: $viewModel.isChannelViewPresented
                 )
             })

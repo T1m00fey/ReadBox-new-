@@ -61,7 +61,7 @@ struct DBUser: Codable, Equatable {
     let name: String?
     let email: String?
     let dateCreated: Date?
-    let likedPosts: [String]?
+    var likedPosts: [String]?
     var authorName: String?
     let isCheckmark: Bool?
     let createdPosts: [String]?
