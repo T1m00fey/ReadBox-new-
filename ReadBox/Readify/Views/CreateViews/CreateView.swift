@@ -9,36 +9,6 @@ import SwiftUI
 import PhotosUI
 import PopupView
 
-final class CreateViewModel: ObservableObject {
-    @Published var isDescriptionAdded = false
-    
-    @Published var isFirstTapOnTitleTE = true
-    @Published var isFirstTapOnDescriptionTE = true
-    
-    @Published var titleText = NSLocalizedString("titlePlaceholder", comment: "")
-    @Published var isTitleTESelected = false
-    
-    @Published var image: UIImage? = nil
-    @Published var imageItem: PhotosPickerItem? = nil
-    
-    @Published var descriptionText = NSLocalizedString("descriptionPlaceholder", comment: "")
-    @Published var isDescriptionTESelected = false
-    
-    @Published var isErrorPopupPresented = false
-    
-    @Published var isTextCreateViewPresented = false
-    
-    @Published var navigationTitle = ""
-    
-    @Published var errorText = ""
-    
-    @Published var isFirstAppear = true
-    
-    func getNavigationTitle(_ isEditing: Bool) -> String {
-        isEditing ? NSLocalizedString("editingLabel", comment: "") : NSLocalizedString("creationLabel", comment: "")
-    }
-}
-
 struct CreateView: View {
     @Binding var isCreateViewPresented: Bool
     
@@ -49,12 +19,18 @@ struct CreateView: View {
     let text: String
     let isEditing: Bool
     
+    @Binding var postsCount: Int
+    @Binding var posts: [PrePost]
+    @Binding var archivePosts: [PrePost]
+    
     @Environment(\.dismiss) var dismiss
     
     @StateObject private var viewModel = CreateViewModel()
     
     @FocusState var isTitleTEFocused: Bool
     @FocusState var isDescriptionTEFocused: Bool
+    
+    @Namespace private var animation
     
     var body: some View {
         NavigationStack {
@@ -79,10 +55,10 @@ struct CreateView: View {
                                 .shadow(radius: 3)
                                 .focused($isTitleTEFocused)
                                 .padding(.horizontal)
-                                .onChange(of: isTitleTEFocused) { isFocused in
+                                .onChange(of: isTitleTEFocused) {
                                     withAnimation {
-                                        viewModel.isTitleTESelected = isFocused ? true : false
-                                        viewModel.navigationTitle = isFocused ? NSLocalizedString("titleLabel", comment: "") : viewModel.getNavigationTitle(isEditing)
+                                        viewModel.isTitleTESelected = isTitleTEFocused ? true : false
+                                        viewModel.navigationTitle = isTitleTEFocused ? NSLocalizedString("titleLabel", comment: "") : viewModel.getNavigationTitle(isEditing)
                                         
                                         if viewModel.isFirstTapOnTitleTE && !isEditing {
                                             withAnimation {
@@ -92,6 +68,28 @@ struct CreateView: View {
                                         }
                                     }
                                 }
+                                .tint(Color(uiColor: .label))
+                            
+                            if !isEditing {
+                                VStack(spacing: 10) {
+                                    Text(NSLocalizedString("whichFeedUploadingToLabel", comment: ""))
+                                        .font(.system(size: 17))
+                                        .foregroundStyle(.gray)
+                                        .frame(width: UIScreen.main.bounds.width - 36, alignment: .leading)
+                                    
+//                                    Picker("", selection: $viewModel.languageSelection) {
+//                                        Text("Ru").tag("ru")
+//                                        Text("En").tag("en")
+//                                    }
+//                                    .pickerStyle(.segmented)
+//                                    .frame(width: UIScreen.main.bounds.width - 32, height: 40)
+//                                    .font(.system(size: 22, weight: .medium))
+//                                    .foregroundStyle(Color(.secondarySystemBackground))
+                                    
+                                    CustomSegmentedControl(selectedLanguage: $viewModel.languageSelection)
+                                }
+                                .padding(.top, 20)
+                            }
                         }
                             
                         if !viewModel.isTitleTESelected && !viewModel.isDescriptionTESelected {
@@ -135,6 +133,7 @@ struct CreateView: View {
                                                 .frame(width: UIScreen.main.bounds.width - 32)
                                                 .clipShape(RoundedRectangle(cornerRadius: 20))
                                                 .padding(.horizontal)
+                                                .padding(.top, 20)
                                             
                                             ZStack {
                                                 RoundedRectangle(cornerRadius: 15)
@@ -161,8 +160,8 @@ struct CreateView: View {
                                         
                                     }
                                 }
-                                .padding(.top, 30)
-                                .onChange(of: viewModel.imageItem) { newValue in
+//                                .padding(.top, 30)
+                                .onChange(of: viewModel.imageItem) {
                                     Task {
                                         do {
                                             guard let imageData = try await viewModel.imageItem?.loadTransferable(type: Data.self) else { return }
@@ -198,10 +197,10 @@ struct CreateView: View {
                                     .clipShape(RoundedRectangle(cornerRadius: 20))
                                     .shadow(radius: 3)
                                     .focused($isDescriptionTEFocused)
-                                    .onChange(of: isDescriptionTEFocused) { isFocused in
+                                    .onChange(of: isDescriptionTEFocused) {
                                         withAnimation {
-                                            viewModel.isDescriptionTESelected = isFocused ? true : false
-                                            viewModel.navigationTitle = isFocused ? NSLocalizedString("descriptionLabel", comment: "") : viewModel.getNavigationTitle(isEditing)
+                                            viewModel.isDescriptionTESelected = isDescriptionTEFocused ? true : false
+                                            viewModel.navigationTitle = isDescriptionTEFocused ? NSLocalizedString("descriptionLabel", comment: "") : viewModel.getNavigationTitle(isEditing)
                                             
                                             if viewModel.isFirstTapOnDescriptionTE && !isEditing {
                                                 withAnimation {
@@ -211,6 +210,7 @@ struct CreateView: View {
                                             }
                                         }
                                     }
+                                    .tint(Color(uiColor: .label))
                                     .padding(.top, 30)
                                     .padding(.horizontal)
                                     .padding(.bottom, 100)
@@ -268,6 +268,10 @@ struct CreateView: View {
                         description: $viewModel.descriptionText,
                         text: text,
                         isEditing: isEditing,
+                        uploadingLanguage: viewModel.languageSelection,
+                        postsCount: $postsCount,
+                        posts: $posts,
+                        archivePosts: $archivePosts,
                         isCreateViewPresented: $isCreateViewPresented
                     )
                 }
@@ -300,7 +304,7 @@ struct CreateView: View {
                     
                 }
             }
-            .onChange(of: viewModel.isTextCreateViewPresented) { newValue in
+            .onChange(of: viewModel.isTextCreateViewPresented) {
                 viewModel.isFirstAppear = false
             }
             .onAppear {
@@ -312,6 +316,9 @@ struct CreateView: View {
                     viewModel.titleText = title
                     viewModel.image = image
                     viewModel.descriptionText = description
+                    
+                    print("HERE: \(description)")
+                    print("HERE: \(text)")
                 }
                 
                 if isEditing && description != "" {
@@ -323,6 +330,7 @@ struct CreateView: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
                         dismiss()
+                        StorageManager.shared.deleteText()
                     } label: {
                         Image(systemName: "xmark")
                     }
@@ -335,5 +343,16 @@ struct CreateView: View {
 }
 
 #Preview {
-    CreateView(isCreateViewPresented: .constant(true), id: "", title: "", image: UIImage(), description: "", text: "", isEditing: false)
+    CreateView(
+        isCreateViewPresented: .constant(true),
+        id: "",
+        title: "",
+        image: nil,
+        description: "",
+        text: "",
+        isEditing: false,
+        postsCount: .constant(0),
+        posts: .constant([]),
+        archivePosts: .constant([])
+    )
 }

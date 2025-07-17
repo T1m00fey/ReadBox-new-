@@ -64,6 +64,7 @@ struct ConfirmationView: View {
                             .font(.title2)
                             .fontWeight(.light)
                             .fontDesign(.rounded)
+                            .foregroundStyle(Color.gray)
                     }
                     .frame(width: UIScreen.main.bounds.width - 64)
                 }

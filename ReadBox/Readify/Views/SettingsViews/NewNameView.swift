@@ -47,9 +47,10 @@ struct NewNameView: View {
                                     .font(.title2)
                                     .focused($isNameTFFocused)
                                     .textInputAutocapitalization(.never)
-                                    .onChange(of: viewModel.nameText) { _ in
+                                    .onChange(of: viewModel.nameText) {
                                         viewModel.isButtonEnable()
                                     }
+                                    .tint(Color(uiColor: .label))
                                 
                                 RoundedRectangle(cornerRadius: 0)
                                     .frame(width: UIScreen.main.bounds.width - 92, height: 2)

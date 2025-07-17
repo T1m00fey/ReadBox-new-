@@ -51,7 +51,7 @@ struct NewPasswordView: View {
                                         .font(.title2)
                                         .focused($isFirstTFFocused)
                                         .textInputAutocapitalization(.never)
-                                        .onChange(of: viewModel.oldPassword) { _ in
+                                        .onChange(of: viewModel.oldPassword) {
                                             if viewModel.oldPassword.count > 0 {
                                                 viewModel.isChangeButtonEnabled()
                                             }
@@ -68,7 +68,7 @@ struct NewPasswordView: View {
                                         .font(.title2)
                                         .focused($isSecondTFFocused)
                                         .textInputAutocapitalization(.never)
-                                        .onChange(of: viewModel.newPassword) { _ in
+                                        .onChange(of: viewModel.newPassword) {
                                             if viewModel.newPassword.count > 0 {
                                                 viewModel.isChangeButtonEnabled()
                                             }

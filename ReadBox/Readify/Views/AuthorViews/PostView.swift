@@ -133,6 +133,8 @@ struct PostView: View {
                             postOption = .delete
                             selectedId = id
                             
+                            print("HERE: \(id)")
+                            
                             StorageManager.shared.deleteImage(id: id)
                         } label: {
                             Label(NSLocalizedString("deleteLabel", comment: ""), systemImage: "xmark.circle")

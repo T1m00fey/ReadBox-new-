@@ -38,7 +38,7 @@
 "languageLabel" = "Язык";
 "chooseLanguageLabel" = "Выберите язык:";
 "favoritesLabel" = "Избранное";
-"noArticlesAddedLabel" = "Пока что вы не добавили ни одной статьи";
+"noArticlesAddedLabel" = "Не было добавлено ни одной публикации";
 "loadMore" = "Загрузить еще";
 "memorySettingsLabel" = "Память и данные";
 "dataInMemoryLabel" = "Использование памяти";
@@ -50,7 +50,6 @@
 "fontSizeChangedAlert" = "Размер шрифта успешно изменен";
 "moreLabel" = "Ещё";
 "writeToDeveloperLabel" = "Написать разработчику";
-"yourPostsLabel" = "Ваши посты";
 "notFoundLabel" = "Не найдено";
 "newPublicationLabel" = "Новая публикация +";
 "newAuthorName" = "Новое имя автора";
@@ -86,4 +85,21 @@
 "addDescriptionLabel" = "Добавить описание +";
 "removePhotoLabel" = "Удалить фото";
 "loadingLabel" = "Загрузка";
-
+"subscribeLabel" = "Подписаться +";
+"subscribersCountLabel" = "подписчики";
+"publicationsCountLabel" = "публикации";
+"youSubscribedLabel" = "Вы подписаны";
+"publicationsLabel" = "Публикации";
+"archiveLabel" = "Архив";
+"privacyPolicy" = "Политика конфиденциальности";
+"termsOfUse" = "Правила использования";
+"updateLabel" = "Обновить 🔁";
+"newVersionAlert" = "Вышла новая версия \nприложения";
+"criticalUpdateAlert" = "Это обновление имеет критические изменения и обязательно к установке";
+"toPublicationsLabel" = "← К публикациям";
+"whichFeedUploadingToLabel" = "В какую ленту ReadBox выкладываем?";
+"languageSwitchTipTitle" = "Переключение языка";
+"languageSwitchTipMessage" = "Для переключения языка просто нажмите на заголовок";
+"authorMultiLanguageTipTitle" = "Разные языки";
+"authorMultiLanguageTipMessage" = "Теперь вы можете писать свои публикации на разных языках";
+"expandButtonLabel" = "Развернуть ↓";

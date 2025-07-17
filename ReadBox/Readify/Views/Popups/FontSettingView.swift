@@ -42,6 +42,7 @@ struct FontSettingView: View {
             }
                 .foregroundStyle(Color(uiColor: .label))
                 .frame(width: UIScreen.main.bounds.width - 32, height: 50)
+                .tint(Color(uiColor: .label))
                 .padding(.bottom, 150)
         }
         .onAppear {
@@ -52,7 +53,7 @@ struct FontSettingView: View {
                 StorageManager.shared.setFont(size: 18)
             }
         }
-        .onChange(of: isPopupPresented) { newValue in
+        .onChange(of: isPopupPresented) {
             if !isPopupPresented {
                 if StorageManager.shared.getFontSize() != Int(fontSize) {
                     StorageManager.shared.setFont(size: Int(fontSize))

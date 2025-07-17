@@ -6,169 +6,30 @@
 //
 
 import SwiftUI
+import PopupView
 import MarkdownUI
-import FirebaseStorage
-
-final class ReadViewModel: ObservableObject {
-    @Published var isPostLiked = false
-    @Published var errorText = ""
-    @Published var isErrorPopupPresented = false
-    @Published var likesCount = 0
-    @Published var fontSize = 0
-    @Published var isFontSettingPopupPresented = false
-    @Published var contentHeight: CGFloat = 0
-    @Published var markdownText = """
-                                    """
-    @Published var image = UIImage()
-    
-//    func plusReadArticle(userId: String, articlesRead: Int) async throws {
-//        try await UserManager.shared.plusReadArticle(userId: userId, articlesRead: articlesRead)
-//    }
-    
-    func addLikedPost(userId: String, articleId: String) async throws {
-        try await UserManager.shared.addLikedPost(id: userId, likedPost: articleId)
-    }
-    
-    func removeLikedPost(userId: String, articleId: String) async throws {
-        try await UserManager.shared.removeLikedPost(id: userId, likedPost: articleId)
-    }
-    
-    func updateLikes(at article: String, likesCount: Int) async throws {
-        try await ArticlesManager.shared.updateLikes(at: article, likesCount: likesCount)
-    }
-    
-//    func getMarkdownText(_ text: String) -> NSAttributedString {
-//        let preMarkdown = text.replacingOccurrences(of: "/n", with: "\n")
-//        
-//        let markdownString = SwiftyMarkdown(string: preMarkdown)
-//        markdownString.bold.fontSize = CGFloat(fontSize)
-//        markdownString.body.fontSize = CGFloat(fontSize)
-//        markdownString.blockquotes.fontSize = CGFloat(fontSize)
-//        markdownString.italic.fontSize = CGFloat(fontSize)
-//        markdownString.code.fontSize = CGFloat(fontSize)
-//        markdownString.strikethrough.fontSize = CGFloat(fontSize)
-//        markdownString.link.fontSize = CGFloat(fontSize)
-//        markdownString.h1.fontSize = CGFloat(fontSize)
-//        markdownString.h2.fontSize = CGFloat(fontSize)
-//        markdownString.h3.fontSize = CGFloat(fontSize)
-//        markdownString.h4.fontSize = CGFloat(fontSize)
-//        markdownString.h5.fontSize = CGFloat(fontSize)
-//        markdownString.h6.fontSize = CGFloat(fontSize)
-//            
-//        
-//        return markdownString.attributedString()
-//    }
-    
-    func getDateCreated(regDate: Date) -> String {
-        let timeInterval = Int(Date().timeIntervalSince(regDate)) / 60 / 60 / 24
-        var date = ""
-        
-        if StorageManager.shared.getLanguage() == "ru" {
-            if timeInterval > 30 && timeInterval < 365 {
-                if timeInterval / 30 == 1 {
-                    date = "\(timeInterval / 30) месяц назад"
-                } else if (2...4).contains(timeInterval / 30) {
-                    date = "\(timeInterval / 30) месяца назад"
-                } else {
-                    date = "\(timeInterval / 30) месяцев назад"
-                }
-            } else if timeInterval >= 365 {
-                if (11...14).contains(timeInterval / 365) {
-                    date = "\(timeInterval / 365) лет назад"
-                } else if timeInterval / 365 % 10 == 1 {
-                    date = "\(timeInterval / 365) год назад"
-                } else if timeInterval / 365 % 10 == 2 || timeInterval / 365 % 10 == 4 || timeInterval / 365 % 10 == 3 {
-                    date = "\(timeInterval) года назад"
-                } else {
-                    date = "\(timeInterval) лет назад"
-                }
-            } else {
-                if timeInterval == 11 || timeInterval == 12 || timeInterval == 13 || timeInterval == 14 {
-                    date = "\(timeInterval) дней назад"
-                } else if timeInterval % 10 == 1 {
-                    date = "\(timeInterval) день назад"
-                } else if timeInterval % 10 == 2 || timeInterval % 10 == 4 || timeInterval % 10 == 3 {
-                    date = "\(timeInterval) дня назад"
-                } else if timeInterval == 0 {
-                    date = "Сегодня"
-                } else {
-                    date = "\(timeInterval) дней назад"
-                }
-            }
-            
-        } else {
-            if timeInterval > 30 && timeInterval < 365 {
-                if timeInterval / 30 == 1 {
-                    date = "\(timeInterval / 30) month ago"
-                } else {
-                    date = "\(timeInterval / 30) months ago"
-                }
-            } else if timeInterval >= 365 {
-                if timeInterval / 365 == 1 {
-                    date = "\(timeInterval / 365) year ago"
-                } else {
-                    date = "\(timeInterval / 365) years ago"
-                }
-            } else {
-                if timeInterval == 1 {
-                    date = "\(timeInterval) day ago"
-                } else if timeInterval == 0 {
-                    date = "Today"
-                } else {
-                    date = "\(timeInterval) days ago"
-                }
-            }
-        }
-        
-        return date
-    }
-}
 
 struct ReadView: View {
+    
     let id: String
-    let userId: String
     let title: String
     let text: String
     let dateCreated: Date
     let likesCount: Int
+    let authorId: String
     let authorName: String
     let isCheckmark: Bool
+    let isArchive: Bool
     
+    @Binding var user: DBUser?
     @Binding var likedPosts: [String]
     @Binding var isChannelViewPresented: Bool
     
-    @StateObject var viewModel = ReadViewModel()
-
-    @Environment(\.dismiss) var dismiss
+    @State private var isSubscribed = false
     
-    private func fetchImage() {
-        let articleImage = StorageManager.shared.getImage(id: id)
-        
-        if articleImage != nil {
-            withAnimation {
-                viewModel.image = articleImage ?? UIImage()
-            }
-        } else {
-            DispatchQueue.main.async {
-                let storage = Storage.storage()
-                let storageRef = storage.reference()
-                
-                let islandRef = storageRef.child("images/\(id).jpg")
-                
-                islandRef.getData(maxSize: 1 * 5012 * 50125) { data, error in
-                    if let error = error {
-                        print(error .localizedDescription)
-                    } else {
-                        // Data for "images/island.jpg" is returned
-                        withAnimation {
-                            self.viewModel.image = UIImage(data: data!)!
-                            StorageManager.shared.saveImage(id: id, image: viewModel.image)
-                        }
-                    }
-                }
-            }
-        }
-    }
+    @StateObject var viewModel = ReadViewModel()
+    
+    @Environment(\.dismiss) var dismiss
     
     var body: some View {
         NavigationStack {
@@ -183,7 +44,7 @@ struct ReadView: View {
                         Text(title)
                             .fontWeight(.light)
                             .fontDesign(.rounded)
-                            .font(.largeTitle)
+                            .font(.title)
                             .frame(width: UIScreen.main.bounds.width - 32, alignment: .leading)
                         
                         RoundedRectangle(cornerRadius: 0)
@@ -219,7 +80,60 @@ struct ReadView: View {
                                         .padding(.top, 4)
                                 }
                             }
+                            
+                            if authorId != "" && authorId != user?.userId {
+                                ZStack {
+                                    Capsule()
+                                        .foregroundStyle(
+                                            isSubscribed
+                                            ? Color(uiColor: .systemBackground)
+                                            : Color(uiColor: .label)
+                                        )
+                                        .shadow(radius: isSubscribed ? 2 : 0)
+                                        .frame(width: 120)
+                                    
+                                    Text(
+                                        isSubscribed
+                                        ? NSLocalizedString("youSubscribedLabel", comment: "")
+                                        : NSLocalizedString("subscribeLabel", comment: "")
+                                    )
+                                    .font(.system(size: 14))
+                                    .fontDesign(.rounded)
+                                    .foregroundStyle(
+                                        isSubscribed
+                                        ? Color(uiColor: .label)
+                                        : Color(uiColor: .systemBackground)
+                                    )
+                                }
+                                .onTapGesture {
+                                    Task {
+                                        do {
+                                            try await viewModel.un_subcribeUser(
+                                                on: authorId,
+                                                isNeedToSubscribe: !isSubscribed
+                                            )
+                                            
+                                            withAnimation {
+                                                if isSubscribed {
+                                                    user?.subscribes?.removeAll { $0 == authorId }
+                                                } else {
+                                                    user?.subscribes?.append(authorId)
+                                                }
+                                                
+                                                isSubscribed.toggle()
+                                            }
+                                        } catch {
+                                            withAnimation {
+                                                viewModel.errorText = error.localizedDescription
+                                                viewModel.isErrorPopupPresented = true
+                                            }
+                                        }
+                                    }
+                                }
+                                .padding(.top, 5)
+                            }
                         }
+                        
                         .frame(width: UIScreen.main.bounds.width - 32, alignment: .leading)
                         .padding(.vertical, viewModel.image != UIImage() ? 20 : 0)
                         .padding(.top, viewModel.image == UIImage() ? 10 : 0)
@@ -257,20 +171,15 @@ struct ReadView: View {
                                     
                                     Task {
                                         do {
-                                            try await viewModel.removeLikedPost(userId: userId, articleId: id)
-                                            
-                                            if id != "" {
-                                                try await viewModel.updateLikes(at: id, likesCount: viewModel.likesCount)
-                                            }
-                                            
-                                            return
+                                            try await viewModel.removeLikedPost(userId: user?.userId ?? "", articleId: id)
                                         } catch {
                                             withAnimation {
                                                 viewModel.errorText = error.localizedDescription
+                                                viewModel.isErrorPopupPresented = true
                                             }
                                         }
                                         
-                                        viewModel.isErrorPopupPresented = true
+                                        try? await viewModel.updateLikes(at: id, likesCount: viewModel.likesCount)
                                     }
                                 } else {
                                     if id != "" {
@@ -284,17 +193,15 @@ struct ReadView: View {
                                         
                                         Task {
                                             do {
-                                                try await viewModel.addLikedPost(userId: userId, articleId: id)
-                                                try await viewModel.updateLikes(at: id, likesCount: viewModel.likesCount)
-                                                
-                                                return
+                                                try await viewModel.addLikedPost(userId: user?.userId ?? "", articleId: id)
                                             } catch {
                                                 withAnimation {
                                                     viewModel.errorText = error.localizedDescription
+                                                    viewModel.isErrorPopupPresented = true
                                                 }
                                             }
                                             
-                                            viewModel.isErrorPopupPresented = true
+                                            try? await viewModel.updateLikes(at: id, likesCount: viewModel.likesCount)
                                         }
                                     } else {
                                         withAnimation {
@@ -316,21 +223,27 @@ struct ReadView: View {
                         .padding(.horizontal)
                         .padding(.bottom, 30)
                         
-                        Markdown(text.replacingOccurrences(of: "<br>#", with: "\n#").replacingOccurrences(of: "#<br>", with: "\n"))
-                            .markdownTextStyle(\.text) {
-                                FontSize(CGFloat(viewModel.fontSize))
-                            }
-                            .markdownTheme(.gitHub)
-                            .frame(width: UIScreen.main.bounds.width - 32, alignment: .topLeading)
-                            .padding(.bottom, 50)
-    
+                        Markdown(
+                            text.normalizeEmptyLines()
+                        )
+                        .markdownTextStyle(\.text) {
+                            FontSize(CGFloat(viewModel.fontSize))
+                        }
+                        .markdownTheme(.gitHub)
+                        .frame(width: UIScreen.main.bounds.width - 32, alignment: .topLeading)
+                        .padding(.bottom, 50)
+                        
                     }
                     
                 }
                 .onAppear {
                     withAnimation {
+                        if let subscribes = user?.subscribes {
+                            isSubscribed = subscribes.contains(authorId)
+                        }
+                
                         viewModel.isPostLiked = likedPosts.contains(id)
-                        fetchImage()
+                        viewModel.fetchImage(byId: id)
                     }
                     
                     viewModel.likesCount = likesCount
@@ -366,9 +279,9 @@ struct ReadView: View {
                         .appearFrom(.bottomSlide)
                         .dragToDismiss(true)
                 }
-                .onChange(of: viewModel.isFontSettingPopupPresented) { newValue in
+                .onChange(of: viewModel.isFontSettingPopupPresented) {
                     withAnimation {
-                        if !newValue {
+                        if !viewModel.isFontSettingPopupPresented {
                             viewModel.fontSize = StorageManager.shared.getFontSize()
                         }
                     }
@@ -393,8 +306,11 @@ struct ReadView: View {
                                 Image(systemName: "book.pages")
                             }
                             
-                            ShareLink(item: URL(string: "readbox://posts/\(id)")!) {
-                                Image(systemName: "square.and.arrow.up")
+                            if !isArchive {
+                                ShareLink(item: URL(string: "https://readbox-links.online/posts/?index=\(id)")!) {
+                                    Image(systemName: "square.and.arrow.up")
+                                }
+                                .padding(.bottom, 1)
                             }
                             
                         }
@@ -483,8 +399,5 @@ struct ReadView: View {
 //}
 
 
-#Preview {
-    ReadView(id: "10", userId: "", title: "", text: "ksdkdnksndkskdnnsksdfd", dateCreated: Date(), likesCount: 0, authorName: "test", isCheckmark: false, likedPosts: .constant([]), isChannelViewPresented: .constant(false))
-}
 
 

@@ -44,7 +44,21 @@ final class StorageManager {
     }
     
     func getFontSize() -> Int {
-        userDefaults.integer(forKey: "fontSize")
+        let fontSize = userDefaults.integer(forKey: "fontSize")
+        
+        if fontSize == 0 {
+            return 18
+        }
+        
+        return fontSize
+    }
+    
+    func getViewedPosts() -> [String] {
+        userDefaults.array(forKey: "viewedPosts") as? [String] ?? []
+    }
+    
+    func setViewedPosts(_ posts: [String]) {
+        userDefaults.set(posts, forKey: "viewedPosts")
     }
     
     func setFont(size: Int) {
@@ -61,5 +75,21 @@ final class StorageManager {
     
     func getText() -> String {
         userDefaults.string(forKey: "createText") ?? ""
+    }
+    
+    func save(views: [String]) {
+        userDefaults.set(views, forKey: "views")
+    }
+    
+    func getViews() -> [String] {
+        userDefaults.array(forKey: "views") as? [String] ?? []
+    }
+    
+    func set(fcmToken: String) {
+        userDefaults.set(fcmToken, forKey: "fcmToken")
+    }
+    
+    func getFcmToken() -> String {
+        userDefaults.string(forKey: "fcmToken") ?? ""
     }
 }

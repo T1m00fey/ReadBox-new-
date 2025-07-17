@@ -21,6 +21,10 @@ final class SignUpViewModel: ObservableObject {
     
     @Published private(set) var user: DBUser? = nil
     
+    let privacyText = StorageManager.shared.getLanguage() == "en"
+    ? "By using this application, you agree to the [terms of use](https://readbox-links.online/terms.html) and [privacy policy](https://readbox-links.online/privacy.html) regarding the processing of personal data by this application."
+    : "Используя данное приложение, вы соглашаетесь с [условиями использования](https://readbox-links.online/terms.html) и [политикой конфиденциальности](https://readbox-links.online/privacy.html), касающейся обработки персональных данных этим приложением."
+    
     func signUp() async throws {
         guard !emailText.isEmpty, !passwordText.isEmpty else {
             print("No email or password found.")

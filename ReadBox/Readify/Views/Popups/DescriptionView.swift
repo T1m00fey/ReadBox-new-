@@ -47,10 +47,11 @@ struct DescriptionView: View {
                     
                     Text(LocalizedStringKey("readButton"))
                         .font(.title2)
+                        .foregroundStyle(Color(uiColor: .label))
                 }
             }
             .padding(.top, 20)
-            .padding(.bottom, 100)
+            .padding(.bottom, 50)
         }
         .frame(width: UIScreen.main.bounds.width)
         .frame(minHeight: 100)

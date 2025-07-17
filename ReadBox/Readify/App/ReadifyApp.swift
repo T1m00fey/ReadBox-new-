@@ -48,8 +48,21 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
     
     @objc func messaging(_ messaging: Messaging, didReceiveRegistrationToken fcmToken: String?) {
         print("Firebase token: \(String(describing: fcmToken))")
-        Messaging.messaging().subscribe(toTopic: Locale.preferredLanguages.first?.components(separatedBy: "-").first ?? "en")
+        
+        let originalLanguage = StorageManager.shared.getLanguage()
+        
+        print("Original language: \(originalLanguage)")
+        
+        StorageManager.shared.set(fcmToken: fcmToken ?? "")
+        
+        Messaging.messaging().subscribe(toTopic: originalLanguage)
+        Messaging.messaging().unsubscribe(
+            fromTopic: originalLanguage == "en"
+            ? "ru"
+            : "en"
+        )
     }
+    
 }
 
 
@@ -58,7 +71,6 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
 @main
 struct YourApp: App {
     
-    // Регистрируем AppDelegate для Firebase
     @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
     @Environment(\.scenePhase) private var scenePhase
     
@@ -70,7 +82,9 @@ struct YourApp: App {
                         // Пример: установка языка в зависимости от системы
                         DispatchQueue.main.async {
                             StorageManager.shared.setLanguage(
-                                to: Locale.preferredLanguages.first?.components(separatedBy: "-").first ?? "en"
+                                to: Locale.preferredLanguages.first?.components(separatedBy: "-").first == "ru"
+                                    ? "ru"
+                                    : "en"
                             )
                         }
                         
@@ -78,8 +92,7 @@ struct YourApp: App {
                         let db = Firestore.firestore()
                         db.clearPersistence()
                     }
-                    .onChange(of: scenePhase) { newValue in
-                        // При сворачивании/завершении приложения можно снова очистить кеш
+                    .onChange(of: scenePhase) {
                         if scenePhase == .inactive || scenePhase == .background {
                             let db = Firestore.firestore()
                             db.clearPersistence()
@@ -87,5 +100,6 @@ struct YourApp: App {
                     }
             }
         }
+        
     }
 }

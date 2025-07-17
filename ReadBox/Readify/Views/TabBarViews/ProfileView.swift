@@ -14,7 +14,7 @@ struct ProfileView: View {
     
     @StateObject var viewModel = ProfileViewModel()
     
-    @State private var isPremiumViewPresented = false
+    @Environment(\.dismiss) var dismiss
     
     var body: some View {
         NavigationStack {
@@ -23,13 +23,6 @@ struct ProfileView: View {
                     .ignoresSafeArea()
                 ScrollView {
                     VStack {
-//                        HStack(spacing: 20) {
-//                            daysWithApp
-//                            
-//                            articlesRead
-//                        }
-//                        .padding(.top, 20)
-                        
                         VStack {
                             Text(LocalizedStringKey("settingsLabel"))
                                 .font(.title)
@@ -38,39 +31,6 @@ struct ProfileView: View {
                                 .frame(width: UIScreen.main.bounds.width - 32, alignment: .leading)
                             
                             if let _ = viewModel.user {
-//                                Button {
-////                                    isPremiumViewPresented = true
-//                                    let domain = Bundle.main.bundleIdentifier!
-//                                    UserDefaults.standard.removePersistentDomain(forName: domain)
-//                                    UserDefaults.standard.synchronize()
-//                                } label: {
-//                                    ZStack {
-//                                        RoundedRectangle(cornerRadius: 20)
-//                                            .foregroundStyle(Color(uiColor: .secondarySystemBackground))
-//                                            .shadow(radius: 2)
-//                                        
-//                                        HStack {
-//                                            Image(systemName: "crown")
-//                                            
-//                                            Spacer()
-//                                            
-//                                            Text("Premium")
-//                                                .font(.title)
-//                                                .fontWeight(.light)
-//                                                .fontDesign(.rounded)
-//                                            
-//                                            Spacer()
-//                                            
-//                                            Image(systemName: "crown")
-//                                        }
-//                                        .padding(.horizontal, 16)
-//                                    }
-//                                }
-//                                .navigationDestination(isPresented: $isPremiumViewPresented, destination: {
-//                                    
-//                                })
-//                                .frame(width: UIScreen.main.bounds.width - 32, height: 60)
-                                
                                 NavigationLink(destination: NewNameView(isSuccessPopupPresented: $viewModel.isSuccessPopupPresented, successText: $viewModel.successText, userID: viewModel.user?.userId)) {
                                     ZStack {
                                         RoundedRectangle(cornerRadius: 20)
@@ -302,7 +262,13 @@ struct ProfileView: View {
                                                 .fontWeight(.light)
                                                 .fontDesign(.rounded)
                                             
-                                            LoadingIndicator(animation: .circleRunner, color: Color(uiColor: .label), size: .small, speed: .fast)
+                                            if viewModel.isLoading {
+                                                LoadingIndicator(
+                                                    animation: .circleRunner,
+                                                    color: Color(uiColor: .label),
+                                                    size: .small, speed: .fast
+                                                )
+                                            }
                                         }
                                     }
                                 }
@@ -313,6 +279,19 @@ struct ProfileView: View {
                         }
                     }
                     .onAppear {
+                        if viewModel.isLoading {
+                            viewModel.isLoading = false
+                            
+                            Task {
+                                viewModel.isLoading = true
+                            }
+                        }
+                        
+                        if viewModel.isNeedToReload {
+                            viewModel.reload()
+                            viewModel.isNeedToReload = false
+                        }
+                        
                         if viewModel.user == nil {
                             Task {
                                 try? await viewModel.loadCurrentUser()
@@ -322,12 +301,11 @@ struct ProfileView: View {
                 }
                 .padding(.top, 20)
                 .refreshable {
-                    Task {
-                        try? await viewModel.loadCurrentUser()
-                    }
-                    
-                    withAnimation {
-                        viewModel.isLoading = false
+                    viewModel.reload()
+                }
+                .onChange(of: isSignInViewPresented) {
+                    if !isSignInViewPresented {
+                        viewModel.reload()
                     }
                 }
                 .popup(isPresented: $viewModel.isErrorPopupPresented) {
@@ -372,8 +350,8 @@ struct ProfileView: View {
                     Button(LocalizedStringKey("signOutLabel"), role:.destructive) {
                         Task {
                             do {
-                                try viewModel.signOut()
-                                isSignInViewPresented.toggle()
+                                try await viewModel.signOut()
+                                isSignInViewPresented = true
                                 return
                             } catch {
                                 withAnimation {
@@ -405,6 +383,11 @@ struct ProfileView: View {
                         .animation(.bouncy)
                         .dragToDismiss(true)
                         .autohideIn(5)
+                }
+                .onChange(of: isSignInViewPresented) {
+                    if !isSignInViewPresented {
+                        viewModel.isNeedToReload = true
+                    }
                 }
                 .popup(isPresented: $viewModel.isMemorySettingsPopupPresented) {
                     MemorySettingsView(
@@ -449,10 +432,6 @@ struct ProfileView: View {
             }
         }
     }
-}
-
-#Preview {
-    ProfileView(isSignInViewPresented: .constant(false))
 }
 
 private extension ProfileView {

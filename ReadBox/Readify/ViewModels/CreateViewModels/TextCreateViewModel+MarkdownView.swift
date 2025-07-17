@@ -84,6 +84,7 @@ final class TextCreateViewModel: ObservableObject {
     @Published var isErrorPopupPresented = false
     @Published var errorText = ""
     @Published var heightOfTE: CGFloat = UIScreen.main.bounds.height - 300
+    @Published var isLoading = false
     
     let fonts: [String: [String]] = [
         NSLocalizedString("titleLabel", comment: ""): ["1", "2", ""]
@@ -277,13 +278,21 @@ final class TextCreateViewModel: ObservableObject {
         }
     }
     
-    func addNewPost(title: String, description: String, text: String, image: UIImage, isArchive: Bool) async throws {
+    func addNewPost(
+        title: String,
+        description: String,
+        text: String,
+        image: UIImage,
+        isArchive: Bool,
+        uploadingLanguage: String
+    ) async throws {
         try await ArticlesManager.shared.addNewPost(
             title: title,
             description: description,
             text: text,
             image: image,
-            isArchive: isArchive
+            isArchive: isArchive,
+            uploadingLanguage: uploadingLanguage
         )
     }
     

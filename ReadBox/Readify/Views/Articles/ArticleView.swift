@@ -16,6 +16,9 @@ struct ArticleView: View {
     let isArchive: Bool
     
     @State private var image: UIImage? = nil
+    @State private var isExpanded = false
+    
+    private let maxTitleLen = 150
     
     private func fetchImage() {
         let articleImage = StorageManager.shared.getImage(id: id)
@@ -35,7 +38,6 @@ struct ArticleView: View {
                     if let error = error {
                         print(error .localizedDescription)
                     } else {
-                        // Data for "images/island.jpg" is returned
                         withAnimation {
                             self.image = UIImage(data: data!)
                             StorageManager.shared.saveImage(id: id, image: image ?? UIImage())
@@ -57,9 +59,10 @@ struct ArticleView: View {
                 
                 HStack(spacing: 0) {
                     Text(authorName)
-                        .font(.title2)
+                        .font(.system(size: 21))
                         .fontDesign(.rounded)
                         .padding(.vertical, 20)
+                        .lineLimit(1)
                     
                     if isCheckmark {
                         Image(systemName: "checkmark.seal.fill")
@@ -91,13 +94,50 @@ struct ArticleView: View {
                     .frame(width: UIScreen.main.bounds.width - 10)
                     .shadow(radius: 2)
                 
-                VStack {
+                VStack(spacing: 0) {
                     Text(title)
-                        .font(.title3)
+                        .font(.system(size: 19))
                         .fontDesign(.rounded)
+                        .lineLimit(!isExpanded && title.count >= maxTitleLen ? 3 : nil)
                         .frame(width: UIScreen.main.bounds.width - 42, alignment: .leading)
                         .padding(.vertical, 20)
+                        .padding(.bottom, !isExpanded && title.count >= maxTitleLen ? 17 : 0)
+                    
                 }
+                
+                ZStack {
+                    if !isExpanded && title.count >= maxTitleLen {
+                        RoundedRectangle(cornerRadius: 30)
+                            .fill(
+                                LinearGradient(
+                                    gradient:
+                                        Gradient(
+                                            colors: [Color.clear, Color(.secondarySystemBackground)]
+                                        ),
+                                    startPoint: UnitPoint.top,
+                                    endPoint: .bottom
+                                )
+                            )
+                            .frame(width: UIScreen.main.bounds.width - 42, height: 50)
+                    }
+                    
+                    if !isExpanded && title.count >= maxTitleLen {
+                        Text(NSLocalizedString("expandButtonLabel", comment: ""))
+                            .font(.system(size: 16))
+                            .fontDesign(.rounded)
+                            .foregroundStyle(.gray)
+                            .frame(width: UIScreen.main.bounds.width - 42, alignment: .trailing)
+                            .padding(.horizontal, 20)
+                            .onTapGesture {
+                                withAnimation {
+                                    isExpanded = true
+                                }
+                            }
+                            .offset(y: 25)
+                    }
+                }
+                .offset(y: 15)
+
             }
             
         }
@@ -111,5 +151,5 @@ struct ArticleView: View {
 }
 
 #Preview {
-    ArticleView(id: "1", title: "", authorName: "", isCheckmark: false, isArchive: false)
+    ArticleView(id: "1", title: "TETSTETSTETSTETSTETSTETSTETSTETSTETSTETSTETSTETSTETSTETSTETSTETSTETSTETSTETSTETSTETSTETSTETSTETSTETSTETSTETSTETSTETSTETSTETSTETS", authorName: "Test", isCheckmark: false, isArchive: false)
 }

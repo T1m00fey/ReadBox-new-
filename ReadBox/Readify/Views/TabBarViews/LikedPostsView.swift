@@ -7,223 +7,11 @@
 
 import SwiftUI
 import SwiftfulLoadingIndicators
-
-@MainActor
-final class LikedPostsViewModel: ObservableObject {
-    @Published var isReadViewPresented = false
-    @Published var articles: [Article] = []
-    @Published var errorText = ""
-    @Published var isErrorPopupPresented = false
-    @Published var isDescriptionPopupPresented = false
-    @Published var user: DBUser? = nil
-    @Published var likedPosts: [String] = []
-    @Published var fromIndex = ""
-    @Published var authorsNames: [String: String] = [:]
-    @Published var authorsCheckmarks: [String: Bool] = [:]
-    @Published var indexesNeedToLoad: [String] = []
-    @Published var isLoading = true
-    @Published var isChannelViewPresented = false
-    @Published var postToView: Article? = nil
-    
-    
-    var description = ""
-    var title = ""
-    var image = UIImage()
-    var dateCreated = Date()
-    var text = ""
-    var likesCount = 0
-    var id = ""
-    var userId = ""
-    var authorId = ""
-    
-    func getArticle(id: String) async throws -> Article {
-        try await ArticlesManager.shared.getArticle(id: id)
-    }
-    
-    func getAuthorName(id: String) async throws -> String {
-        try await UserManager.shared.getUser(userId: id).authorName ?? ""
-    }
-    
-    func getAuthorIsCheckmarkStatus(id: String) async throws -> Bool {
-        try await UserManager.shared.getUser(userId: id).isCheckmark ?? false
-    }
-    
-    func loadUser() async throws {
-        let authDataResult = try AuthenticationManager.shared.getAuthenticatedUser()
-        let user = try await UserManager.shared.getUser(userId: authDataResult.uid)
-        
-        self.user = user
-    }
-    
-//    func getArticles() async throws {
-//        articles = []
-//        
-//        for index in likedPosts {
-//            do {
-//                articles.append(try await ArticlesManager.shared.getRuArticle(id: index))
-//            } catch {
-//                withAnimation {
-//                    errorText = NSLocalizedString("someArticlesNotFoundLabel", comment: "")
-//                    isErrorPopupPresented = true
-//                }
-//            }
-//        }
-//    }
-    
-//    func getArticles() async throws {
-//        var indexes = likedPosts
-//        var posts: [Article] = []
-//        var article = Article(id: "", dateCreated: nil, title: nil, text: nil, description: nil, likesCount: nil, isArchive: nil, authorId: nil, viewsCount: nil, originalLanguage: nil)
-//        
-//        print(indexes)
-//        
-//        if indexes.count > 0 {
-//            do {
-//                article = try await ArticlesManager.shared.getArticle(id: indexes[2])
-//                
-//                withAnimation {
-//                    posts.append(article)
-//                }
-//            } catch {
-//                withAnimation {
-//                    posts.append(
-//                        Article(
-//                            id: indexes[0],
-//                            dateCreated: nil,
-//                            title: NSLocalizedString("articleErrorLabel", comment: ""),
-//                            text: nil,
-//                            description: nil,
-//                            likesCount: nil,
-//                            isArchive: nil,
-//                            authorId: nil,
-//                            viewsCount: nil,
-//                            originalLanguage: nil
-//                        )
-//                    )
-//                    
-//                    let index = indexes[0]
-//                    
-//                    indexes.removeAll { $0 == index }
-//                    loadedPostsCount += 1
-//                }
-//            }
-//        }
-//        
-//        print(posts)
-//        
-//        for index in likedPosts {
-//            if loadedPostsCount % 20 != 0 {
-//                do {
-//                    article = try await ArticlesManager.shared.getArticle(id: index)
-//                    withAnimation {
-//                        posts.append(article)
-//                        indexes.removeAll { $0 == index }
-//                    }
-//                    
-//                    loadedPostsCount += 1
-//                    print("We here!")
-//                } catch {
-//                    withAnimation {
-//                        posts.append(
-//                            Article(
-//                                id: "",
-//                                dateCreated: nil,
-//                                title: NSLocalizedString("articleErrorLabel", comment: ""),
-//                                text: nil,
-//                                description: nil,
-//                                likesCount: nil,
-//                                isArchive: nil,
-//                                authorId: nil,
-//                                viewsCount: nil,
-//                                originalLanguage: nil
-//                            )
-//                        )
-//                        
-//                        indexes.removeAll { $0 == index }
-//                        loadedPostsCount += 1
-//                    }
-//                }
-//            }
-//        }
-//        
-//        posts.reverse()
-//        likedPosts = indexes
-//        articles = posts
-//        
-//        print(articles)
-//    }
-    
-    func getArticles() async throws {
-        var indexesToAdd: [String] = []
-        var postsToAdd: [Article] = []
-        var article = Article(id: "", dateCreated: nil, title: nil, text: nil, description: nil, likesCount: nil, isArchive: nil, authorId: nil, viewsCount: nil, originalLanguage: nil)
-        
-        var count = 0
-        
-        for index in indexesNeedToLoad {
-            if count < 20 {
-                indexesToAdd.append(index)
-                count += 1
-            }
-        }
-        
-        count = 0
-        
-        for index in indexesToAdd {
-            do {
-                article = try await ArticlesManager.shared.getArticle(id: index)
-    
-                if article.isArchive ?? true {
-                    postsToAdd.append(
-                        Article(
-                            id: index,
-                            dateCreated: article.dateCreated,
-                            title: NSLocalizedString("archiveArticleLabel", comment: ""),
-                            text: "",
-                            description: "",
-                            likesCount: article.likesCount,
-                            isArchive: article.isArchive,
-                            authorId: article.authorId,
-                            viewsCount: article.viewsCount,
-                            originalLanguage: article.originalLanguage
-                        )
-                    )
-                } else {
-                    postsToAdd.append(article)
-                }
-            } catch {
-                article = Article(
-                    id: index,
-                    dateCreated: nil,
-                    title: NSLocalizedString("articleErrorLabel", comment: ""),
-                    text: "",
-                    description: "",
-                    likesCount: 0,
-                    isArchive: false,
-                    authorId: nil,
-                    viewsCount: 0,
-                    originalLanguage: StorageManager.shared.getLanguage()
-                )
-                
-                postsToAdd.append(article)
-            }
-            
-            indexesNeedToLoad.removeAll { $0 == index }
-        }
-        
-        withAnimation {
-            isLoading = false
-        }
-        
-        for post in postsToAdd.reversed() {
-            withAnimation {
-                articles.append(post)
-            }
-        }
-    }
-}
+import Shimmer
 
 struct LikedPostsView: View {
+    @Binding var isSignInViewPresented: Bool
+    
     @StateObject var viewModel = LikedPostsViewModel()
     
     var body: some View {
@@ -234,9 +22,9 @@ struct LikedPostsView: View {
                 
                 VStack {
                     
-                    if viewModel.isLoading {
+                    if viewModel.isLoadingShowed {
                         
-                        ForEach(0..<7) { _ in
+                        ForEach(0..<5) { _ in
                             ArticleView(
                                 id: "-1",
                                 title: "Hello, World!",
@@ -247,9 +35,10 @@ struct LikedPostsView: View {
                             .redacted(reason: .placeholder)
                             .padding(.top, 30)
                             .padding(.horizontal)
+                            .shimmering()
                         }
                         
-                    } else if viewModel.articles == [] {
+                    } else if viewModel.articles == [] && !viewModel.isLoading {
                         
                         VStack(spacing: 20) {
                             
@@ -264,6 +53,8 @@ struct LikedPostsView: View {
                                 .fontDesign(.rounded)
                                 .foregroundStyle(Color.gray)
                                 .multilineTextAlignment(.center)
+                                .lineLimit(2)
+                                .padding(.horizontal, 32)
                         }
                         .frame(height: UIScreen.main.bounds.height - 200, alignment: .center)
                         
@@ -279,68 +70,14 @@ struct LikedPostsView: View {
                             .padding(.top, 30)
                             .padding(.horizontal)
                             .onAppear {
-                                if !viewModel.authorsNames.keys.contains(article.authorId ?? "") && article.authorId != nil {
-                                    Task {
-                                        do {
-                                            viewModel.authorsNames[article.authorId ?? ""] = try await viewModel.getAuthorName(id: article.authorId ?? "")
-                                            viewModel.authorsCheckmarks[article.authorId ?? ""] = try await viewModel.getAuthorIsCheckmarkStatus(id: article.authorId ?? "")
-                                        } catch {
-//                                            withAnimation {
-//                                                viewModel.errorText = error.localizedDescription
-//                                                viewModel.isErrorPopupPresented = true
-//                                            }
-                                        }
-                                    }
-                                }
+                                viewModel.onPostAppearing(article)
                             }
                             .onTapGesture {
-                                viewModel.description = article.description ?? NSLocalizedString("notFoundLabel", comment: "")
-                                viewModel.title = article.title ?? NSLocalizedString("notFoundLabel", comment: "")
-                                viewModel.text = article.text ?? NSLocalizedString("notFoundLabel", comment: "")
-                                viewModel.image = StorageManager.shared.getImage(id: article.id) ?? UIImage()
-                                viewModel.dateCreated = article.dateCreated ?? Date()
-                                viewModel.likesCount = article.likesCount ?? 0
-                                viewModel.id = article.id
-                                viewModel.authorId = article.authorId ?? ""
-                                
-                                if article.isArchive ?? true {
-                                    viewModel.image = UIImage()
-                                }
-                                
-                                if viewModel.user != nil {
-                                    if viewModel.userId == "" {
-                                        viewModel.userId = viewModel.user?.userId ?? ""
-                                    }
-                                    
-                                    if viewModel.description == "" {
-                                        viewModel.isReadViewPresented = true
-                                        
-                                        if !((viewModel.user?.createdPosts ?? [viewModel.id]).contains(viewModel.id)) {
-                                            Task {
-                                                do {
-                                                    try await ArticlesManager.shared.updateViews(at: viewModel.id)
-                                                } catch {
-//                                                    withAnimation {
-//                                                        viewModel.errorText = error.localizedDescription
-//                                                        viewModel.isErrorPopupPresented = true
-//                                                    }
-                                                }
-                                            }
-                                        }
-
-                                    } else {
-                                        viewModel.isDescriptionPopupPresented = true
-                                    }
-                                } else {
-                                    withAnimation {
-                                        viewModel.errorText = NSLocalizedString("loadDataErrorText", comment: "")
-                                        viewModel.isErrorPopupPresented = true
-                                    }
-                                }
+                                viewModel.tapGestureHandler(on: article)
                             }
                         }
                         
-                        if viewModel.indexesNeedToLoad.count > 0 {
+                        if viewModel.indexesNeedToLoad.count > 0 && !viewModel.isLoading {
                             Button {
                                 Task {
                                     do {
@@ -383,124 +120,65 @@ struct LikedPostsView: View {
             }
             .padding(.top, 10)
             .refreshable {
-                viewModel.isLoading = true
-                viewModel.likedPosts = []
-                viewModel.articles = []
-                viewModel.user = nil
-                viewModel.authorsNames = [:]
-                viewModel.authorsCheckmarks = [:]
-                
-                Task {
-                    try? await viewModel.loadUser()
-                }
-            }
-            .onChange(of: viewModel.likedPosts, perform: { newValue in
-                if viewModel.likedPosts != [] {
-                    Task {
-                        do {
-                            viewModel.indexesNeedToLoad = viewModel.likedPosts
-                            try await viewModel.getArticles()
-                            return
-                        } catch {
-//                            withAnimation {
-//                                viewModel.errorText = error.localizedDescription
-//                            }
-                        }
-                        
-//                        viewModel.isErrorPopupPresented = true
-                    }
-                } else {
-                    viewModel.articles = []
-                }
-            })
-            .popup(isPresented: $viewModel.isDescriptionPopupPresented) {
-                DescriptionView(
-                    isReadViewPresented: $viewModel.isReadViewPresented,
-                    errorText: $viewModel.errorText,
-                    isErrorPopupPresented: $viewModel.isErrorPopupPresented,
-                    id: viewModel.id,
-                    description: viewModel.description
-                )
-                .shadow(radius: 3)
-            } customize: {
-                $0
-                    .type(.toast)
-                    .appearFrom(.bottomSlide)
-                    .dragToDismiss(true)
+                viewModel.reload()
             }
             .fullScreenCover(isPresented: $viewModel.isReadViewPresented, content: {
                 ReadView(
                     id: viewModel.id,
-                    userId: viewModel.userId,
                     title: viewModel.title,
                     text: viewModel.text,
                     dateCreated: viewModel.dateCreated,
                     likesCount: viewModel.likesCount,
+                    authorId: viewModel.authorId,
                     authorName: viewModel.authorsNames[viewModel.authorId] ?? "",
                     isCheckmark: viewModel.authorsCheckmarks[viewModel.authorId] ?? false,
+                    isArchive: viewModel.isArchive,
+                    user: $viewModel.user,
                     likedPosts: $viewModel.likedPosts,
                     isChannelViewPresented: $viewModel.isChannelViewPresented
                 )
             })
             .fullScreenCover(isPresented: $viewModel.isChannelViewPresented, content: {
                 ChannelView(
+                    user: $viewModel.user,
                     authorId: viewModel.authorId,
                     authorName: viewModel.authorsNames[viewModel.authorId] ?? NSLocalizedString("notFoundLabel", comment: ""),
                     isCheckmark: viewModel.authorsCheckmarks[viewModel.authorId] ?? false,
-                    postToView: $viewModel.postToView
+                    postToView: $viewModel.postToView,
+                    postToRead: $viewModel.postToRead
                 )
             })
-            .onChange(of: viewModel.postToView) { newValue in
-                viewModel.id = viewModel.postToView?.id ?? ""
-                viewModel.title = viewModel.postToView?.title ?? ""
-                viewModel.text = viewModel.postToView?.text ?? ""
-                viewModel.dateCreated = viewModel.postToView?.dateCreated ?? Date()
-                viewModel.likesCount = viewModel.postToView?.likesCount ?? 0
-                viewModel.authorId = viewModel.postToView?.authorId ?? ""
-                
-                viewModel.isReadViewPresented = true
-            }
-            .onChange(of: viewModel.isReadViewPresented) { newValue in
-                if !newValue {
-                    viewModel.postToView = nil
-                }
-            }
-            .popup(isPresented: $viewModel.isErrorPopupPresented) {
-                Text(viewModel.errorText)
-                    .frame(width: UIScreen.main.bounds.width - 72, alignment: .leading)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 16)
-                    .foregroundStyle(Color.white)
-                    .background(Color.red)
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
-                    .padding(.top, 20)
-            } customize: {
-                $0
-                    .type(.floater())
-                    .position(.top)
-                    .animation(.bouncy)
-                    .dragToDismiss(true)
-                    .autohideIn(5)
-            }
+            .makePopupsForLikedView(
+                viewModel: viewModel,
+                isErrorPopupPresented: $viewModel.isErrorPopupPresented,
+                isLoadingPopupPresented: $viewModel.isLoadingPopupPresented,
+                isDescriptionPopupPresented: $viewModel.isDescriptionPopupPresented,
+                isReadViewPresented: $viewModel.isReadViewPresented,
+                errorText: $viewModel.errorText
+            )
+            .trackChangesOnLikedPosts(
+                viewModel: viewModel,
+                isSignInViewPresented: isSignInViewPresented
+            )
             .onAppear {
+                if viewModel.isLoading {
+                    viewModel.isLoading = false
+                    
+                    Task {
+                        viewModel.isLoading = true
+                    }
+                }
+                
+                if viewModel.isNeedToReload {
+                    viewModel.reload()
+                    viewModel.isNeedToReload = false
+                    return
+                }
+                
                 if viewModel.user == nil {
                     Task {
                         try? await viewModel.loadUser()
                     }
-                }
-            }
-            .onChange(of: viewModel.user) { newValue in
-                viewModel.articles = []
-                
-                if viewModel.user?.likedPosts != nil {
-                    viewModel.likedPosts = viewModel.user?.likedPosts ?? []
-                    
-                    if viewModel.likedPosts.count == 0 {
-                        withAnimation {
-                            viewModel.isLoading = false
-                        }
-                    }
-                    
                 }
             }
             .toolbar {
@@ -521,10 +199,14 @@ struct LikedPostsView: View {
                             Text(LocalizedStringKey("favoritesLabel"))
                                 .font(.largeTitle)
                                 .fontWeight(.light)
-//                                .fontDesign(.rounded)
                             
                             if viewModel.isLoading {
-                                LoadingIndicator(animation: .circleRunner, color: Color(uiColor: .label), size: .small, speed: .fast)
+                                LoadingIndicator(
+                                    animation: .circleRunner,
+                                    color: Color(uiColor: .label),
+                                    size: .small,
+                                    speed: .fast
+                                )
                             }
                         }
                         .frame(width: UIScreen.main.bounds.width - 32, alignment: .leading)
@@ -533,6 +215,7 @@ struct LikedPostsView: View {
                 }
             }
         }
+        
     }
 }
 

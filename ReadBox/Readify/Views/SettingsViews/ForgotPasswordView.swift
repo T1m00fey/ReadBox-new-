@@ -44,9 +44,10 @@ struct ForgotPasswordView: View {
                                     .font(.title2)
                                     .focused($isEmailTFFocused)
                                     .textInputAutocapitalization(.never)
-                                    .onChange(of: viewModel.emailText) { _ in
+                                    .onChange(of: viewModel.emailText) {
                                         viewModel.isButtonEnable()
                                     }
+                                    .tint(Color(uiColor: .label))
                                 
                                 RoundedRectangle(cornerRadius: 0)
                                     .frame(width: UIScreen.main.bounds.width - 92, height: 2)

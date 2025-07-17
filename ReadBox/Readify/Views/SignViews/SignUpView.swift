@@ -9,7 +9,6 @@ import SwiftUI
 import SwiftfulLoadingIndicators
 
 struct SignUpView: View {
-    @Binding var isPresented: Bool
     @Binding var isSignInViewPresented: Bool
     
     @StateObject var viewModel = SignUpViewModel()
@@ -17,6 +16,8 @@ struct SignUpView: View {
     @FocusState var isFirstTFFocused: Bool
     @FocusState var isSecondTFFocused: Bool
     @FocusState var isThirdTFFocused: Bool
+    
+    @Environment(\.dismiss) var dismiss
     
     var body: some View {
         ZStack {
@@ -49,11 +50,12 @@ struct SignUpView: View {
                                     .font(.title2)
                                     .focused($isFirstTFFocused)
                                     .textInputAutocapitalization(.never)
-                                    .onChange(of: viewModel.nameText) { _ in
+                                    .onChange(of: viewModel.nameText) {
                                         if viewModel.emailText.count > 0 {
                                             viewModel.isSignUpButtonEnabled()
                                         }
                                     }
+                                    .tint(Color(uiColor: .label))
                                 
                                 RoundedRectangle(cornerRadius: 0)
                                     .frame(width: UIScreen.main.bounds.width - 92, height: 2)
@@ -66,11 +68,12 @@ struct SignUpView: View {
                                     .font(.title2)
                                     .focused($isSecondTFFocused)
                                     .textInputAutocapitalization(.never)
-                                    .onChange(of: viewModel.emailText) { _ in
+                                    .onChange(of: viewModel.emailText) {
                                         if viewModel.emailText.count > 0 {
                                             viewModel.isSignUpButtonEnabled()
                                         }
                                     }
+                                    .tint(Color(uiColor: .label))
                                 
                                 RoundedRectangle(cornerRadius: 0)
                                     .frame(width: UIScreen.main.bounds.width - 92, height: 2)
@@ -83,11 +86,12 @@ struct SignUpView: View {
                                     .font(.title2)
                                     .focused($isThirdTFFocused)
                                     .textInputAutocapitalization(.never)
-                                    .onChange(of: viewModel.passwordText) { _ in
+                                    .onChange(of: viewModel.passwordText) {
                                         if viewModel.emailText.count > 0 {
                                             viewModel.isSignUpButtonEnabled()
                                         }
                                     }
+                                    .tint(Color(uiColor: .label))
                                 
                                 RoundedRectangle(cornerRadius: 0)
                                     .frame(width: UIScreen.main.bounds.width - 92, height: 2)
@@ -110,7 +114,11 @@ struct SignUpView: View {
                     Task {
                         do {
                             try await viewModel.signUp()
+                            
                             isSignInViewPresented = false
+                            
+                            viewModel.isLoading = false
+                            
                             return
                         } catch {
                             print("Error: \(error.localizedDescription)")
@@ -146,7 +154,14 @@ struct SignUpView: View {
                     .shadow(radius: viewModel.isButtonEnable ? 2 : 0)
                 }
                 .disabled(!viewModel.isButtonEnable)
-                .padding(.top, 10)
+                
+                Text(.init(viewModel.privacyText))
+                    .font(.footnote)
+                    .frame(width: UIScreen.main.bounds.width - 20)
+                    .multilineTextAlignment(.center)
+                    .foregroundStyle(Color.gray)
+                    .padding(.top, 10)
+                    .ignoresSafeArea(.keyboard)
             }
             .popup(isPresented: $viewModel.isPopupPresented) {
                 Text(viewModel.errorText)
@@ -169,20 +184,23 @@ struct SignUpView: View {
                 Spacer()
                 
                 Button {
-                    isPresented = false
+                   dismiss()
                 } label: {
                     Text(LocalizedStringKey("signInLabel"))
                         .font(.title3)
                         .fontDesign(.rounded)
                         .underline()
                 }
-                .padding(.bottom, 20)
             }
+            .padding(.bottom, 20)
             .ignoresSafeArea(.keyboard)
+        }
+        .onDisappear {
+            isFirstTFFocused = false
+            isSecondTFFocused = false
+            isThirdTFFocused = false
         }
     }
 }
 
-#Preview {
-    SignUpView(isPresented: .constant(true), isSignInViewPresented: .constant(false))
-}
+

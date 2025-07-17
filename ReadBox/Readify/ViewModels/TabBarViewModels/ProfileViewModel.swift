@@ -23,9 +23,10 @@ final class ProfileViewModel: ObservableObject {
     @Published var isMoreSettingPopupPresented = false
     @Published var isMailViewPresented = false
     @Published var isLoading = true
+    @Published var isNeedToReload = false
     @Published var mailData = ComposeMailData(
         subject: "To the developer",
-         recipients: ["simply.develop@mail.ru"],
+         recipients: ["support@ireadbox.ru"],
          message: """
                     App: ReadBox
                     iOS: \(UIDevice.current.systemVersion)
@@ -49,8 +50,25 @@ final class ProfileViewModel: ObservableObject {
         }
     }
     
-    func signOut() throws {
+    func signOut() async throws {
+        try? await UserManager.shared.deleteFcmToken(from: user?.userId ?? "")
         try AuthenticationManager.shared.signOut()
+    }
+    
+    func reload() {
+        if !isLoading {
+            withAnimation {
+                isLoading = true
+            }
+        }
+        
+        Task {
+            try? await loadCurrentUser()
+        }
+        
+        withAnimation {
+            isLoading = false
+        }
     }
     
     func getDays(regDate: Date?) -> Int {
