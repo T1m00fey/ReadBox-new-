@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import _PhotosUI_SwiftUI
 
 struct MarkdownTextView: UIViewRepresentable {
     @Binding var text: String
@@ -63,7 +64,7 @@ struct MarkdownTextView: UIViewRepresentable {
 enum MarkdownType {
     case bold
     case italic
-    case header(level: Int)  // Заголовок с указанием уровня (1–6)
+    case header(level: Int)
     case code
     case strikethrough
     case blockquote
@@ -85,6 +86,7 @@ final class TextCreateViewModel: ObservableObject {
     @Published var errorText = ""
     @Published var heightOfTE: CGFloat = UIScreen.main.bounds.height - 300
     @Published var isLoading = false
+    @Published var imageItem: PhotosPickerItem? = nil
     
     let fonts: [String: [String]] = [
         NSLocalizedString("titleLabel", comment: ""): ["1", "2", ""]
@@ -275,6 +277,29 @@ final class TextCreateViewModel: ObservableObject {
                     selectedRange = NSRange(location: selectedRange.location, length: selectedRange.length + 1 + "](\(linkPlaceholder))".count)
                 }
             }
+        }
+    }
+    
+    func insertPhoto(postId: String) async {
+        guard let item = imageItem else { return }
+        
+        do {
+            guard let data = try? await item.loadTransferable(type: Data.self), let image = UIImage(data: data) else { return }
+            
+            let id = UUID().uuidString + postId
+            let url = try await ArticlesManager.shared.uploadImage(id: id, image: image)
+            
+            let markdown = "\n![](\(url))\n"
+            
+            if let range = Range(selectedRange, in: text) {
+                text.replaceSubrange(range, with: markdown)
+                let newLoc = selectedRange.location + markdown.count
+                selectedRange = NSRange(location: newLoc, length: 0)
+            }
+            
+            imageItem = nil
+        } catch {
+            print("ERROR TO UPLOAD IMAGE: \(error.localizedDescription)")
         }
     }
     

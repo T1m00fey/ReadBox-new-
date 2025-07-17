@@ -77,15 +77,6 @@ struct CreateView: View {
                                         .foregroundStyle(.gray)
                                         .frame(width: UIScreen.main.bounds.width - 36, alignment: .leading)
                                     
-//                                    Picker("", selection: $viewModel.languageSelection) {
-//                                        Text("Ru").tag("ru")
-//                                        Text("En").tag("en")
-//                                    }
-//                                    .pickerStyle(.segmented)
-//                                    .frame(width: UIScreen.main.bounds.width - 32, height: 40)
-//                                    .font(.system(size: 22, weight: .medium))
-//                                    .foregroundStyle(Color(.secondarySystemBackground))
-                                    
                                     CustomSegmentedControl(selectedLanguage: $viewModel.languageSelection)
                                 }
                                 .padding(.top, 20)
@@ -316,9 +307,6 @@ struct CreateView: View {
                     viewModel.titleText = title
                     viewModel.image = image
                     viewModel.descriptionText = description
-                    
-                    print("HERE: \(description)")
-                    print("HERE: \(text)")
                 }
                 
                 if isEditing && description != "" {

@@ -81,9 +81,9 @@
 "deletePostError" = "Couldn't delete the post";
 "becomeAuthorLabel" = "Become author";
 "addPostToFavoritesLabel" = "It is not possible to add a publication to favorites";
-"addPhotoLabel" = "Add photo";
+"addPhotoLabel" = "Add a cover";
 "addDescriptionLabel" = "Add description +";
-"removePhotoLabel" = "Remove photo";
+"removePhotoLabel" = "Delete the cover";
 "loadingLabel" = "Loading";
 "subscribeLabel" = "Subscribe +";
 "subscribersCountLabel" = "subscribers";

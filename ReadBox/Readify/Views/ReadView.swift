@@ -8,6 +8,7 @@
 import SwiftUI
 import PopupView
 import MarkdownUI
+import SwiftfulLoadingIndicators
 
 struct ReadView: View {
     
@@ -230,6 +231,7 @@ struct ReadView: View {
                             FontSize(CGFloat(viewModel.fontSize))
                         }
                         .markdownTheme(.gitHub)
+                        .markdownImageProvider(.asset)
                         .frame(width: UIScreen.main.bounds.width - 32, alignment: .topLeading)
                         .padding(.bottom, 50)
                         

@@ -160,4 +160,15 @@ final class ArticlesManager {
         
         try await Firestore.firestore().collection("maxIndex").document("0").updateData(data)
     }
+    
+    func uploadImage(id: String, image: UIImage) async throws -> String {
+        guard let imageData = image.jpegData(compressionQuality: 1) else { return "" }
+        
+        let ref = Storage.storage().reference().child("contentImages/\(id).jpg")
+        _ = try await ref.putDataAsync(imageData)
+        
+        let url = try await ref.downloadURL().absoluteString
+        print("URL: \(url)")
+        return url
+    }
 }

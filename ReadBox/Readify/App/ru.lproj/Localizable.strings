@@ -81,9 +81,9 @@
 "deletePostError" = "Не удалось удалить пост";
 "becomeAuthorLabel" = "Стать автором";
 "addPostToFavoritesLabel" = "Невозможно добавить публикацию в избранное ";
-"addPhotoLabel" = "Добавить фото";
+"addPhotoLabel" = "Добавить обложку";
 "addDescriptionLabel" = "Добавить описание +";
-"removePhotoLabel" = "Удалить фото";
+"removePhotoLabel" = "Удалить обложку";
 "loadingLabel" = "Загрузка";
 "subscribeLabel" = "Подписаться +";
 "subscribersCountLabel" = "подписчики";

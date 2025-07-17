@@ -9,6 +9,7 @@ import SwiftUI
 import MarkdownUI
 import PopupView
 import SwiftfulLoadingIndicators
+import _PhotosUI_SwiftUI
 
 struct TextCreateView: View {
     let id: String
@@ -28,7 +29,7 @@ struct TextCreateView: View {
     @FocusState var isTEFocused: Bool
     
     @Environment(\.dismiss) var dismiss
-    
+
     var body: some View {
         NavigationStack {
             ZStack {
@@ -41,10 +42,35 @@ struct TextCreateView: View {
                         
                         if viewModel.isPreviewShowed {
                             
-                            Markdown(
+                            MarkdownUI.Markdown(
                                 viewModel.text.normalizeEmptyLines()
                             )
                             .markdownTheme(.gitHub)
+                            .markdownImageProvider(
+                                   ClosureImageProvider { url in
+                                       AsyncImage(url: url) { phase in
+                                           switch phase {
+                                           case .success(let image):
+                                               image
+//                                                   .resizable()
+//                                                   .scaledToFit()
+                                                   .frame(width: UIScreen.main.bounds.width - 32)
+                                                   /*clipShape(RoundedRectangle(cornerRadius: 12))*/
+                                           case .empty:
+                                               LoadingIndicator(
+                                                animation: .circleRunner,
+                                                color: Color(.label),
+                                                size: .medium,
+                                                speed: .fast
+                                               )
+                                               .frame(width: UIScreen.main.bounds.width - 32, height: 100)
+                                               .background(Color(.secondarySystemBackground))
+                                           default:
+                                               EmptyView()
+                                           }
+                                       }
+                                   }
+                               )
                             .padding(.horizontal, 16)
                             .padding(.vertical, 16)
                             .frame(width: UIScreen.main.bounds.width - 10, alignment: .topLeading)
@@ -63,7 +89,6 @@ struct TextCreateView: View {
                                 )
                                 .focused($isTEFocused)
                                 .padding(.horizontal)
-                            
                         }
                         
                     }
@@ -83,6 +108,17 @@ struct TextCreateView: View {
                         Spacer()
                         
                         HStack {
+                            
+                            PhotosPicker(selection: $viewModel.imageItem, matching: .images) {
+                                Image(systemName: "photo.on.rectangle.angled")
+                                    .font(.system(size: 22))
+                                    .foregroundStyle(Color(.label))
+                                    .frame(width: 50, height: 50)
+                                    .background(Color(.secondarySystemBackground))
+                                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                                    .shadow(radius: 2)
+                            }
+                            
                             ZStack {
                                 RoundedRectangle(cornerRadius: 20)
                                     .foregroundStyle(Color(uiColor: .secondarySystemBackground))
@@ -194,7 +230,7 @@ struct TextCreateView: View {
                                 viewModel.isConfirmationViewPresented = true
                             } label: {
                                 Image(systemName: "arrow.right")
-                                    .font(.title2)
+                                    .font(.system(size: 22))
                                     .foregroundStyle(Color(uiColor: .systemBackground))
                                     .frame(width: 50, height: 50)
                                     .background(Color(uiColor: .label))
@@ -205,6 +241,11 @@ struct TextCreateView: View {
                         .frame(width: UIScreen.main.bounds.width - 32)
                         .padding(.bottom, 20)
                         
+                    }
+                    .onChange(of: viewModel.imageItem) {
+                        Task {
+                            await viewModel.insertPhoto(postId: id)
+                        }
                     }
                 }
             }
@@ -474,4 +515,18 @@ struct TextCreateView: View {
 //    }
 //}
 
+struct ClosureImageProvider<BodyView: View>: ImageProvider {
+    typealias Body = BodyView
+
+    private let builder: (URL?) -> BodyView
+
+    init(_ builder: @escaping (URL?) -> BodyView) {
+        self.builder = builder
+    }
+
+    @ViewBuilder
+    func makeImage(url: URL?) -> BodyView {
+        builder(url)
+    }
+}
 
