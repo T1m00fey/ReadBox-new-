@@ -289,7 +289,7 @@ final class TextCreateViewModel: ObservableObject {
             let id = UUID().uuidString + postId
             let url = try await ArticlesManager.shared.uploadImage(id: id, image: image)
             
-            let markdown = "\n![](\(url))\n"
+            let markdown = "\n\n![](\(url))\n\n"
             
             if let range = Range(selectedRange, in: text) {
                 text.replaceSubrange(range, with: markdown)
