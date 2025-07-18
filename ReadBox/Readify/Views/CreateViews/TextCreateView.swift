@@ -42,35 +42,15 @@ struct TextCreateView: View {
                         
                         if viewModel.isPreviewShowed {
                             
-                            MarkdownUI.Markdown(
+                            Markdown(
                                 viewModel.text.normalizeEmptyLines()
                             )
                             .markdownTheme(.gitHub)
-                            .markdownImageProvider(
-                                   ClosureImageProvider { url in
-                                       AsyncImage(url: url) { phase in
-                                           switch phase {
-                                           case .success(let image):
-                                               image
-//                                                   .resizable()
-//                                                   .scaledToFit()
-                                                   .frame(width: UIScreen.main.bounds.width - 32)
-                                                   /*clipShape(RoundedRectangle(cornerRadius: 12))*/
-                                           case .empty:
-                                               LoadingIndicator(
-                                                animation: .circleRunner,
-                                                color: Color(.label),
-                                                size: .medium,
-                                                speed: .fast
-                                               )
-                                               .frame(width: UIScreen.main.bounds.width - 32, height: 100)
-                                               .background(Color(.secondarySystemBackground))
-                                           default:
-                                               EmptyView()
-                                           }
-                                       }
-                                   }
-                               )
+                            .markdownBlockStyle(\.image) { configuration in
+                                configuration.label
+                                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                                    .frame(width: UIScreen.main.bounds.width - 32)
+                            }
                             .padding(.horizontal, 16)
                             .padding(.vertical, 16)
                             .frame(width: UIScreen.main.bounds.width - 10, alignment: .topLeading)
@@ -514,19 +494,3 @@ struct TextCreateView: View {
 //        uiView.attributedText = md.attributedString()
 //    }
 //}
-
-struct ClosureImageProvider<BodyView: View>: ImageProvider {
-    typealias Body = BodyView
-
-    private let builder: (URL?) -> BodyView
-
-    init(_ builder: @escaping (URL?) -> BodyView) {
-        self.builder = builder
-    }
-
-    @ViewBuilder
-    func makeImage(url: URL?) -> BodyView {
-        builder(url)
-    }
-}
-

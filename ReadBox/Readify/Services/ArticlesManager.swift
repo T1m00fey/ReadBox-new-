@@ -162,13 +162,12 @@ final class ArticlesManager {
     }
     
     func uploadImage(id: String, image: UIImage) async throws -> String {
+        let storage = Storage.storage()
+        let ref = storage.reference(withPath: "contentImages/\(id).jpg")
+        
         guard let imageData = image.jpegData(compressionQuality: 1) else { return "" }
+        ref.putData(imageData)
         
-        let ref = Storage.storage().reference().child("contentImages/\(id).jpg")
-        _ = try await ref.putDataAsync(imageData)
-        
-        let url = try await ref.downloadURL().absoluteString
-        print("URL: \(url)")
-        return url
+        return try await ref.downloadURL().absoluteString
     }
 }

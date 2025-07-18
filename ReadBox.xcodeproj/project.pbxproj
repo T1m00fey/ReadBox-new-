@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		5258435D2E2A6BA000EF34F2 /* SDWebImageSwiftUI in Frameworks */ = {isa = PBXBuildFile; productRef = 5258435C2E2A6BA000EF34F2 /* SDWebImageSwiftUI */; };
 		C46E2CCB2E0861A4008B4BB2 /* Shimmer in Frameworks */ = {isa = PBXBuildFile; productRef = C46E2CCA2E0861A4008B4BB2 /* Shimmer */; };
 		C49684412DABF0E0004ED3AB /* PopupView in Frameworks */ = {isa = PBXBuildFile; productRef = C49684402DABF0E0004ED3AB /* PopupView */; };
 		C49684442DABF0F0004ED3AB /* SwiftfulLoadingIndicators in Frameworks */ = {isa = PBXBuildFile; productRef = C49684432DABF0F0004ED3AB /* SwiftfulLoadingIndicators */; };
@@ -51,6 +52,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				5258435D2E2A6BA000EF34F2 /* SDWebImageSwiftUI in Frameworks */,
 				C49684532DABF200004ED3AB /* FirebaseMessaging in Frameworks */,
 				C49684472DABF112004ED3AB /* MarkdownUI in Frameworks */,
 				C49684552DABF20B004ED3AB /* FirebaseStorage in Frameworks */,
@@ -123,6 +125,7 @@
 				C49684542DABF20B004ED3AB /* FirebaseStorage */,
 				C49684582DABF26F004ED3AB /* SwiftUIMailView */,
 				C46E2CCA2E0861A4008B4BB2 /* Shimmer */,
+				5258435C2E2A6BA000EF34F2 /* SDWebImageSwiftUI */,
 			);
 			productName = ReadBox;
 			productReference = C49683D52DABF067004ED3AB /* ReadBox.app */;
@@ -160,6 +163,7 @@
 				C49684482DABF1E4004ED3AB /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
 				C49684572DABF26F004ED3AB /* XCRemoteSwiftPackageReference "swiftui-mail-view" */,
 				C46E2CC92E0861A4008B4BB2 /* XCRemoteSwiftPackageReference "SwiftUI-Shimmer" */,
+				5258435B2E2A6BA000EF34F2 /* XCRemoteSwiftPackageReference "SDWebImageSwiftUI" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = C49683D62DABF067004ED3AB /* Products */;
@@ -411,6 +415,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		5258435B2E2A6BA000EF34F2 /* XCRemoteSwiftPackageReference "SDWebImageSwiftUI" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/SDWebImage/SDWebImageSwiftUI.git";
+			requirement = {
+				kind = exactVersion;
+				version = 3.1.3;
+			};
+		};
 		C46E2CC92E0861A4008B4BB2 /* XCRemoteSwiftPackageReference "SwiftUI-Shimmer" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/markiv/SwiftUI-Shimmer.git";
@@ -462,6 +474,11 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		5258435C2E2A6BA000EF34F2 /* SDWebImageSwiftUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 5258435B2E2A6BA000EF34F2 /* XCRemoteSwiftPackageReference "SDWebImageSwiftUI" */;
+			productName = SDWebImageSwiftUI;
+		};
 		C46E2CCA2E0861A4008B4BB2 /* Shimmer */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = C46E2CC92E0861A4008B4BB2 /* XCRemoteSwiftPackageReference "SwiftUI-Shimmer" */;
