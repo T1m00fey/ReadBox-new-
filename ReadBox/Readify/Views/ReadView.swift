@@ -9,6 +9,7 @@ import SwiftUI
 import PopupView
 import MarkdownUI
 import SwiftfulLoadingIndicators
+import SDWebImageSwiftUI
 
 struct ReadView: View {
     
@@ -224,16 +225,23 @@ struct ReadView: View {
                         .padding(.bottom, 30)
                         
                         Markdown(
-                            text.normalizeEmptyLines()
+                            self.text.normalizeEmptyLines()
+//                            """
+//                            You can tell a `Markdown` view to load images using a 3rd party library
+//                            by configuring an `ImageProvider`. This example uses
+//                            [**SDWebImage/SDWebImageSwiftUI**](https://github.com/SDWebImage/SDWebImageSwiftUI)
+//                            to enable animated GIF rendering.
+//
+//                            ![](https://firebasestorage.googleapis.com/v0/b/readify-403a6.appspot.com/o/images%2F11.jpg?alt=media&token=22e41776-c516-4413-87c1-d7abfffc30ea)
+//                            """
                         )
+                        .markdownImageProvider(.webImage)
                         .markdownTextStyle(\.text) {
                             FontSize(CGFloat(viewModel.fontSize))
                         }
                         .markdownTheme(.gitHub)
-                        .markdownImageProvider(.asset)
-                        .frame(width: UIScreen.main.bounds.width - 32, alignment: .topLeading)
+                        .frame(width: UIScreen.main.bounds.width - 32, height: 100, alignment: .topLeading)
                         .padding(.bottom, 50)
-                        
                     }
                     
                 }
