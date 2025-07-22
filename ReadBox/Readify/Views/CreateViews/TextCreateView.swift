@@ -10,6 +10,7 @@ import MarkdownUI
 import PopupView
 import SwiftfulLoadingIndicators
 import _PhotosUI_SwiftUI
+import PopupView
 
 struct TextCreateView: View {
     let id: String
@@ -43,14 +44,9 @@ struct TextCreateView: View {
                         if viewModel.isPreviewShowed {
                             
                             Markdown(
-                                viewModel.text.normalizeEmptyLines()
+                                viewModel.text.replacingOccurrences(of: "\n", with: "  \n").normalizeEmptyLines()
                             )
-                            .markdownTheme(.gitHub)
-                            .markdownBlockStyle(\.image) { configuration in
-                                configuration.label
-                                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                                    .frame(width: UIScreen.main.bounds.width - 32)
-                            }
+                            .markdownImageProvider(.webImage)
                             .padding(.horizontal, 16)
                             .padding(.vertical, 16)
                             .frame(width: UIScreen.main.bounds.width - 10, alignment: .topLeading)
@@ -74,6 +70,7 @@ struct TextCreateView: View {
                     }
                     
                 }
+                .background(Color(.systemBackground))
                 .onChange(of: isTEFocused) {
                     withAnimation {
                         viewModel.heightOfTE = isTEFocused ? 300 : UIScreen.main.bounds.height - 300
@@ -82,6 +79,23 @@ struct TextCreateView: View {
                 .onTapGesture {
                     isTEFocused = false
                 }
+                .popup(isPresented: $viewModel.isMediaControlViewPresented) {
+                    MediaControlView(
+                        postId: id,
+                        mediaURLs: $viewModel.mediaURLs,
+                        text: $viewModel.text,
+                        errorText: $viewModel.errorText,
+                        isErrorPopupPresented: $viewModel.isErrorPopupPresented,
+                        isErrorPopup: $viewModel.isErrorPopup
+                    )
+                        .shadow(radius: 2)
+                } customize: {
+                    $0
+                        .type(.toast)
+                        .appearFrom(.bottomSlide)
+                        .dragToDismiss(true)
+                }
+
                 
                 if !viewModel.isPreviewShowed {
                     VStack {
@@ -89,15 +103,16 @@ struct TextCreateView: View {
                         
                         HStack {
                             
-                            PhotosPicker(selection: $viewModel.imageItem, matching: .images) {
-                                Image(systemName: "photo.on.rectangle.angled")
-                                    .font(.system(size: 22))
-                                    .foregroundStyle(Color(.label))
-                                    .frame(width: 50, height: 50)
-                                    .background(Color(.secondarySystemBackground))
-                                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                                    .shadow(radius: 2)
-                            }
+                            Image(systemName: "photo.on.rectangle.angled")
+                                .font(.system(size: 22))
+                                .foregroundStyle(Color(.label))
+                                .frame(width: 50, height: 50)
+                                .background(Color(.secondarySystemBackground))
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                                .shadow(radius: 2)
+                                .onTapGesture {
+                                    viewModel.isMediaControlViewPresented.toggle()
+                                }
                             
                             ZStack {
                                 RoundedRectangle(cornerRadius: 20)
@@ -107,6 +122,17 @@ struct TextCreateView: View {
                                 
                                 ScrollView(.horizontal, showsIndicators: false) {
                                     HStack(spacing: 10) {
+                                        PhotosPicker(selection: $viewModel.imageItem, matching: .images) {
+                                            Image(systemName: "photo.badge.plus")
+                                                .font(.system(size: 20))
+                                                .foregroundStyle(Color(.label))
+                                                .frame(width: 40, height: 40)
+                                                .background(Color(.systemBackground))
+                                                .clipShape(RoundedRectangle(cornerRadius: 10))
+                                                .shadow(radius: 2)
+                                        }
+                                        .disabled(viewModel.isImageUploading)
+                                        
                                         Menu(NSLocalizedString("titleLabel", comment: "")) {
                                             ForEach(1..<7) { num in
                                                 Button {
@@ -124,74 +150,12 @@ struct TextCreateView: View {
                                         .clipShape(RoundedRectangle(cornerRadius: 10))
                                         .shadow(radius: 2)
                                         
-                                        Button("B") {
-                                            viewModel.toggleMarkdown(type: .bold)
+                                        ForEach(viewModel.markdownButtons, id: \.title) { (title, type) in
+                                            viewModel.configureMarkdownButton(
+                                                title: title,
+                                                type: type
+                                            )
                                         }
-                                        .font(.title2)
-                                        .fontDesign(.rounded)
-                                        .bold()
-                                        .frame(height: 40)
-                                        .padding(.horizontal)
-                                        .background(Color(uiColor: .systemBackground))
-                                        .clipShape(RoundedRectangle(cornerRadius: 10))
-                                        .shadow(radius: 2)
-                                        
-                                        
-                                        Button("I") {
-                                            viewModel.toggleMarkdown(type: .italic)
-                                        }
-                                        .font(.title2)
-                                        .fontDesign(.rounded)
-                                        .italic()
-                                        .frame(height: 40)
-                                        .padding(.horizontal)
-                                        .background(Color(uiColor: .systemBackground))
-                                        .clipShape(RoundedRectangle(cornerRadius: 10))
-                                        .shadow(radius: 2)
-                                        
-                                        Button(NSLocalizedString("quoteLabel", comment: "")) {
-                                            viewModel.toggleMarkdown(type: .blockquote)
-                                        }
-                                        .font(.title2)
-                                        .fontDesign(.rounded)
-                                        .frame(height: 40)
-                                        .padding(.horizontal)
-                                        .background(Color(uiColor: .systemBackground))
-                                        .clipShape(RoundedRectangle(cornerRadius: 10))
-                                        .shadow(radius: 2)
-                                        
-                                        Button(NSLocalizedString("strikeThroughLabel", comment: "")) {
-                                            viewModel.toggleMarkdown(type: .strikethrough)
-                                        }
-                                        .font(.title2)
-                                        .fontDesign(.rounded)
-                                        .frame(height: 40)
-                                        .padding(.horizontal)
-                                        .background(Color(uiColor: .systemBackground))
-                                        .clipShape(RoundedRectangle(cornerRadius: 10))
-                                        .shadow(radius: 2)
-                                        
-                                        Button(NSLocalizedString("codeLabel", comment: "")) {
-                                            viewModel.toggleMarkdown(type: .code)
-                                        }
-                                        .font(.title2)
-                                        .fontDesign(.rounded)
-                                        .frame(height: 40)
-                                        .padding(.horizontal)
-                                        .background(Color(uiColor: .systemBackground))
-                                        .clipShape(RoundedRectangle(cornerRadius: 10))
-                                        .shadow(radius: 2)
-                                        
-                                        Button(NSLocalizedString("linkLabel", comment: "")) {
-                                            viewModel.toggleMarkdown(type: .link)
-                                        }
-                                        .font(.title2)
-                                        .fontDesign(.rounded)
-                                        .frame(height: 40)
-                                        .padding(.horizontal)
-                                        .background(Color(uiColor: .systemBackground))
-                                        .clipShape(RoundedRectangle(cornerRadius: 10))
-                                        .shadow(radius: 2)
                                         
                                     }
                                     .padding(.vertical, 2)
@@ -217,6 +181,7 @@ struct TextCreateView: View {
                                     .clipShape(RoundedRectangle(cornerRadius: 12))
                                     .shadow(radius: 2)
                             }
+                            .disabled(viewModel.isImageUploading)
                         }
                         .frame(width: UIScreen.main.bounds.width - 32)
                         .padding(.bottom, 20)
@@ -224,7 +189,11 @@ struct TextCreateView: View {
                     }
                     .onChange(of: viewModel.imageItem) {
                         Task {
-                            await viewModel.insertPhoto(postId: id)
+                            do {
+                                try await viewModel.insertPhoto(postId: id)                                
+                            } catch {
+                                print("Error to upload photo: \(error.localizedDescription)")
+                            }
                         }
                     }
                 }
@@ -339,6 +308,7 @@ struct TextCreateView: View {
                                     viewModel.isLoading = false
                                     viewModel.errorText = error.localizedDescription
                                     viewModel.isErrorPopupPresented = true
+                                    viewModel.isErrorPopup = true
                                     
                                     return
                                 }
@@ -354,7 +324,7 @@ struct TextCreateView: View {
                             do {
                                 let userId = try AuthenticationManager.shared.getAuthenticatedUser().uid
                                 
-                                try await viewModel.addNewPost(
+                                let newId = try await viewModel.addNewPost(
                                     title: title,
                                     description: description,
                                     text: viewModel.text,
@@ -367,11 +337,10 @@ struct TextCreateView: View {
                                     postsCount += 1
                                     
                                     try await UserManager.shared.updatePostsCount(userId: userId, postsCount: postsCount)
-                                    let maxIndex = try await ArticlesManager.shared.getMaxIndex()
                                     
                                     posts.insert(
                                         PrePost(
-                                            id: maxIndex ?? "",
+                                            id: newId,
                                             title: title,
                                             authorId: userId,
                                             viewsCount: 0,
@@ -381,10 +350,9 @@ struct TextCreateView: View {
                                         at: 0
                                     )
                                 } else {
-                                    let maxIndex = try await ArticlesManager.shared.getMaxIndex()
                                     archivePosts.insert(
                                         PrePost(
-                                            id: maxIndex ?? "",
+                                            id: newId,
                                             title: title,
                                             authorId: userId,
                                             viewsCount: 0,
@@ -402,6 +370,7 @@ struct TextCreateView: View {
                                     viewModel.isLoading = true
                                     viewModel.errorText = error.localizedDescription
                                     viewModel.isErrorPopupPresented = true
+                                    viewModel.isErrorPopup = false
                                 }
                                 
                                 return
@@ -419,8 +388,8 @@ struct TextCreateView: View {
                     .frame(width: UIScreen.main.bounds.width - 72, alignment: .leading)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 16)
-                    .foregroundStyle(Color.white)
-                    .background(Color.red)
+                    .foregroundStyle(viewModel.isErrorPopup ? Color.white : Color(.label))
+                    .background(viewModel.isErrorPopup ? Color.red : Color(.secondarySystemBackground))
                     .clipShape(RoundedRectangle(cornerRadius: 10))
                     .padding(.top, 20)
             } customize: {
@@ -436,19 +405,50 @@ struct TextCreateView: View {
                     viewModel.navigationTitle = viewModel.getNavigationTitle(isEditing)
                 }
                 
+                let savedText = StorageManager.shared.getText()
+                viewModel.text = savedText == "" ? text : savedText
+                
                 if isEditing {
-                    viewModel.text = text
-                } else {
-                    viewModel.text = StorageManager.shared.getText()
+                    Task {
+                        do {
+                            viewModel.mediaURLs = try await ArticlesManager.shared.getMediaURLs(from: id)
+                        } catch {
+                            withAnimation {
+                                viewModel.errorText = error.localizedDescription
+                                viewModel.isErrorPopupPresented = true
+                                viewModel.isErrorPopup = false
+                            }
+                        }
+                    }
                 }
             }
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button {
-                        dismiss()
                         StorageManager.shared.save(text: viewModel.text)
+                        dismiss()
                     } label: {
                         Image(systemName: "arrow.left")
+                    }
+                    .disabled(viewModel.isImageUploading)
+                }
+                
+                ToolbarItem(placement: .principal) {
+                    if viewModel.isImageUploading {
+                        HStack(spacing: 10) {
+                            Text("Загружаем")
+                                .font(.system(size: 18))
+                            
+                            LoadingIndicator(
+                                animation: .circleRunner,
+                                color: Color(.label),
+                                size: .small,
+                                speed: .fast
+                            )
+                        }
+                    } else {
+                        Text(viewModel.getNavigationTitle(isEditing))
+                            .font(.system(size: 18))
                     }
                 }
                 
@@ -473,7 +473,6 @@ struct TextCreateView: View {
             }
             .navigationBarTitleDisplayMode(.inline)
             .navigationBarBackButtonHidden()
-            .navigationTitle(viewModel.navigationTitle)
         }
     }
 }

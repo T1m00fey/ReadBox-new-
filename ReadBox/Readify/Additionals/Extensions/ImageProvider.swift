@@ -28,7 +28,7 @@ struct WebImageProvider: ImageProvider {
                 speed: .fast
             )
             .frame(width: UIScreen.main.bounds.width - 32, height: 200)
-            .background(Color(.systemBackground))
+            .background(Color(.secondarySystemBackground))
             .clipShape(RoundedRectangle(cornerRadius: 16))
         }
         .onSuccess { _, _, _ in
@@ -37,7 +37,6 @@ struct WebImageProvider: ImageProvider {
         .onFailure(perform: { error in
             print("HERE: \(error.localizedDescription)")
         })
-        .indicator(.activity)
         .transition(.fade(duration: 0.5))
         .scaledToFit()
         .frame(width: UIScreen.main.bounds.width - 32)

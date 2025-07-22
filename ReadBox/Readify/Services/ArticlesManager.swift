@@ -115,12 +115,15 @@ final class ArticlesManager {
         image: UIImage,
         isArchive: Bool,
         uploadingLanguage: String
-    ) async throws {
-        guard let maxIndex = try await getMaxIndex() else { return }
-        let newMaxIndex = String((Int(maxIndex) ?? -2) + 1)
+    ) async throws -> String {
+//        guard let maxIndex = try await getMaxIndex() else { return }
+//        let newMaxIndex = String((Int(maxIndex) ?? -2) + 1)
+        
+        let ref = articlesCollection.document()
+        let newId = ref.documentID
         
         let data: [String: Any] = [
-            "id": newMaxIndex,
+            "id": newId,
             "likes_count": 0,
             "views_count": 0,
             "title": title,
@@ -132,19 +135,19 @@ final class ArticlesManager {
             "date_created": Date()
         ]
         
-        try await articlesCollection.document("\(newMaxIndex)").setData(data)
+        try await ref.setData(data)
         
         if image != UIImage() {
             let storage = Storage.storage()
-            let ref = storage.reference(withPath: "images/\(newMaxIndex).jpg")
-            guard let imageData = image.jpegData(compressionQuality: 1) else { return }
+            let ref = storage.reference(withPath: "images/\(newId).jpg")
+            guard let imageData = image.jpegData(compressionQuality: 1) else { return "" }
             
             ref.putData(imageData)
         }
         
-        try await UserManager.shared.updateCreatedPosts(newPost: newMaxIndex)
+//        try await UserManager.shared.updateCreatedPosts(newPost: newId)
         
-        try await updateMaxIndex(to: newMaxIndex)
+        return newId
     }
     
     func getMaxIndex() async throws -> String? {
@@ -161,13 +164,65 @@ final class ArticlesManager {
         try await Firestore.firestore().collection("maxIndex").document("0").updateData(data)
     }
     
-    func uploadImage(id: String, image: UIImage) async throws -> String {
+    func uploadImage(id: String, image: UIImage, folder: String) async throws -> String {
         let storage = Storage.storage()
-        let ref = storage.reference(withPath: "contentImages/\(id).jpg")
+        let ref = storage.reference(withPath: "\(folder)/\(id).jpg")
         
         guard let imageData = image.jpegData(compressionQuality: 1) else { return "" }
-        ref.putData(imageData)
+        _ = try await ref.putDataAsync(imageData)
         
         return try await ref.downloadURL().absoluteString
+    }
+    
+    func getCreatedPosts(userId: String, startAfter: DocumentSnapshot? = nil, isArchive: Bool = false) async throws -> ([PrePost?], DocumentSnapshot?) {
+        var query = Firestore.firestore()
+            .collection("articles")
+            .whereField("author_id", isEqualTo: userId)
+            .whereField("is_archive", isEqualTo: isArchive)
+            .order(by: "date_created", descending: true)
+            .limit(to: 20)
+        
+        if let last = startAfter {
+            query = query.start(afterDocument: last)
+        }
+        
+        let snapshot = try await query.getDocuments()
+        let posts: [PrePost?] = snapshot.documents.map { try? $0.data(as: PrePost.self) }
+        
+        return (posts, snapshot.documents.last)
+    }
+    
+    func getMediaURLs(from id: String) async throws -> [URL] {
+        let mediaURLs = try await articleDocument(id: id).getDocument(as: MediaURLs.self).mediaURLs
+        var URLs: [URL] = []
+        
+        mediaURLs?.forEach { url in
+            if let url = URL(string: url) {
+                URLs.append(url)
+            }
+        }
+        
+        return URLs
+    }
+    
+    func uploadMedia(url: String, to id: String) async throws {
+        let data: [String: Any] = [
+            "media_URLs": FieldValue.arrayUnion([url])
+        ]
+        
+        try await articleDocument(id: id).updateData(data)
+    }
+    
+    func removeMedia(url: String, from id: String) async throws {
+        let data: [String: Any] = [
+            "media_URLs": FieldValue.arrayRemove([url])
+        ]
+        
+        try await articleDocument(id: id).updateData(data)
+    }
+    
+    func deleteImage(url: URL) async throws {
+        let ref = Storage.storage().reference(forURL: url.absoluteString)
+        try await ref.delete()
     }
 }

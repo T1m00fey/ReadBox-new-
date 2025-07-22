@@ -89,9 +89,9 @@ final class UserManager {
         }
     }
     
-    func getAuthorsCreatedPosts(id: String) async throws -> [String]? {
-        try await userDocument(userId: id)?.getDocument(as: CreatedPosts.self).createdPosts
-    }
+//    func getAuthorsCreatedPosts(id: String) async throws -> [String]? {
+//        try await userDocument(userId: id)?.getDocument(as: CreatedPosts.self).createdPosts
+//    }
     
     func deleteCreatedPost(id: String) async throws {
         let userId = try? AuthenticationManager.shared.getAuthenticatedUser().uid
@@ -168,15 +168,15 @@ final class UserManager {
         try await userDocument(userId: userId)?.updateData(data)
     }
     
-    func updateCreatedPosts(newPost: String) async throws {
-        let userId = try? AuthenticationManager.shared.getAuthenticatedUser().uid
-        
-        let data: [String: Any] = [
-            "created_posts": FieldValue.arrayUnion([newPost])
-        ]
-        
-        try await userDocument(userId: userId ?? "")?.updateData(data)
-    }
+//    func updateCreatedPosts(newPost: String) async throws {
+//        let userId = try? AuthenticationManager.shared.getAuthenticatedUser().uid
+//        
+//        let data: [String: Any] = [
+//            "created_posts": FieldValue.arrayUnion([newPost])
+//        ]
+//        
+//        try await userDocument(userId: userId ?? "")?.updateData(data)
+//    }
     
     func un_subscribeUser(on id: String, isNeedToSubscribe: Bool) async throws {
         let userId = try? AuthenticationManager.shared.getAuthenticatedUser().uid

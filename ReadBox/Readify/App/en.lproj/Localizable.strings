@@ -103,3 +103,7 @@
 "authorMultiLanguageTipTitle" = "Different languages";
 "authorMultiLanguageTipMessage" = "Now you can write your posts in different languages";
 "expandButtonLabel" = "Expand ↓";
+"noMediaFilesAddedLabel" = "You have not yet attached any files \nto this post";
+"fileDeletedFromTextCreateView" = "The file was deleted successfully ✓";
+"linkIsCopiedLabel" = "The link is copied ✓";
+"attachedFilesLabel" = "Attached files";

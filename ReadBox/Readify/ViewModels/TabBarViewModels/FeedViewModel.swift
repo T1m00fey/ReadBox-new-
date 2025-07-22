@@ -225,34 +225,6 @@ final class FeedViewModel: ObservableObject {
     }
     
     func getArticles() async throws {
-//        while loadCount != 20 && fromIndex > -1 {
-//            if !topArticlesIndexes.contains(String(fromIndex)) {
-//                
-//                do {
-//                    let originalLanguage = try await ArticlesManager.shared.getOriginalLanguageOfArticle(id: "\(fromIndex)")
-//                    let isArchive = try await ArticlesManager.shared.getIsArchive(of: "\(fromIndex)")
-//                    
-//                    if originalLanguage == primaryLanguage && !isArchive {
-//                        let post = try await ArticlesManager.shared.getPrePost(id: "\(fromIndex)")
-//                        
-//                        withAnimation {
-//                            articles.append(post)
-//                            isLoadingShowing = false
-//                        }
-//                        
-//                        loadCount += 1
-//                    }
-//                } catch {
-////                    withAnimation {
-////                        errorText = error.localizedDescription
-////                        isErrorPopupPresented = true
-////                    }
-//                }
-//            }
-//            
-//            fromIndex -= 1
-//        }
-        
         Task {
             let query = db.collection("articles")
                 .whereField("is_archive", isEqualTo: false)
@@ -338,7 +310,7 @@ final class FeedViewModel: ObservableObject {
                         isDescriptionPopupPresented = true
                     }
                     
-                    if (user?.createdPosts ?? [id]).contains(id) == false {
+                    if user?.userId ?? "" != post.authorId {
                         if !views.contains(id) {
                             Task {
                                 do {

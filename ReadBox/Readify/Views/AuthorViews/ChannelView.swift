@@ -125,7 +125,8 @@ struct ChannelView: View {
                                                 postToRead = PostToRead(
                                                     dateCreated: postToread.dateCreated,
                                                     text: postToread.text,
-                                                    description: postToread.description
+                                                    description: postToread.description,
+                                                    mediaURLs: postToread.mediaURLs
                                                 )
 //                                                
                                                 dismiss()
@@ -135,19 +136,7 @@ struct ChannelView: View {
                                                 viewModel.isLoadingPopupPresented = false
                                                 viewModel.isDescriptionPopupPresented = true
                                             }
-                                            
-//                                            if (viewModel.user?.createdPosts ?? [id]).contains(id) == false {
-//                                                if !viewModel.views.contains(id) {
-//                                                    Task {
-//                                                        do {
-//                                                            try await ArticlesManager.shared.updateViews(at: post.id)
-//                                                            
-//                                                            viewModel.views.append(id)
-//                                                            viewModel.saveViews()
-//                                                        }
-//                                                    }
-//                                                }
-//                                            }
+
                                         } catch {
                                             withAnimation {
                                                 viewModel.errorText = error.localizedDescription
@@ -196,7 +185,8 @@ struct ChannelView: View {
                                                 postToRead = PostToRead(
                                                     dateCreated: postToread.dateCreated,
                                                     text: postToread.text,
-                                                    description: postToread.description
+                                                    description: postToread.description,
+                                                    mediaURLs: postToread.mediaURLs
                                                 )
 
                                                 dismiss()
@@ -231,11 +221,11 @@ struct ChannelView: View {
                             .frame(height: UIScreen.main.bounds.height - 200, alignment: .center)
                         }
                         
-                        if viewModel.postsNeedToLoad.count > 0 && !viewModel.isLoading {
+                        if !viewModel.isLoading && !viewModel.isAllLoading && viewModel.posts.count >= 20 {
                             Button {
                                 Task {
                                     do {
-                                        try await viewModel.loadPosts()
+                                        try await viewModel.loadPosts(by: authorId)
                                         return
                                     } catch {
                                         withAnimation {
@@ -336,7 +326,7 @@ struct ChannelView: View {
                     
                     Task {
                         do {
-                            try await viewModel.loadPostsIndexes(id: authorId)
+                            try await viewModel.loadPosts(by: authorId)
                         } catch {
                             withAnimation {
                                 viewModel.errorText = NSLocalizedString("loadDataErrorLabel", comment: "")
@@ -350,7 +340,6 @@ struct ChannelView: View {
                         viewModel.isLoading = true
                         viewModel.isLoadingShowing = true
                         
-                        viewModel.postsNeedToLoad = []
                         viewModel.posts = []
                         
                         Task {
@@ -368,7 +357,7 @@ struct ChannelView: View {
                         
                         Task {
                             do {
-                                try await viewModel.loadPostsIndexes(id: authorId)
+                                try await viewModel.loadPosts(by: authorId)
                             } catch {
                                 withAnimation {
                                     viewModel.errorText = NSLocalizedString("loadDataErrorText", comment: "")
@@ -486,7 +475,7 @@ struct ChannelView: View {
                                         .foregroundStyle(Color(uiColor: .label))
                                 }
                                 .frame(width: UIScreen.main.bounds.width - 10, height: 50, alignment: .center)
-                                .background(Color(uiColor: .secondarySystemBackground))
+                                .background(Color(uiColor: .systemBackground))
                                 .foregroundColor(Color(uiColor: .label))
                                 .clipShape(RoundedRectangle(cornerRadius: 15))
                                 .shadow(radius: 3)

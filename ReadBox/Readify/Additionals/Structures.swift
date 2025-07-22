@@ -40,14 +40,6 @@ struct IsCheckmark: Codable {
     }
 }
 
-struct CreatedPosts: Codable {
-    let createdPosts: [String]?
-    
-    enum CodingKeys: String, CodingKey {
-        case createdPosts = "created_posts"
-    }
-}
-
 struct AuthorDescription: Codable {
     let authorDescription: String?
     
@@ -64,7 +56,6 @@ struct DBUser: Codable, Equatable {
     var likedPosts: [String]?
     var authorName: String?
     let isCheckmark: Bool?
-    let createdPosts: [String]?
     let subscribersCount: Int?
     var subscribes: [String]?
     var authorDescription: String?
@@ -80,7 +71,6 @@ struct DBUser: Codable, Equatable {
         self.likedPosts = []
         self.authorName = ""
         self.isCheckmark = false
-        self.createdPosts = []
         self.subscribes = []
         self.subscribersCount = 0
         self.authorDescription = ""
@@ -112,7 +102,6 @@ struct DBUser: Codable, Equatable {
         self.likedPosts = likedPosts
         self.authorName = authorName
         self.isCheckmark = isCheckmark
-        self.createdPosts = createdPosts
         self.subscribersCount = subscribersCount
         self.subscribes = subscribes
         self.authorDescription = authorDescription
@@ -129,7 +118,6 @@ struct DBUser: Codable, Equatable {
         case likedPosts = "liked_posts"
         case authorName = "author_name"
         case isCheckmark = "is_checkmark"
-        case createdPosts = "created_posts"
         case subscribes = "subscribes"
         case subscribersCount = "subscribers_count"
         case authorDescription = "author_description"
@@ -205,11 +193,13 @@ struct PostToRead: Codable {
     let dateCreated: Date?
     let text: String?
     let description: String?
+    let mediaURLs: [String]?
     
     enum CodingKeys: String, CodingKey {
         case dateCreated = "date_created"
         case text = "text"
         case description = "description"
+        case mediaURLs = "media_URLs"
     }
 }
 
@@ -266,6 +256,14 @@ struct LikesCount: Codable {
     
     enum CodingKeys: String, CodingKey {
         case likesCount = "likes_count"
+    }
+}
+
+struct MediaURLs: Codable {
+    let mediaURLs: [String]?
+    
+    enum CodingKeys: String, CodingKey {
+        case mediaURLs = "media_URLs"
     }
 }
 

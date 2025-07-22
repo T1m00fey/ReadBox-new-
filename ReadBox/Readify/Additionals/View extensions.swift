@@ -481,40 +481,19 @@ extension View {
                     withAnimation {
                         viewModel.posts = []
                         viewModel.archivePosts = []
-                        viewModel.articlesIndexes = []
                     }
                     
                     Task {
                         do {
-                            try await viewModel.getIndexes()
-                            
-                            if viewModel.articlesIndexes.count == 0 {
-                                withAnimation {
-                                    viewModel.isLoading = false
-                                    viewModel.isLoadingShowing = false
-                                }
-                            }
-                        } catch {
-                            withAnimation {
-                                viewModel.errorText = error.localizedDescription
-                                viewModel.isErrorPopupPresented = true
-                            }
-                        }
-                    }
-                }
-            }
-            .onChange(of: viewModel.articlesIndexes) {
-                if viewModel.articlesIndexes != [] {
-                    withAnimation {
-                        viewModel.isLoadingShowing = true
-                    }
-                    
-                    Task {
-                        viewModel.isLoading = true
-                        
-                        do {
-                            viewModel.postsNeedToLoad = viewModel.articlesIndexes
                             try await viewModel.getPosts()
+                            try await viewModel.getArchivedPost()
+                            
+                            viewModel.isNewPublicationButtonPresented = true
+                            
+                            withAnimation {
+                                viewModel.isLoading = false
+                                viewModel.isLoadingShowing = false
+                            }
                         } catch {
                             withAnimation {
                                 viewModel.errorText = error.localizedDescription
@@ -524,6 +503,27 @@ extension View {
                     }
                 }
             }
+//            .onChange(of: viewModel.articlesIndexes) {
+//                if viewModel.articlesIndexes != [] {
+//                    withAnimation {
+//                        viewModel.isLoadingShowing = true
+//                    }
+//                    
+//                    Task {
+//                        viewModel.isLoading = true
+//                        
+//                        do {
+//                            viewModel.postsNeedToLoad = viewModel.articlesIndexes
+//                            try await viewModel.getPosts()
+//                        } catch {
+//                            withAnimation {
+//                                viewModel.errorText = error.localizedDescription
+//                                viewModel.isErrorPopupPresented = true
+//                            }
+//                        }
+//                    }
+//                }
+//            }
             .onChange(of: isSignInViewPresented) {
                 if !isSignInViewPresented {
                     viewModel.reload()

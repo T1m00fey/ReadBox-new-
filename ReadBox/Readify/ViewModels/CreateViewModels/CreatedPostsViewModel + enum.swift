@@ -7,6 +7,7 @@
 
 import SwiftUI
 import FirebaseStorage
+import Firebase
 
 enum PostOptions {
     case nothing
@@ -30,10 +31,8 @@ final class CreatedPostsViewModel: ObservableObject {
     @Published var isCreateViewPresented = false
     @Published var isArchivePresented = false
     @Published var postsNeedToLoad: [String] = []
-    @Published var isLoading = true
     @Published var postOption: PostOptions = .nothing
-    @Published var likedPosts: [String] = []
-    @Published var isNewPublicationButtonPresented = true
+    @Published var isNewPublicationButtonPresented = false
     @Published var authorNameText = ""
     @Published var isButtonEnabled = false
     @Published var isChannelViewPresented = false
@@ -41,8 +40,13 @@ final class CreatedPostsViewModel: ObservableObject {
     @Published var isSettingViewPresented = false
     @Published var isNeedToReload = false
     @Published var postsCount = 0
+    @Published var isLoading = false
     @Published var isLoadingShowing = true
     @Published var isLoadingPopupPresented = false
+    @Published var lastPostSnapshot: DocumentSnapshot? = nil
+    @Published var lastArchivedPostSnapshot: DocumentSnapshot? = nil
+    @Published var isAllLoaded = false
+    @Published var isAllArchivedLoaded = false
     
     @Published var user: DBUser? = nil
     
@@ -111,18 +115,17 @@ final class CreatedPostsViewModel: ObservableObject {
         text = post.text ?? ""
     }
     
-    func getIndexes() async throws {
-        let indexes = try await UserManager.shared.getAuthorsCreatedPosts(id: user?.userId ?? "") ?? []
-        articlesIndexes = indexes.reversed()
-    }
-    
     func reload() {
         withAnimation {
             posts = []
             archivePosts = []
-            articlesIndexes = []
             postsCount = 0
             isLoadingShowing = true
+            isNewPublicationButtonPresented = false
+            isAllLoaded = false
+            isAllArchivedLoaded = false
+            lastPostSnapshot = nil
+            lastArchivedPostSnapshot = nil
             
             user = nil
         }
@@ -214,47 +217,51 @@ final class CreatedPostsViewModel: ObservableObject {
     }
     
     func getPosts() async throws {
+        guard !isAllLoaded else { return }
         
-        var indexes: [String] = []
+        let (posts, lastDocument) = try await ArticlesManager.shared.getCreatedPosts(
+            userId: user?.userId ?? "",
+            startAfter: lastPostSnapshot
+        )
         
-        var count = 0
-        
-        for index in postsNeedToLoad {
-            if count < 20 {
-                indexes.append(index)
-                count += 1
-            }
+        if posts.isEmpty {
+            isAllLoaded = true
+            return
         }
         
-        for index in indexes {
-            do {
-                let article = try await getPrePost(id: index)
-                
+        
+        posts.forEach { post in
+            if let post {
                 withAnimation {
-                    if article.isArchive ?? true {
-                        archivePosts.append(article)
-                    } else {
-                        posts.append(article)
-                    }
-                
-                    isLoadingShowing = false
-                    postsNeedToLoad.removeAll { $0 == index }
-                }
-            } catch {
-                postsNeedToLoad.removeAll { $0 == index }
-                
-                withAnimation {
-                    errorText = NSLocalizedString("someArticlesNotFoundLabel", comment: "")
-                    isErrorPopupPresented = true
+                    self.posts.append(post)
                 }
             }
         }
-                
-        withAnimation {
-            isLoading = false
-            isLoadingShowing = false
+        
+        lastPostSnapshot = lastDocument
+    }
+    
+    func getArchivedPost() async throws {
+        guard !isAllArchivedLoaded else { return }
+        
+        let (posts, lastDocument) = try await ArticlesManager.shared.getCreatedPosts(
+            userId: user?.userId ?? "",
+            startAfter: lastArchivedPostSnapshot,
+            isArchive: true
+        )
+        
+        if posts.isEmpty {
+            isAllArchivedLoaded = true
+            return
         }
-            
+        
+        posts.forEach { post in
+            if let post {
+                self.archivePosts.append(post)
+            }
+        }
+        
+        lastArchivedPostSnapshot = lastDocument
     }
     
     func tapGestureHandler(on post: PrePost) {
@@ -268,10 +275,6 @@ final class CreatedPostsViewModel: ObservableObject {
         }
         
         if user != nil {
-            if likedPosts == [] {
-                likedPosts = user?.likedPosts ?? []
-            }
-            
             Task {
                 do {
                     isLoadingPopupPresented = true

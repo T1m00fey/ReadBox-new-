@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import Firebase
 
 @MainActor
 final class ChannelViewModel: ObservableObject {
@@ -25,6 +26,8 @@ final class ChannelViewModel: ObservableObject {
     @Published var views: [String] = []
     @Published var isLoadingPopupPresented = false
     @Published var isLoadingShowing = true
+    @Published var isAllLoading = false
+    @Published var lastDocument: DocumentSnapshot? = nil
     
     var description = ""
     
@@ -48,19 +51,6 @@ final class ChannelViewModel: ObservableObject {
         try await UserManager.shared.un_subscribeUser(on: id, isNeedToSubscribe: isNeedToSubscribe)
     }
     
-    func loadPostsIndexes(id: String) async throws {
-        let indexes = try await UserManager.shared.getAuthorsCreatedPosts(id: id) ?? []
-        postsNeedToLoad = indexes.reversed()
-        
-        if postsNeedToLoad != [] {
-            try await loadPosts()
-        } else {
-            withAnimation {
-                isLoading = false
-            }
-        }
-    }
-    
     func getSubscribersCount(authorId: String) async throws {
         subscribersCount = try await UserManager.shared.getSubscribersCount(authorId: authorId)
     }
@@ -73,39 +63,29 @@ final class ChannelViewModel: ObservableObject {
         authorDescription = try await UserManager.shared.getAuthorDescription(id: id)
     }
     
-    func loadPosts() async throws {
-        var count = 0
+    func loadPosts(by authorId: String) async throws {
+        guard !isAllLoading else { return }
         
-        for index in postsNeedToLoad {
-            if count < 20 && postsNeedToLoad != [] {
-                do {
-                    let isArchive = try await ArticlesManager.shared.getIsArchive(of: index)
-                    
-                    if !isArchive {
-                        let post = try await ArticlesManager.shared.getPrePost(id: index)
-                        
-                        withAnimation {
-                            posts.append(post)
-                            isLoadingShowing = false
-                        }
-                        
-                        count += 1
-                    }
-                    
-                    postsNeedToLoad.removeAll { $0 == index }
-                    print("Channel post index: \(index)")
-                } catch {
-                    withAnimation {
-                        errorText = NSLocalizedString("someArticlesNotFoundLabel", comment: "")
-                        isErrorPopupPresented = true
-                    }
+        let (posts, lastDocument) = try await ArticlesManager.shared.getCreatedPosts(userId: authorId)
+        
+        if posts.isEmpty {
+            isAllLoading = true
+            return
+        }
+        
+        posts.forEach { post in
+            if let post {
+                withAnimation {
+                    self.posts.append(post)
+                    isLoadingShowing = false
                 }
             }
         }
         
+        self.lastDocument = lastDocument
+        
         withAnimation {
             isLoading = false
         }
-
     }
 }

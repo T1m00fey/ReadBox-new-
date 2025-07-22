@@ -8,6 +8,7 @@
 import SwiftUI
 import _PhotosUI_SwiftUI
 
+@MainActor
 struct MarkdownTextView: UIViewRepresentable {
     @Binding var text: String
     @Binding var selectedRange: NSRange
@@ -84,13 +85,36 @@ final class TextCreateViewModel: ObservableObject {
     @Published var addingMode = 0
     @Published var isErrorPopupPresented = false
     @Published var errorText = ""
+    @Published var isErrorPopup = false
     @Published var heightOfTE: CGFloat = UIScreen.main.bounds.height - 300
     @Published var isLoading = false
     @Published var imageItem: PhotosPickerItem? = nil
+    @Published var isImageUploading = false
+    @Published var isMediaControlViewPresented = false
+    @Published var mediaURLs: [URL] = []
     
-    let fonts: [String: [String]] = [
-        NSLocalizedString("titleLabel", comment: ""): ["1", "2", ""]
+    @Published var markdownButtons: [(title: String, type: MarkdownType)] = [
+        ("B", .bold),
+        ("I", .italic),
+        (NSLocalizedString("quoteLabel", comment: ""), .blockquote),
+        (NSLocalizedString("strikeThroughLabel", comment: ""), .strikethrough),
+        (NSLocalizedString("codeLabel", comment: ""), .code),
+        (NSLocalizedString("linkLabel", comment: ""), .link)
     ]
+    
+    func configureMarkdownButton(title: String, type: MarkdownType) -> some View {
+        Button(title) {
+            self.toggleMarkdown(type: type)
+        }
+        .font(.system(size: 22))
+        .fontDesign(.rounded)
+        .bold()
+        .frame(height: 40)
+        .padding(.horizontal)
+        .background(Color(uiColor: .systemBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .shadow(radius: 2)
+    }
     
     func toggleMarkdown(type: MarkdownType) {
         guard let swiftRange = Range(selectedRange, in: text) else { return }
@@ -280,26 +304,33 @@ final class TextCreateViewModel: ObservableObject {
         }
     }
     
-    func insertPhoto(postId: String) async {
+    @MainActor
+    func insertPhoto(postId: String) async throws {
+        guard !isImageUploading else { return }
         guard let item = imageItem else { return }
         
-        do {
-            guard let data = try? await item.loadTransferable(type: Data.self), let image = UIImage(data: data) else { return }
-            
-            let id = UUID().uuidString + postId
-            let url = try await ArticlesManager.shared.uploadImage(id: id, image: image)
-            
-            let markdown = "\n\n![](\(url))\n\n"
-            
-            if let range = Range(selectedRange, in: text) {
+        withAnimation {
+            isImageUploading = true
+        }
+        
+        guard let data = try? await item.loadTransferable(type: Data.self), let image = UIImage(data: data) else { return }
+        
+        let id = UUID().uuidString + postId
+        let url = try await ArticlesManager.shared.uploadImage(id: id, image: image, folder: "contentImages")
+        
+        let markdown = "\n\n![](\(url))\n\n"
+        
+        try await ArticlesManager.shared.uploadMedia(url: String(url), to: postId)
+        mediaURLs.append(URL(string: url)!)
+        
+        if let range = Range(selectedRange, in: text) {
+            withAnimation {
                 text.replaceSubrange(range, with: markdown)
-                let newLoc = selectedRange.location + markdown.count
-                selectedRange = NSRange(location: newLoc, length: 0)
             }
-            
-            imageItem = nil
-        } catch {
-            print("ERROR TO UPLOAD IMAGE: \(error.localizedDescription)")
+        }
+        
+        withAnimation {
+            isImageUploading = false
         }
     }
     
@@ -310,7 +341,7 @@ final class TextCreateViewModel: ObservableObject {
         image: UIImage,
         isArchive: Bool,
         uploadingLanguage: String
-    ) async throws {
+    ) async throws -> String {
         try await ArticlesManager.shared.addNewPost(
             title: title,
             description: description,

@@ -103,3 +103,7 @@
 "authorMultiLanguageTipTitle" = "Разные языки";
 "authorMultiLanguageTipMessage" = "Теперь вы можете писать свои публикации на разных языках";
 "expandButtonLabel" = "Развернуть ↓";
+"noMediaFilesAddedLabel" = "Вы еще не прикрепили файлы к этой публикации";
+"fileDeletedFromTextCreateView" = "Файл успшено удален ✓";
+"linkIsCopiedLabel" = "Ссылка скопирована ✓";
+"attachedFilesLabel" = "Прикрепленные файлы";

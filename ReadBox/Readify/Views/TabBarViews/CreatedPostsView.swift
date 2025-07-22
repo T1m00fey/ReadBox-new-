@@ -163,7 +163,7 @@ struct CreatedPostsView: View {
                                     ? NSLocalizedString("archiveLabel", comment: "")
                                     : NSLocalizedString("publicationsLabel", comment: "")
                                 )
-                                    .font(.title)
+                                    .font(.system(size: 26))
                                     .fontWeight(.light)
                                     .fontDesign(.rounded)
                                     .frame(minWidth: UIScreen.main.bounds.width - 20, alignment: .leading)
@@ -258,21 +258,28 @@ struct CreatedPostsView: View {
                                         .foregroundStyle(Color.gray)
                                     
                                     Text(LocalizedStringKey("noArticlesAddedLabel"))
-                                        .font(.title)
+                                        .font(.system(size: 25))
                                         .bold()
                                         .fontDesign(.rounded)
                                         .foregroundStyle(Color.gray)
                                         .multilineTextAlignment(.center)
                                     
                                 }
-                                .padding(.top, viewModel.user?.authorDescription == "" ? 200 : 100 )
+                                .frame(width: UIScreen.main.bounds.width - 32)
+                                .padding(.top, viewModel.user?.authorDescription == "" ? 200 : 100)
                             }
                             
-                            if ((viewModel.posts != [] && viewModel.postsNeedToLoad.count > 0) || (viewModel.archivePosts != [] && viewModel.postsNeedToLoad.count > 0)) && !viewModel.isLoading {
+                            if !viewModel.isLoading
+                                && ((viewModel.isArchivePresented && !viewModel.isAllArchivedLoaded && viewModel.archivePosts.count >= 20)
+                                    || (!viewModel.isArchivePresented && !viewModel.isAllLoaded && viewModel.posts.count >= 20)) {
                                 Button {
                                     Task {
                                         do {
-                                            try await viewModel.getPosts()
+                                            if viewModel.isArchivePresented {
+                                                try await viewModel.getPosts()
+                                            } else {
+                                                try await viewModel.getArchivedPost()
+                                            }
                                             return
                                         } catch {
                                             withAnimation {
@@ -299,9 +306,10 @@ struct CreatedPostsView: View {
                                     .background(Color(uiColor: .secondarySystemBackground))
                                     .clipShape(RoundedRectangle(cornerRadius: 10))
                                     .shadow(radius: 2)
-                                    .padding(.top, 20)
+                                    .padding(.bottom, 20)
                                 }
                                 .padding(.bottom, 10)
+                                .offset(y: -30)
                                 
                             }
                             

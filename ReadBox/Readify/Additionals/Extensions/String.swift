@@ -12,7 +12,7 @@ extension String {
         let lines = self.components(separatedBy: "\n")
         return lines.map { line in
             if line.trimmingCharacters(in: .whitespaces).isEmpty {
-                return "&nbsp;\n"
+                return "\n![]()\n"
             } else {
                 return line
             }
