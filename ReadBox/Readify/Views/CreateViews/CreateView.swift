@@ -18,6 +18,7 @@ struct CreateView: View {
     let description: String
     let text: String
     let isEditing: Bool
+    let mediaURLs: [URL]
     
     @Binding var postsCount: Int
     @Binding var posts: [PrePost]
@@ -29,8 +30,6 @@ struct CreateView: View {
     
     @FocusState var isTitleTEFocused: Bool
     @FocusState var isDescriptionTEFocused: Bool
-    
-    @Namespace private var animation
     
     var body: some View {
         NavigationStack {
@@ -260,6 +259,7 @@ struct CreateView: View {
                         text: text,
                         isEditing: isEditing,
                         uploadingLanguage: viewModel.languageSelection,
+                        mediaURLs: $viewModel.mediaURLs,
                         postsCount: $postsCount,
                         posts: $posts,
                         archivePosts: $archivePosts,
@@ -313,12 +313,29 @@ struct CreateView: View {
                     viewModel.isDescriptionAdded = true
                 }
                 
+                if viewModel.isFirstAppear {
+                    viewModel.mediaURLs = mediaURLs
+                }
+                
             }
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
-                        dismiss()
                         StorageManager.shared.deleteText()
+                                                                        
+                        if mediaURLs != viewModel.mediaURLs && !isEditing {
+                            if mediaURLs.count < viewModel.mediaURLs.count {
+                                for url in viewModel.mediaURLs {
+                                    if !mediaURLs.contains(url) {
+                                        Task {
+                                            try? await ArticlesManager.shared.deleteImage(url: url)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        
+                        dismiss()
                     } label: {
                         Image(systemName: "xmark")
                     }
@@ -328,19 +345,4 @@ struct CreateView: View {
             .navigationBarTitleDisplayMode(.inline)
         }
     }
-}
-
-#Preview {
-    CreateView(
-        isCreateViewPresented: .constant(true),
-        id: "",
-        title: "",
-        image: nil,
-        description: "",
-        text: "",
-        isEditing: false,
-        postsCount: .constant(0),
-        posts: .constant([]),
-        archivePosts: .constant([])
-    )
 }

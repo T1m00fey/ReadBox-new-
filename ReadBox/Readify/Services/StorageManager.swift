@@ -71,6 +71,8 @@ final class StorageManager {
     
     func deleteText() {
         userDefaults.removeObject(forKey: "createText")
+        
+        print(StorageManager.shared.getText())
     }
     
     func getText() -> String {

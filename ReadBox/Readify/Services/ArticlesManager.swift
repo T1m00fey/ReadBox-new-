@@ -75,6 +75,8 @@ final class ArticlesManager {
             "is_archive": isArchive
         ]
         
+        print("TEXT: \(text)")
+        
         try await articlesCollection.document(id).updateData(data)
         
         if image == UIImage() {
@@ -205,9 +207,9 @@ final class ArticlesManager {
         return URLs
     }
     
-    func uploadMedia(url: String, to id: String) async throws {
+    func uploadMedia(URLs: [String], to id: String) async throws {
         let data: [String: Any] = [
-            "media_URLs": FieldValue.arrayUnion([url])
+            "media_URLs": URLs
         ]
         
         try await articleDocument(id: id).updateData(data)

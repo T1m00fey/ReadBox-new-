@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import SDWebImageSwiftUI
 
 struct MemorySettingsView: View {
     func clearCache() {
@@ -13,10 +14,12 @@ struct MemorySettingsView: View {
         let dictionary = userDefaults.dictionaryRepresentation()
         
         for key in dictionary.keys {
-            if key != "savedArticles" && key != "language"{
+            if key != "views" && key != "language" {
                 userDefaults.removeObject(forKey: key)
             }
         }
+        
+        SDImageCache.shared.clear(with: .all)
         
         userDefaults.synchronize()
         

@@ -69,6 +69,7 @@ struct CreatedPostsView: View {
                             description: viewModel.description,
                             text: viewModel.text,
                             isEditing: viewModel.isEditing,
+                            mediaURLs: viewModel.mediaURLs,
                             postsCount: $viewModel.postsCount,
                             posts: $viewModel.posts,
                             archivePosts: $viewModel.archivePosts
@@ -385,7 +386,7 @@ struct CreatedPostsView: View {
                                         .foregroundStyle(isDescriptionFocused ? Color(uiColor: .label) : Color.gray)
                                 }
                             }
-                            .frame(height: 150)
+                            .frame(height: 160)
                             .onAppear {
                                 viewModel.isButtonEnable()
                             }

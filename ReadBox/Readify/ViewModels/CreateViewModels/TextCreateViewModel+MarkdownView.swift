@@ -91,7 +91,6 @@ final class TextCreateViewModel: ObservableObject {
     @Published var imageItem: PhotosPickerItem? = nil
     @Published var isImageUploading = false
     @Published var isMediaControlViewPresented = false
-    @Published var mediaURLs: [URL] = []
     
     @Published var markdownButtons: [(title: String, type: MarkdownType)] = [
         ("B", .bold),
@@ -305,23 +304,20 @@ final class TextCreateViewModel: ObservableObject {
     }
     
     @MainActor
-    func insertPhoto(postId: String) async throws {
-        guard !isImageUploading else { return }
-        guard let item = imageItem else { return }
+    func insertPhoto(postId: String) async throws -> String {
+        guard !isImageUploading else { return "" }
+        guard let item = imageItem else { return "" }
         
         withAnimation {
             isImageUploading = true
         }
         
-        guard let data = try? await item.loadTransferable(type: Data.self), let image = UIImage(data: data) else { return }
+        guard let data = try? await item.loadTransferable(type: Data.self), let image = UIImage(data: data) else { return "" }
         
         let id = UUID().uuidString + postId
         let url = try await ArticlesManager.shared.uploadImage(id: id, image: image, folder: "contentImages")
         
         let markdown = "\n\n![](\(url))\n\n"
-        
-        try await ArticlesManager.shared.uploadMedia(url: String(url), to: postId)
-        mediaURLs.append(URL(string: url)!)
         
         if let range = Range(selectedRange, in: text) {
             withAnimation {
@@ -332,6 +328,8 @@ final class TextCreateViewModel: ObservableObject {
         withAnimation {
             isImageUploading = false
         }
+        
+        return url
     }
     
     func addNewPost(
@@ -340,9 +338,10 @@ final class TextCreateViewModel: ObservableObject {
         text: String,
         image: UIImage,
         isArchive: Bool,
-        uploadingLanguage: String
+        uploadingLanguage: String,
+        mediaURLs: [URL]
     ) async throws -> String {
-        try await ArticlesManager.shared.addNewPost(
+        let id = try await ArticlesManager.shared.addNewPost(
             title: title,
             description: description,
             text: text,
@@ -350,9 +349,22 @@ final class TextCreateViewModel: ObservableObject {
             isArchive: isArchive,
             uploadingLanguage: uploadingLanguage
         )
+        
+        let urls = mediaURLs.map { $0.absoluteString }
+        try await ArticlesManager.shared.uploadMedia(URLs: urls, to: id)
+        
+        return id
     }
     
-    func updatePost(id: String, title: String, image: UIImage, description: String, text: String, isArchive: Bool) async throws {
+    func updatePost(
+        id: String,
+        title: String,
+        image: UIImage,
+        description: String,
+        text: String,
+        isArchive: Bool,
+        mediaURLs: [URL]
+    ) async throws {
         try await ArticlesManager.shared.updatePost(
             id: id,
             title: title,
@@ -361,6 +373,10 @@ final class TextCreateViewModel: ObservableObject {
             text: text,
             isArchive: isArchive
         )
+        
+        let urls = mediaURLs.map { $0.absoluteString }
+        
+        try await ArticlesManager.shared.uploadMedia(URLs: urls, to: id)
     }
     
     func getNavigationTitle(_ isEditing: Bool) -> String {

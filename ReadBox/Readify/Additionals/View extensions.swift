@@ -533,12 +533,16 @@ extension View {
                 if !viewModel.isReadViewPresented {
                     viewModel.postOption = .nothing
                     viewModel.id = ""
+                    viewModel.text = ""
+                    viewModel.mediaURLs = []
                 }
             }
             .onChange(of: viewModel.isCreateViewPresented) {
                 if !viewModel.isCreateViewPresented {
                     viewModel.postOption = .nothing
                     viewModel.id = ""
+                    viewModel.text = ""
+                    viewModel.mediaURLs = []
                 }
             }
             .onChange(of: viewModel.id) {

@@ -47,6 +47,7 @@ final class CreatedPostsViewModel: ObservableObject {
     @Published var lastArchivedPostSnapshot: DocumentSnapshot? = nil
     @Published var isAllLoaded = false
     @Published var isAllArchivedLoaded = false
+    @Published var mediaURLs: [URL] = []
     
     @Published var user: DBUser? = nil
     
@@ -113,6 +114,10 @@ final class CreatedPostsViewModel: ObservableObject {
         dateCreated = post.dateCreated ?? Date()
         description = post.description ?? ""
         text = post.text ?? ""
+        
+        if let mediaURLs = post.mediaURLs {
+            self.mediaURLs = mediaURLs.map { URL(string: $0)! }
+        }
     }
     
     func reload() {

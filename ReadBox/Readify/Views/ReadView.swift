@@ -45,7 +45,7 @@ struct ReadView: View {
                         Text(title)
                             .fontWeight(.light)
                             .fontDesign(.rounded)
-                            .font(.title)
+                            .font(.system(size: 26))
                             .frame(width: UIScreen.main.bounds.width - 32, alignment: .leading)
                         
                         RoundedRectangle(cornerRadius: 0)
@@ -54,7 +54,7 @@ struct ReadView: View {
                         
                         HStack {
                             Text("by")
-                                .font(.title3)
+                                .font(.system(size: 21))
                                 .fontDesign(.rounded)
                                 .foregroundStyle(Color.gray)
                             
@@ -69,7 +69,9 @@ struct ReadView: View {
                                     }
                                 } label: {
                                     Text(authorName == "" ? NSLocalizedString("notFoundLabel", comment: "") : authorName)
-                                        .font(.title2)
+                                        .font(.system(size: 21))
+                                        .multilineTextAlignment(.leading)
+                                        .lineLimit(2)
                                         .fontDesign(.rounded)
                                         .underline()
                                 }
@@ -81,60 +83,7 @@ struct ReadView: View {
                                         .padding(.top, 4)
                                 }
                             }
-                            
-                            if authorId != "" && authorId != user?.userId {
-                                ZStack {
-                                    Capsule()
-                                        .foregroundStyle(
-                                            isSubscribed
-                                            ? Color(uiColor: .systemBackground)
-                                            : Color(uiColor: .label)
-                                        )
-                                        .shadow(radius: isSubscribed ? 2 : 0)
-                                        .frame(width: 120)
-                                    
-                                    Text(
-                                        isSubscribed
-                                        ? NSLocalizedString("youSubscribedLabel", comment: "")
-                                        : NSLocalizedString("subscribeLabel", comment: "")
-                                    )
-                                    .font(.system(size: 14))
-                                    .fontDesign(.rounded)
-                                    .foregroundStyle(
-                                        isSubscribed
-                                        ? Color(uiColor: .label)
-                                        : Color(uiColor: .systemBackground)
-                                    )
-                                }
-                                .onTapGesture {
-                                    Task {
-                                        do {
-                                            try await viewModel.un_subcribeUser(
-                                                on: authorId,
-                                                isNeedToSubscribe: !isSubscribed
-                                            )
-                                            
-                                            withAnimation {
-                                                if isSubscribed {
-                                                    user?.subscribes?.removeAll { $0 == authorId }
-                                                } else {
-                                                    user?.subscribes?.append(authorId)
-                                                }
-                                                
-                                                isSubscribed.toggle()
-                                            }
-                                        } catch {
-                                            withAnimation {
-                                                viewModel.errorText = error.localizedDescription
-                                                viewModel.isErrorPopupPresented = true
-                                            }
-                                        }
-                                    }
-                                }
-                                .padding(.top, 5)
-                            }
                         }
-                        
                         .frame(width: UIScreen.main.bounds.width - 32, alignment: .leading)
                         .padding(.vertical, viewModel.image != UIImage() ? 20 : 0)
                         .padding(.top, viewModel.image == UIImage() ? 10 : 0)
@@ -150,7 +99,7 @@ struct ReadView: View {
                     
                         HStack {
                             Text(viewModel.getDateCreated(regDate: dateCreated))
-                                .font(.title2)
+                                .font(.system(size: 22))
                                 .fontWeight(.light)
                                 .fontDesign(.rounded)
                                 .foregroundStyle(Color.gray)
@@ -219,10 +168,61 @@ struct ReadView: View {
                                     .clipShape(RoundedRectangle(cornerRadius: 10))
                                     .shadow(radius: 2)
                             }
+                            
+                            if authorId != "" && authorId != user?.userId {
+                                ZStack {
+                                    RoundedRectangle(cornerRadius: 10)
+                                        .foregroundStyle(
+                                            isSubscribed
+                                            ? Color(uiColor: .systemBackground)
+                                            : Color(uiColor: .label)
+                                        )
+                                        .shadow(radius: isSubscribed ? 2 : 0)
+                                        .frame(width: 120)
+                                    
+                                    Text(
+                                        isSubscribed
+                                        ? NSLocalizedString("youSubscribedLabel", comment: "")
+                                        : NSLocalizedString("subscribeLabel", comment: "")
+                                    )
+                                    .font(.system(size: 14))
+                                    .fontDesign(.rounded)
+                                    .foregroundStyle(
+                                        isSubscribed
+                                        ? Color(uiColor: .label)
+                                        : Color(uiColor: .systemBackground)
+                                    )
+                                }
+                                .onTapGesture {
+                                    Task {
+                                        do {
+                                            try await viewModel.un_subcribeUser(
+                                                on: authorId,
+                                                isNeedToSubscribe: !isSubscribed
+                                            )
+                                            
+                                            withAnimation {
+                                                if isSubscribed {
+                                                    user?.subscribes?.removeAll { $0 == authorId }
+                                                } else {
+                                                    user?.subscribes?.append(authorId)
+                                                }
+                                                
+                                                isSubscribed.toggle()
+                                            }
+                                        } catch {
+                                            withAnimation {
+                                                viewModel.errorText = error.localizedDescription
+                                                viewModel.isErrorPopupPresented = true
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                         }
                         .frame(width: UIScreen.main.bounds.width - 32)
                         .padding(.horizontal)
-                        .padding(.bottom, 30)
+                        .padding(.bottom, 20)
                         
                         Markdown(
                             text.replacingOccurrences(of: "\n", with: "  \n").normalizeEmptyLines()

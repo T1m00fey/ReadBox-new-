@@ -35,6 +35,8 @@ final class CreateViewModel: ObservableObject {
     
     @Published var languageSelection = StorageManager.shared.getLanguage()
     
+    @Published var mediaURLs: [URL] = []
+    
     func getNavigationTitle(_ isEditing: Bool) -> String {
         isEditing ? NSLocalizedString("editingLabel", comment: "") : NSLocalizedString("creationLabel", comment: "")
     }

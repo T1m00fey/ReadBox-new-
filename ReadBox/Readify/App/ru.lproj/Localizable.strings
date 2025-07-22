@@ -88,7 +88,7 @@
 "subscribeLabel" = "Подписаться +";
 "subscribersCountLabel" = "подписчики";
 "publicationsCountLabel" = "публикации";
-"youSubscribedLabel" = "Вы подписаны";
+"youSubscribedLabel" = "Вы подписаны ✓";
 "publicationsLabel" = "Публикации";
 "archiveLabel" = "Архив";
 "privacyPolicy" = "Политика конфиденциальности";

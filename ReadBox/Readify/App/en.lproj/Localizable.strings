@@ -88,7 +88,7 @@
 "subscribeLabel" = "Subscribe +";
 "subscribersCountLabel" = "subscribers";
 "publicationsCountLabel" = "publications";
-"youSubscribedLabel" = "Subscribed";
+"youSubscribedLabel" = "Subscribed ✓";
 "publicationsLabel" = "Publications";
 "archiveLabel" = "Archive";
 "privacyPolicy" = "Privacy policy";

@@ -20,6 +20,7 @@ struct TextCreateView: View {
     let text: String
     let isEditing: Bool
     let uploadingLanguage: String
+    @Binding var mediaURLs: [URL]
     @Binding var postsCount: Int
     @Binding var posts: [PrePost]
     @Binding var archivePosts: [PrePost]
@@ -82,7 +83,7 @@ struct TextCreateView: View {
                 .popup(isPresented: $viewModel.isMediaControlViewPresented) {
                     MediaControlView(
                         postId: id,
-                        mediaURLs: $viewModel.mediaURLs,
+                        mediaURLs: $mediaURLs,
                         text: $viewModel.text,
                         errorText: $viewModel.errorText,
                         isErrorPopupPresented: $viewModel.isErrorPopupPresented,
@@ -190,7 +191,11 @@ struct TextCreateView: View {
                     .onChange(of: viewModel.imageItem) {
                         Task {
                             do {
-                                try await viewModel.insertPhoto(postId: id)                                
+                                let url = try await viewModel.insertPhoto(postId: id)
+                                
+                                if url != "" {
+                                    mediaURLs.append(URL(string: url)!)
+                                }
                             } catch {
                                 print("Error to upload photo: \(error.localizedDescription)")
                             }
@@ -219,8 +224,7 @@ struct TextCreateView: View {
                 }
                 
                 if viewModel.addingMode > 0 {
-                    if isEditing {
-                        
+                    if isEditing {                        
                         Task {
                             do {
                                 let isArchived = try await ArticlesManager.shared.getIsArchive(of: id)
@@ -232,7 +236,8 @@ struct TextCreateView: View {
                                     image: image,
                                     description: description,
                                     text: viewModel.text,
-                                    isArchive: isArchive
+                                    isArchive: isArchive,
+                                    mediaURLs: mediaURLs
                                 )
                                 
                                 if isArchived != isArchive {
@@ -301,8 +306,6 @@ struct TextCreateView: View {
                                     }
                                 }
                                 
-                                StorageManager.shared.deleteText()
-                                
                             } catch {
                                 withAnimation {
                                     viewModel.isLoading = false
@@ -318,6 +321,7 @@ struct TextCreateView: View {
                         }
                         
                         StorageManager.shared.deleteImage(id: id)
+                        StorageManager.shared.deleteText()
                         
                     } else {
                         Task {
@@ -330,7 +334,8 @@ struct TextCreateView: View {
                                     text: viewModel.text,
                                     image: image,
                                     isArchive: isArchive,
-                                    uploadingLanguage: uploadingLanguage
+                                    uploadingLanguage: uploadingLanguage,
+                                    mediaURLs: mediaURLs
                                 )
                                 
                                 if !isArchive {
@@ -407,20 +412,6 @@ struct TextCreateView: View {
                 
                 let savedText = StorageManager.shared.getText()
                 viewModel.text = savedText == "" ? text : savedText
-                
-                if isEditing {
-                    Task {
-                        do {
-                            viewModel.mediaURLs = try await ArticlesManager.shared.getMediaURLs(from: id)
-                        } catch {
-                            withAnimation {
-                                viewModel.errorText = error.localizedDescription
-                                viewModel.isErrorPopupPresented = true
-                                viewModel.isErrorPopup = false
-                            }
-                        }
-                    }
-                }
             }
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
@@ -435,9 +426,10 @@ struct TextCreateView: View {
                 
                 ToolbarItem(placement: .principal) {
                     if viewModel.isImageUploading {
-                        HStack(spacing: 10) {
+                        HStack(spacing: 5) {
                             Text("Загружаем")
-                                .font(.system(size: 18))
+                                .font(.system(size: 17))
+                                .fontWeight(.semibold)
                             
                             LoadingIndicator(
                                 animation: .circleRunner,
@@ -445,10 +437,12 @@ struct TextCreateView: View {
                                 size: .small,
                                 speed: .fast
                             )
+                            .scaleEffect(0.7)
                         }
                     } else {
                         Text(viewModel.getNavigationTitle(isEditing))
-                            .font(.system(size: 18))
+                            .font(.system(size: 17))
+                            .fontWeight(.semibold)
                     }
                 }
                 

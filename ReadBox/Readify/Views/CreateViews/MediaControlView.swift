@@ -70,6 +70,13 @@ struct MediaControlView: View {
                                     .clipShape(RoundedRectangle(cornerRadius: 16))
                                     .padding(.vertical, 10)
                                     
+                                    Text(url.absoluteString)
+                                        .font(.system(size: 18))
+                                        .fontDesign(.rounded)
+                                        .fontWeight(.light)
+                                        .lineLimit(5)
+                                        .multilineTextAlignment(.leading)
+                                    
                                     Spacer()
                                     
                                     HStack(spacing: 12) {
@@ -82,20 +89,28 @@ struct MediaControlView: View {
                                                 isErrorPopup = false
                                             }
                                         } label: {
-                                            Image(systemName: "document.on.document")
-                                                .font(.system(size: 25))
-                                                .foregroundStyle(Color.gray)
+                                            ZStack {
+                                                RoundedRectangle(cornerRadius: 12)
+                                                    .frame(width: 50, height: 50)
+                                                    .foregroundStyle(Color(.secondarySystemBackground))
+                                                    .shadow(radius: 2)
+                                                
+                                                Image(systemName: "document.on.document")
+                                                    .font(.system(size: 23))
+                                                    .foregroundStyle(Color.gray)
+                                            }
                                         }
                                         
                                         Button {
                                             Task {
                                                 do {
-                                                    try await ArticlesManager.shared.removeMedia(url: "\(url)", from: postId)
+                                                    try await ArticlesManager.shared.removeMedia(url: url.absoluteString, from: postId)
                                                     try await ArticlesManager.shared.deleteImage(url: url)
                                                     
                                                     withAnimation {
                                                         text = text.replacingOccurrences(of: "![](\(url))", with: "")
                                                         mediaURLs.removeAll { $0 == url }
+                                                        print("DELETE: \(mediaURLs)")
                                                         
                                                         errorText = NSLocalizedString("fileDeletedFromTextCreateView", comment: "")
                                                         isErrorPopupPresented = true
@@ -110,12 +125,18 @@ struct MediaControlView: View {
                                                 }
                                             }
                                         } label: {
-                                            Image(systemName: "minus.circle")
-                                                .font(.system(size: 25))
-                                                .foregroundStyle(Color.red)
+                                            ZStack {
+                                                RoundedRectangle(cornerRadius: 12)
+                                                    .frame(width: 50, height: 50)
+                                                    .foregroundStyle(Color(.secondarySystemBackground))
+                                                    .shadow(radius: 2)
+                                                
+                                                Image(systemName: "minus.circle")
+                                                    .font(.system(size: 23))
+                                                    .foregroundStyle(Color.red)
+                                            }
                                         }
                                     }
-                                    .padding(.trailing, 10)
                                 }
                                 .frame(width: UIScreen.main.bounds.width - 30)
                             }

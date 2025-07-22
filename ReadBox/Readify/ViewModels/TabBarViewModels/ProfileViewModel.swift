@@ -7,6 +7,7 @@
 
 import SwiftUI
 import SwiftUIMailView
+import SDWebImageSwiftUI
 
 @MainActor
 final class ProfileViewModel: ObservableObject {
@@ -100,17 +101,18 @@ final class ProfileViewModel: ObservableObject {
     func getUserDefaultsSize() {
         var totalSize = 0
         
-        // Получаем все ключи в UserDefaults
         let dictionary = UserDefaults.standard.dictionaryRepresentation()
         
-        // Для каждого значения в UserDefaults
         for (_, value) in dictionary {
             if let data = try? NSKeyedArchiver.archivedData(withRootObject: value, requiringSecureCoding: false) {
                 totalSize += data.count // Суммируем размеры данных
             }
         }
         
-        // Переводим размер в мегабайты (MB)
+        SDImageCache.shared.calculateSize { _, size in
+            totalSize += Int(size)
+        }
+        
         let sizeInMB = Double(totalSize) / (1024 * 1024)
         sizeOfData = sizeInMB
     }
