@@ -6,7 +6,9 @@
 //
 
 import SwiftUI
-import _PhotosUI_SwiftUI
+import PhotosUI
+import FirebaseStorage
+import MarkdownUI
 
 @MainActor
 struct MarkdownTextView: UIViewRepresentable {
@@ -91,28 +93,50 @@ final class TextCreateViewModel: ObservableObject {
     @Published var imageItem: PhotosPickerItem? = nil
     @Published var isImageUploading = false
     @Published var isMediaControlViewPresented = false
+    @Published var selectedImageURL: URL? = nil
+    @Published var isImageFullScreenPresented = false
     
-    @Published var markdownButtons: [(title: String, type: MarkdownType)] = [
-        ("B", .bold),
-        ("I", .italic),
-        (NSLocalizedString("quoteLabel", comment: ""), .blockquote),
-        (NSLocalizedString("strikeThroughLabel", comment: ""), .strikethrough),
-        (NSLocalizedString("codeLabel", comment: ""), .code),
-        (NSLocalizedString("linkLabel", comment: ""), .link)
+    @Published var markdownButtons: [MarkdownType] = [
+        .bold,
+        .italic,
+        .blockquote,
+        .link,
+        .strikethrough,
+        .code
     ]
     
-    func configureMarkdownButton(title: String, type: MarkdownType) -> some View {
-        Button(title) {
+    func configureMarkdownButton(type: MarkdownType) -> some View {
+        Button {
             self.toggleMarkdown(type: type)
+        } label: {
+            getMarkdownLabel(type)
+                .markdownTextStyle(\.text) {
+                    FontSize(CGFloat(22))
+                }
         }
-        .font(.system(size: 22))
-        .fontDesign(.rounded)
-        .bold()
         .frame(height: 40)
         .padding(.horizontal)
         .background(Color(uiColor: .systemBackground))
         .clipShape(RoundedRectangle(cornerRadius: 10))
         .shadow(radius: 2)
+    }
+    
+    func getMarkdownLabel(_ type: MarkdownType) -> Markdown {
+        switch type {
+        case .bold:
+            return Markdown("**B**")
+        case .italic:
+            return Markdown("*I*")
+        case .code:
+            return Markdown("`\(NSLocalizedString("codeLabel", comment: ""))`")
+        case .strikethrough:
+            return Markdown("~~\(NSLocalizedString("strikeThroughLabel", comment: ""))~~")
+        case .blockquote:
+            return Markdown("\(NSLocalizedString("quoteLabel", comment: ""))")
+        case .link:
+            return Markdown("\(NSLocalizedString("linkLabel", comment: ""))")
+        default: return Markdown("")
+        }
     }
     
     func toggleMarkdown(type: MarkdownType) {
@@ -304,32 +328,48 @@ final class TextCreateViewModel: ObservableObject {
     }
     
     @MainActor
-    func insertPhoto(postId: String) async throws -> String {
-        guard !isImageUploading else { return "" }
+    func insertMedia(with id: String) async throws -> String {
         guard let item = imageItem else { return "" }
         
         withAnimation {
             isImageUploading = true
         }
-        
-        guard let data = try? await item.loadTransferable(type: Data.self), let image = UIImage(data: data) else { return "" }
-        
-        let id = UUID().uuidString + postId
-        let url = try await ArticlesManager.shared.uploadImage(id: id, image: image, folder: "contentImages")
-        
-        let markdown = "\n\n![](\(url))\n\n"
-        
-        if let range = Range(selectedRange, in: text) {
+        defer {
             withAnimation {
-                text.replaceSubrange(range, with: markdown)
+                isImageUploading = false
             }
         }
-        
-        withAnimation {
-            isImageUploading = false
+
+        if let imageData = try await item.loadTransferable(type: Data.self),
+           let image = UIImage(data: imageData) {
+
+            print("🖼 Это изображение")
+            let url = try await ArticlesManager.shared.uploadImage(id: id, image: image, folder: "contentImages")
+
+            let markdown = "\n\n![](\(url))\n\n"
+            if let range = Range(selectedRange, in: text) {
+                text.replaceSubrange(range, with: markdown)
+            }
+
+            return url
+        }
+
+        if let videoData = try await item.loadTransferable(type: Data.self) {
+            print("🎞 Это видео")
+            let id = UUID().uuidString + id
+            let ref = Storage.storage().reference(withPath: "contentImages/\(id).mp4")
+            _ = try await ref.putDataAsync(videoData)
+            let url = try await ref.downloadURL().absoluteString
+            
+            let markdown = "\n\n![](\(url))\n\n"
+            if let range = Range(selectedRange, in: text) {
+                text.replaceSubrange(range, with: markdown)
+            }
+            
+            return url
         }
         
-        return url
+        return ""
     }
     
     func addNewPost(

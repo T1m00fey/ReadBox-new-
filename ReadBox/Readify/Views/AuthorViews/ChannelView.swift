@@ -88,7 +88,7 @@ struct ChannelView: View {
                                 .fontWeight(.light)
                                 .fontDesign(.rounded)
                                 .frame(width: UIScreen.main.bounds.width - 20, alignment: .leading)
-                                .padding(.top, 20)
+                                .padding(.top, viewModel.authorDescription == "" ? 50 : 20)
                             
                             ForEach(viewModel.posts) { post in
                                 PostView(
@@ -304,10 +304,12 @@ struct ChannelView: View {
                 }
                 .onAppear(perform: {
                     viewModel.isLoading = false
+                    viewModel.authorId = authorId
                     
                     viewModel.isSubscribed = viewModel.isSubscribed(user, on: authorId)
                     
                     viewModel.getViews()
+                    viewModel.getAvatar()
                     
                     Task {
                         viewModel.isLoading = true
@@ -358,6 +360,7 @@ struct ChannelView: View {
                         Task {
                             do {
                                 try await viewModel.loadPosts(by: authorId)
+                                viewModel.getAvatar()
                             } catch {
                                 withAnimation {
                                     viewModel.errorText = NSLocalizedString("loadDataErrorText", comment: "")
@@ -378,9 +381,24 @@ struct ChannelView: View {
                         
                         VStack(spacing: -30) {
                             HStack {
+                                if let avatar = viewModel.avatarImage {
+                                    Image(uiImage: avatar)
+                                        .resizable()
+                                        .scaledToFill()
+                                        .frame(width: 50, height: 50)
+                                        .clipShape(Circle())
+                                        .overlay {
+                                            Circle()
+                                                .stroke(
+                                                    Color(.label),
+                                                    lineWidth: 0.1
+                                                )
+                                        }
+                                }
+                                
                                 HStack(spacing: 0) {
                                     Text(authorName)
-                                        .font(.largeTitle)
+                                        .font(.system(size: 27))
                                         .fontWeight(.light)
                                         .lineLimit(1)
                                     
@@ -466,56 +484,41 @@ struct ChannelView: View {
                                 .shadow(radius: 3)
                                 .offset(y: 40)
                             
-                            if isSubscribed && !viewModel.isLoadingShowing {
-                                HStack {
-                                    Text(NSLocalizedString("youSubscribedLabel", comment: ""))
-                                        .font(.title3)
-                                    
-                                    Image(systemName: "checkmark")
-                                        .foregroundStyle(Color(uiColor: .label))
-                                }
-                                .frame(width: UIScreen.main.bounds.width - 10, height: 50, alignment: .center)
-                                .background(Color(uiColor: .systemBackground))
-                                .foregroundColor(Color(uiColor: .label))
-                                .clipShape(RoundedRectangle(cornerRadius: 15))
-                                .shadow(radius: 3)
-                                .offset(y: 20)
-                                .onTapGesture {
-                                    Task {
-                                        do {
-                                            try await viewModel.un_subscribeUser(on: authorId, isNeedToSubscribe: false)
-                                            
-                                            withAnimation {
-                                                user?.subscribes?.removeAll { $0 == authorId }
-                                                viewModel.isSubscribed?.toggle()
-                                                viewModel.subscribersCount -= 1
-                                            }
-                                        } catch {
-                                            withAnimation {
-                                                viewModel.errorText = error.localizedDescription
-                                                viewModel.isErrorPopupPresented = true
-                                            }
-                                        }
-                                    }
-                                }
-                            } else if !isSubscribed && !viewModel.isLoadingShowing {
-                                Text(NSLocalizedString("subscribeLabel", comment: ""))
+                            if !viewModel.isLoading {
+                                Text(
+                                    isSubscribed
+                                    ? NSLocalizedString("youSubscribedLabel", comment: "")
+                                    : NSLocalizedString("subscribeLabel", comment: "")
+                                )
                                     .font(.title3)
                                     .frame(width: UIScreen.main.bounds.width - 10, height: 50, alignment: .center)
-                                    .background(Color(uiColor: .label))
-                                    .foregroundColor(Color(uiColor: .systemBackground))
+                                    .background(
+                                        isSubscribed
+                                        ? Color(.systemBackground)
+                                        : Color(uiColor: .label)
+                                    )
+                                    .foregroundColor(
+                                        isSubscribed
+                                        ? Color(.label)
+                                        : Color(uiColor: .systemBackground)
+                                    )
                                     .clipShape(RoundedRectangle(cornerRadius: 15))
                                     .shadow(radius: 3)
                                     .offset(y: 20)
                                     .onTapGesture {
                                         Task {
                                             do {
-                                                try await viewModel.un_subscribeUser(on: authorId, isNeedToSubscribe: true)
+                                                try await viewModel.un_subscribeUser(on: authorId, isNeedToSubscribe: isSubscribed ? false : true)
                                                 
                                                 withAnimation {
-                                                    user?.subscribes?.append(authorId)
+                                                    if isSubscribed {
+                                                        user?.subscribes?.removeAll { $0 == authorId }
+                                                    } else {
+                                                        user?.subscribes?.append(authorId)
+                                                    }
+                                                    
                                                     viewModel.isSubscribed?.toggle()
-                                                    viewModel.subscribersCount += 1
+                                                    viewModel.subscribersCount += isSubscribed ? -1 : 1
                                                 }
                                             } catch {
                                                 withAnimation {

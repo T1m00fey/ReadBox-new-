@@ -59,7 +59,7 @@
 "titlePlaceholder" = "Название...";
 "descriptionPlaceholder" = "Описание...";
 "creationLabel" = "Создание";
-"titleTEError" = "Заголовок должен быть длиной не более 100 символов";
+"titleTEError" = "У публикации должен быть заголовок";
 "uploadPhotoError" = "Не удалось загрузить фото";
 "descriptionTEError" = "Такое описание недопустимо";
 "imageError" = "Выберите изображение для вашей публикации";
@@ -107,3 +107,6 @@
 "fileDeletedFromTextCreateView" = "Файл успшено удален ✓";
 "linkIsCopiedLabel" = "Ссылка скопирована ✓";
 "attachedFilesLabel" = "Прикрепленные файлы";
+"videoLabel" = "Видео 📹";
+"photoLabel" = "Фото 📷";
+"underlinedLabel" = "Подчеркнутый";

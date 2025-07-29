@@ -98,24 +98,34 @@ final class ProfileViewModel: ObservableObject {
         }
     }
     
-    func getUserDefaultsSize() {
+    func getTotalCacheSize() {
         var totalSize = 0
-        
+
         let dictionary = UserDefaults.standard.dictionaryRepresentation()
-        
         for (_, value) in dictionary {
             if let data = try? NSKeyedArchiver.archivedData(withRootObject: value, requiringSecureCoding: false) {
-                totalSize += data.count // Суммируем размеры данных
+                totalSize += data.count
             }
         }
-        
-        SDImageCache.shared.calculateSize { _, size in
-            totalSize += Int(size)
+
+        SDImageCache.shared.calculateSize { _, sdSize in
+            totalSize += Int(sdSize)
+
+            let tmp = FileManager.default.temporaryDirectory
+            let fileURLs = (try? FileManager.default.contentsOfDirectory(at: tmp, includingPropertiesForKeys: [.fileSizeKey])) ?? []
+
+            for url in fileURLs where url.pathExtension == "mp4" {
+                if let size = try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize {
+                    totalSize += size
+                }
+            }
+
+            DispatchQueue.main.async {
+                self.sizeOfData = Double(totalSize) / (1024 * 1024) // MB
+            }
         }
-        
-        let sizeInMB = Double(totalSize) / (1024 * 1024)
-        sizeOfData = sizeInMB
     }
+
     
     func getStringOf(articlesRead: Int) -> String {
         if StorageManager.shared.getLanguage() == "ru" {

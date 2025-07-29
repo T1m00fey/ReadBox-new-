@@ -213,11 +213,6 @@ struct SignInView: View {
             .fullScreenCover(isPresented: $viewModel.isSignUpViewPresented) {
                 SignUpView(isSignInViewPresented: $isSignInViewPresented)
             }
-            .onAppear {
-                Task {
-                    try? await viewModel.loadCurrentUser()
-                }
-            }
             .onDisappear {
                 isSecondTFFocused = false
                 isThirdTFFocused = false

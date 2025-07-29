@@ -62,6 +62,7 @@ struct FeedView: View {
                                 ArticleView(
                                     id: String(num),
                                     title: "Hello, World! Hello, World! Hello, World!",
+                                    authorId: "",
                                     authorName: "Hello, World!",
                                     isCheckmark: true,
                                     isArchive: false
@@ -75,6 +76,7 @@ struct FeedView: View {
                                 ArticleView(
                                     id: post.id,
                                     title: post.title ?? "",
+                                    authorId: post.authorId ?? "",
                                     authorName: viewModel.authorsNames[post.authorId ?? ""] ?? "",
                                     isCheckmark: viewModel.authorsCheckmarks[post.authorId ?? ""] ?? false,
                                     isArchive: post.isArchive ?? true

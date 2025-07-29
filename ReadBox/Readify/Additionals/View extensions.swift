@@ -326,9 +326,17 @@ extension View {
                             if viewModel.isLoadingShowing {
                                 VStack(spacing: -30) {
                                     HStack {
+                                        Circle()
+                                            .stroke(
+                                                Color(.label),
+                                                lineWidth: 0.1
+                                            )
+                                            .frame(width: 50, height: 50)
+                                            .shimmering()
+                                        
                                         HStack(spacing: 0) {
                                             Text("Hello, World!")
-                                                .font(.largeTitle)
+                                                .font(.system(size: 27))
                                                 .fontWeight(.light)
                                                 .redacted(reason: .placeholder)
                                                 .shimmering()
@@ -376,9 +384,24 @@ extension View {
                             } else {
                                 VStack(spacing: -30) {
                                     HStack {
+                                        if let avatar = viewModel.avatarImage {
+                                            Image(uiImage: avatar)
+                                                .resizable()
+                                                .scaledToFill()
+                                                .frame(width: 50, height: 50)
+                                                .clipShape(Circle())
+                                                .overlay {
+                                                    Circle()
+                                                        .stroke(
+                                                            Color(.label),
+                                                            lineWidth: 0.1
+                                                        )
+                                                }
+                                        }
+                                        
                                         HStack(spacing: 0) {
                                             Text(viewModel.user?.authorName ?? "")
-                                                .font(.largeTitle)
+                                                .font(.system(size: 27))
                                                 .fontWeight(.light)
                                                 .lineLimit(1)
                                             

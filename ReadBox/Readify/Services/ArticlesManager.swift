@@ -75,8 +75,6 @@ final class ArticlesManager {
             "is_archive": isArchive
         ]
         
-        print("TEXT: \(text)")
-        
         try await articlesCollection.document(id).updateData(data)
         
         if image == UIImage() {

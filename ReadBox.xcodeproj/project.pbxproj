@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		52207A082E38F83800D1564F /* NotificationService.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 52207A012E38F83800D1564F /* NotificationService.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		5258435D2E2A6BA000EF34F2 /* SDWebImageSwiftUI in Frameworks */ = {isa = PBXBuildFile; productRef = 5258435C2E2A6BA000EF34F2 /* SDWebImageSwiftUI */; };
 		C46E2CCB2E0861A4008B4BB2 /* Shimmer in Frameworks */ = {isa = PBXBuildFile; productRef = C46E2CCA2E0861A4008B4BB2 /* Shimmer */; };
 		C49684412DABF0E0004ED3AB /* PopupView in Frameworks */ = {isa = PBXBuildFile; productRef = C49684402DABF0E0004ED3AB /* PopupView */; };
@@ -21,11 +22,43 @@
 		C49684592DABF26F004ED3AB /* SwiftUIMailView in Frameworks */ = {isa = PBXBuildFile; productRef = C49684582DABF26F004ED3AB /* SwiftUIMailView */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		52207A062E38F83800D1564F /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = C49683CD2DABF067004ED3AB /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 52207A002E38F83800D1564F;
+			remoteInfo = NotificationService;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		522079FA2E38CFC400D1564F /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				52207A082E38F83800D1564F /* NotificationService.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
+		52207A012E38F83800D1564F /* NotificationService.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = NotificationService.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		C49683D52DABF067004ED3AB /* ReadBox.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ReadBox.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		52207A0C2E38F83800D1564F /* Exceptions for "NotificationService" folder in "NotificationService" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 52207A002E38F83800D1564F /* NotificationService */;
+		};
 		C49684562DABF21E004ED3AB /* Exceptions for "ReadBox" folder in "ReadBox" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
@@ -37,6 +70,14 @@
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		52207A022E38F83800D1564F /* NotificationService */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				52207A0C2E38F83800D1564F /* Exceptions for "NotificationService" folder in "NotificationService" target */,
+			);
+			path = NotificationService;
+			sourceTree = "<group>";
+		};
 		C49683D72DABF067004ED3AB /* ReadBox */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
@@ -48,6 +89,13 @@
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		522079FE2E38F83800D1564F /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		C49683D22DABF067004ED3AB /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -74,7 +122,7 @@
 			isa = PBXGroup;
 			children = (
 				C49683D72DABF067004ED3AB /* ReadBox */,
-				C496844B2DABF1EE004ED3AB /* Frameworks */,
+				52207A022E38F83800D1564F /* NotificationService */,
 				C49683D62DABF067004ED3AB /* Products */,
 			);
 			sourceTree = "<group>";
@@ -83,20 +131,36 @@
 			isa = PBXGroup;
 			children = (
 				C49683D52DABF067004ED3AB /* ReadBox.app */,
+				52207A012E38F83800D1564F /* NotificationService.appex */,
 			);
 			name = Products;
-			sourceTree = "<group>";
-		};
-		C496844B2DABF1EE004ED3AB /* Frameworks */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		52207A002E38F83800D1564F /* NotificationService */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 52207A092E38F83800D1564F /* Build configuration list for PBXNativeTarget "NotificationService" */;
+			buildPhases = (
+				522079FD2E38F83800D1564F /* Sources */,
+				522079FE2E38F83800D1564F /* Frameworks */,
+				522079FF2E38F83800D1564F /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				52207A022E38F83800D1564F /* NotificationService */,
+			);
+			name = NotificationService;
+			packageProductDependencies = (
+			);
+			productName = NotificationService;
+			productReference = 52207A012E38F83800D1564F /* NotificationService.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 		C49683D42DABF067004ED3AB /* ReadBox */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = C49683E02DABF068004ED3AB /* Build configuration list for PBXNativeTarget "ReadBox" */;
@@ -104,10 +168,12 @@
 				C49683D12DABF067004ED3AB /* Sources */,
 				C49683D22DABF067004ED3AB /* Frameworks */,
 				C49683D32DABF067004ED3AB /* Resources */,
+				522079FA2E38CFC400D1564F /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				52207A072E38F83800D1564F /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				C49683D72DABF067004ED3AB /* ReadBox */,
@@ -141,6 +207,9 @@
 				LastSwiftUpdateCheck = 1630;
 				LastUpgradeCheck = 1640;
 				TargetAttributes = {
+					52207A002E38F83800D1564F = {
+						CreatedOnToolsVersion = 16.3;
+					};
 					C49683D42DABF067004ED3AB = {
 						CreatedOnToolsVersion = 16.3;
 					};
@@ -171,11 +240,19 @@
 			projectRoot = "";
 			targets = (
 				C49683D42DABF067004ED3AB /* ReadBox */,
+				52207A002E38F83800D1564F /* NotificationService */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		522079FF2E38F83800D1564F /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		C49683D32DABF067004ED3AB /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -186,6 +263,13 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		522079FD2E38F83800D1564F /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		C49683D12DABF067004ED3AB /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -195,7 +279,67 @@
 		};
 /* End PBXSourcesBuildPhase section */
 
+/* Begin PBXTargetDependency section */
+		52207A072E38F83800D1564F /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 52207A002E38F83800D1564F /* NotificationService */;
+			targetProxy = 52207A062E38F83800D1564F /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
 /* Begin XCBuildConfiguration section */
+		52207A0A2E38F83800D1564F /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 7PV9N4T7V4;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = NotificationService/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = NotificationService;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.3.0;
+				PRODUCT_BUNDLE_IDENTIFIER = Tim.ReadBox.NotificationService;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		52207A0B2E38F83800D1564F /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 7PV9N4T7V4;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = NotificationService/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = NotificationService;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.3.0;
+				PRODUCT_BUNDLE_IDENTIFIER = Tim.ReadBox.NotificationService;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 		C49683DE2DABF068004ED3AB /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -335,7 +479,7 @@
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -371,7 +515,7 @@
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -394,6 +538,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		52207A092E38F83800D1564F /* Build configuration list for PBXNativeTarget "NotificationService" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				52207A0A2E38F83800D1564F /* Debug */,
+				52207A0B2E38F83800D1564F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		C49683D02DABF067004ED3AB /* Build configuration list for PBXProject "ReadBox" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

@@ -121,7 +121,7 @@ struct ProfileView: View {
                                 Button {
                                     viewModel.isMemorySettingsPopupPresented = true
                                     
-                                    viewModel.getUserDefaultsSize()
+                                    viewModel.getTotalCacheSize()
                                 } label: {
                                     ZStack {
                                         RoundedRectangle(cornerRadius: 20)

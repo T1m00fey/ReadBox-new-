@@ -279,7 +279,7 @@ struct CreateView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 15))
                         .padding(.bottom, 30)
                         .onTapGesture {
-                            if viewModel.titleText.count == 0 || viewModel.titleText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                            if (viewModel.titleText.count == 0 || viewModel.titleText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || viewModel.isFirstTapOnTitleTE) && !isEditing {
                                 withAnimation {
                                     viewModel.errorText = NSLocalizedString("titleTEError", comment: "")
                                     viewModel.isErrorPopupPresented = true
@@ -323,7 +323,7 @@ struct CreateView: View {
                     Button {
                         StorageManager.shared.deleteText()
                                                                         
-                        if mediaURLs != viewModel.mediaURLs && !isEditing {
+                        if mediaURLs != viewModel.mediaURLs {
                             if mediaURLs.count < viewModel.mediaURLs.count {
                                 for url in viewModel.mediaURLs {
                                     if !mediaURLs.contains(url) {

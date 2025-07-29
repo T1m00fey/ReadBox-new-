@@ -11,17 +11,21 @@ import FirebaseStorage
 struct ArticleView: View {
     let id: String
     let title: String
+    let authorId: String
     let authorName: String
     let isCheckmark: Bool
     let isArchive: Bool
     
     @State private var image: UIImage? = nil
+    @State private var avatarImage: UIImage? = nil
     @State private var isExpanded = false
     
     private let maxTitleLen = 150
     
     private func fetchImage() {
         let articleImage = StorageManager.shared.getImage(id: id)
+        let storage = Storage.storage()
+        let storageRef = storage.reference()
         
         if articleImage != nil {
             withAnimation {
@@ -29,12 +33,9 @@ struct ArticleView: View {
             }
         } else {
             DispatchQueue.main.async {
-                let storage = Storage.storage()
-                let storageRef = storage.reference()
-                
                 let islandRef = storageRef.child("images/\(id).jpg")
                 
-                islandRef.getData(maxSize: 1 * 5012 * 50125) { data, error in
+                islandRef.getData(maxSize: 1 * 5012 * 5012) { data, error in
                     if let error = error {
                         print(error .localizedDescription)
                     } else {
@@ -42,6 +43,20 @@ struct ArticleView: View {
                             self.image = UIImage(data: data!)
                             StorageManager.shared.saveImage(id: id, image: image ?? UIImage())
                         }
+                    }
+                }
+            }
+        }
+        
+        DispatchQueue.main.async {
+            let islandRef = storageRef.child("avatars/\(authorId).jpg")
+            
+            islandRef.getData(maxSize: 1 * 5012 * 5012) { data, error in
+                if let error = error {
+                    print(error.localizedDescription)
+                } else {
+                    withAnimation {
+                        self.avatarImage = UIImage(data: data!)
                     }
                 }
             }
@@ -57,21 +72,38 @@ struct ArticleView: View {
                     .foregroundStyle(Color(uiColor: .secondarySystemBackground))
                     .shadow(radius: 2)
                 
-                HStack(spacing: 0) {
-                    Text(authorName)
-                        .font(.system(size: 21))
-                        .fontDesign(.rounded)
-                        .padding(.vertical, 20)
-                        .lineLimit(1)
-                    
-                    if isCheckmark {
-                        Image(systemName: "checkmark.seal.fill")
-                            .foregroundStyle(Color.blue)
-                            .font(.footnote)
-                            .padding(.top, 4)
+                HStack {
+                    if let avatarImage {
+                        Image(uiImage: avatarImage)
+                            .resizable()
+                            .scaledToFill()
+                            .frame(width: 40, height: 40)
+                            .clipShape(Circle())
+                            .overlay(
+                                Circle()
+                                    .stroke(
+                                        Color(.label),
+                                        lineWidth: 0.1
+                                    )
+                            )
                     }
                     
-                    Spacer()
+                    HStack(spacing: 0) {
+                        Text(authorName)
+                            .font(.system(size: 21))
+                            .fontDesign(.rounded)
+                            .padding(.vertical, 20)
+                            .lineLimit(1)
+                        
+                        if isCheckmark {
+                            Image(systemName: "checkmark.seal.fill")
+                                .foregroundStyle(Color.blue)
+                                .font(.footnote)
+                                .padding(.top, 4)
+                        }
+                        
+                        Spacer()
+                    }
                 }
                 .frame(width: UIScreen.main.bounds.width - 42, height: 90, alignment: .topLeading)
                 .padding(.bottom, 16)
@@ -148,8 +180,4 @@ struct ArticleView: View {
         }
         
     }
-}
-
-#Preview {
-    ArticleView(id: "1", title: "TETSTETSTETSTETSTETSTETSTETSTETSTETSTETSTETSTETSTETSTETSTETSTETSTETSTETSTETSTETSTETSTETSTETSTETSTETSTETSTETSTETSTETSTETSTETSTETS", authorName: "Test", isCheckmark: false, isArchive: false)
 }

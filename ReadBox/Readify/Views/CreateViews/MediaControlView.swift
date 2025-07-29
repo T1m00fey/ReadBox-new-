@@ -8,6 +8,7 @@
 import SwiftUI
 import SDWebImageSwiftUI
 import SwiftfulLoadingIndicators
+import AVFoundation
 
 struct MediaControlView: View {
     let postId: String
@@ -18,6 +19,31 @@ struct MediaControlView: View {
     @Binding var errorText: String
     @Binding var isErrorPopupPresented: Bool
     @Binding var isErrorPopup: Bool
+    
+    @State private var previewImages: [URL: UIImage] = [:]
+
+    private func generatePreviewImage(from url: URL, completion: @escaping (UIImage?) -> Void) {
+        let asset = AVAsset(url: url)
+        let generator = AVAssetImageGenerator(asset: asset)
+        generator.appliesPreferredTrackTransform = true
+        let time = CMTime(seconds: 0, preferredTimescale: 60)
+        
+        DispatchQueue.global().async {
+            do {
+                let cgImage = try generator.copyCGImage(at: time, actualTime: nil)
+                let uiImage = UIImage(cgImage: cgImage)
+                DispatchQueue.main.async {
+                    completion(uiImage)
+                }
+            } catch {
+                print("Error generating preview image: \(error)")
+                DispatchQueue.main.async {
+                    completion(nil)
+                }
+            }
+        }
+    }
+
     
     var body: some View {
         VStack {
@@ -42,38 +68,75 @@ struct MediaControlView: View {
                                     .frame(width: UIScreen.main.bounds.width - 10)
                                     .foregroundStyle(Color(.systemBackground))
                                     .shadow(radius: 2)
+                                    .onAppear {
+                                        generatePreviewImage(from: url) { image in
+                                            if let image {
+                                                withAnimation {
+                                                    previewImages[url] = image
+                                                }
+                                            }
+                                        }
+                                    }
                                 
                                 HStack {
-                                    WebImage(url: url) { image in
-                                        image
-                                            .resizable()
-                                    } placeholder: {
-                                        LoadingIndicator(
-                                            animation: .circleRunner,
-                                            color: Color(.label),
-                                            size: .small,
-                                            speed: .fast
-                                        )
-                                        .frame(width: 100, height: 100)
-                                        .background(Color(.secondarySystemBackground))
+                                    if url.pathExtension.lowercased() == "mp4" {
+                                        if let preview = previewImages[url] {
+                                            ZStack {
+                                                Image(uiImage: preview)
+                                                    .resizable()
+                                                    .scaledToFit()
+                                                    .frame(width: 100)
+                                                    .clipShape(RoundedRectangle(cornerRadius: 16))
+                                                    .padding(.vertical, 10)
+                                                
+                                                Image(systemName: "play.fill")
+                                                    .font(.system(size: 25))
+                                                    .foregroundStyle(Color(.secondarySystemBackground))
+                                            }
+                                        } else {
+                                            Image(systemName: "play.fill")
+                                                .font(.system(size: 25))
+                                                .foregroundStyle(Color.gray)
+                                                .frame(width: 100, height: 100)
+                                                .background(Color(.secondarySystemBackground))
+                                                .clipShape(RoundedRectangle(cornerRadius: 16))
+                                                .padding(.vertical, 10)
+                                        }
+                                    } else {
+                                        WebImage(url: url) { image in
+                                            image
+                                                .resizable()
+                                        } placeholder: {
+                                            LoadingIndicator(
+                                                animation: .circleRunner,
+                                                color: Color(.label),
+                                                size: .small,
+                                                speed: .fast
+                                            )
+                                            .frame(width: 100, height: 100)
+                                            .background(Color(.secondarySystemBackground))
+                                            .clipShape(RoundedRectangle(cornerRadius: 16))
+                                        }
+                                        .onSuccess { _, _, _ in
+                                            print("HERE: web image")
+                                        }
+                                        .onFailure(perform: { error in
+                                            print("HERE: \(error.localizedDescription)")
+                                        })
+                                        .transition(.fade(duration: 0.5))
+                                        .scaledToFit()
+                                        .frame(width: 100)
                                         .clipShape(RoundedRectangle(cornerRadius: 16))
+                                        .padding(.vertical, 10)
                                     }
-                                    .onSuccess { _, _, _ in
-                                        print("HERE: web image")
-                                    }
-                                    .onFailure(perform: { error in
-                                        print("HERE: \(error.localizedDescription)")
-                                    })
-                                    .transition(.fade(duration: 0.5))
-                                    .scaledToFit()
-                                    .frame(width: 100)
-                                    .clipShape(RoundedRectangle(cornerRadius: 16))
-                                    .padding(.vertical, 10)
                                     
-                                    Text(url.absoluteString)
+                                    Text(
+                                        url.pathExtension == "mp4"
+                                        ? NSLocalizedString("videoLabel", comment: "")
+                                        : NSLocalizedString("photoLabel", comment: "")
+                                    )
                                         .font(.system(size: 18))
                                         .fontDesign(.rounded)
-                                        .fontWeight(.light)
                                         .lineLimit(5)
                                         .multilineTextAlignment(.leading)
                                     
@@ -91,12 +154,12 @@ struct MediaControlView: View {
                                         } label: {
                                             ZStack {
                                                 RoundedRectangle(cornerRadius: 12)
-                                                    .frame(width: 50, height: 50)
+                                                    .frame(width: 40, height: 40)
                                                     .foregroundStyle(Color(.secondarySystemBackground))
                                                     .shadow(radius: 2)
                                                 
                                                 Image(systemName: "document.on.document")
-                                                    .font(.system(size: 23))
+                                                    .font(.system(size: 22))
                                                     .foregroundStyle(Color.gray)
                                             }
                                         }
@@ -110,7 +173,6 @@ struct MediaControlView: View {
                                                     withAnimation {
                                                         text = text.replacingOccurrences(of: "![](\(url))", with: "")
                                                         mediaURLs.removeAll { $0 == url }
-                                                        print("DELETE: \(mediaURLs)")
                                                         
                                                         errorText = NSLocalizedString("fileDeletedFromTextCreateView", comment: "")
                                                         isErrorPopupPresented = true
@@ -127,12 +189,12 @@ struct MediaControlView: View {
                                         } label: {
                                             ZStack {
                                                 RoundedRectangle(cornerRadius: 12)
-                                                    .frame(width: 50, height: 50)
+                                                    .frame(width: 40, height: 40)
                                                     .foregroundStyle(Color(.secondarySystemBackground))
                                                     .shadow(radius: 2)
                                                 
                                                 Image(systemName: "minus.circle")
-                                                    .font(.system(size: 23))
+                                                    .font(.system(size: 22))
                                                     .foregroundStyle(Color.red)
                                             }
                                         }

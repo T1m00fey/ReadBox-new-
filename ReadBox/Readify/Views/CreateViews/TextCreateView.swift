@@ -11,6 +11,7 @@ import PopupView
 import SwiftfulLoadingIndicators
 import _PhotosUI_SwiftUI
 import PopupView
+import FirebaseStorage
 
 struct TextCreateView: View {
     let id: String
@@ -47,10 +48,14 @@ struct TextCreateView: View {
                             Markdown(
                                 viewModel.text.replacingOccurrences(of: "\n", with: "  \n").normalizeEmptyLines()
                             )
-                            .markdownImageProvider(.webImage)
-                            .padding(.horizontal, 16)
+                            .markdownImageProvider(
+                                WebImageProvider(onImageTap: { url in
+                                    viewModel.selectedImageURL = url
+                                    viewModel.isImageFullScreenPresented = true
+                                })
+                            )
                             .padding(.vertical, 16)
-                            .frame(width: UIScreen.main.bounds.width - 10, alignment: .topLeading)
+                            .frame(width: UIScreen.main.bounds.width - 32, alignment: .topLeading)
                             .padding(.horizontal)
                             
                         } else {
@@ -123,7 +128,7 @@ struct TextCreateView: View {
                                 
                                 ScrollView(.horizontal, showsIndicators: false) {
                                     HStack(spacing: 10) {
-                                        PhotosPicker(selection: $viewModel.imageItem, matching: .images) {
+                                        PhotosPicker(selection: $viewModel.imageItem, matching: .any(of: [.images, .videos])) {
                                             Image(systemName: "photo.badge.plus")
                                                 .font(.system(size: 20))
                                                 .foregroundStyle(Color(.label))
@@ -151,10 +156,9 @@ struct TextCreateView: View {
                                         .clipShape(RoundedRectangle(cornerRadius: 10))
                                         .shadow(radius: 2)
                                         
-                                        ForEach(viewModel.markdownButtons, id: \.title) { (title, type) in
+                                        ForEach(0..<viewModel.markdownButtons.count, id: \.self) { index in
                                             viewModel.configureMarkdownButton(
-                                                title: title,
-                                                type: type
+                                                type: viewModel.markdownButtons[index]
                                             )
                                         }
                                         
@@ -191,16 +195,28 @@ struct TextCreateView: View {
                     .onChange(of: viewModel.imageItem) {
                         Task {
                             do {
-                                let url = try await viewModel.insertPhoto(postId: id)
+                                let url = try await viewModel.insertMedia(with: UUID().uuidString + id)
                                 
                                 if url != "" {
-                                    mediaURLs.append(URL(string: url)!)
+                                    withAnimation {
+                                        mediaURLs.append(URL(string: url)!)
+                                    }
                                 }
                             } catch {
-                                print("Error to upload photo: \(error.localizedDescription)")
+                                withAnimation {
+                                    viewModel.errorText = error.localizedDescription
+                                    viewModel.isErrorPopupPresented = true
+                                    viewModel.isErrorPopup = true
+                                }
                             }
                         }
                     }
+                    
+                }
+            }
+            .fullScreenCover(isPresented: $viewModel.isImageFullScreenPresented) {
+                if let url = viewModel.selectedImageURL {
+                    ZoomableImageView(imageURL: url)
                 }
             }
             .popup(isPresented: $viewModel.isConfirmationViewPresented) {

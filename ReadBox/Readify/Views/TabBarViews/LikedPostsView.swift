@@ -28,6 +28,7 @@ struct LikedPostsView: View {
                             ArticleView(
                                 id: "-1",
                                 title: "Hello, World!",
+                                authorId: "",
                                 authorName: "ReadBox Author",
                                 isCheckmark: true,
                                 isArchive: false
@@ -63,6 +64,7 @@ struct LikedPostsView: View {
                             ArticleView(
                                 id: article.id,
                                 title: article.title ?? "",
+                                authorId: article.authorId ?? "",
                                 authorName: viewModel.authorsNames[article.authorId ?? ""] ?? "",
                                 isCheckmark: viewModel.authorsCheckmarks[article.authorId ?? ""] ?? false,
                                 isArchive: article.isArchive ?? false

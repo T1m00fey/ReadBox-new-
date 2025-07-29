@@ -28,28 +28,30 @@ struct RootView: View {
     
     var body: some View {
         ZStack {
-            TabView {
-                FeedView(isSignInViewPresented: $isSignInViewPresented)
-                    .tabItem {
-                        Label("", systemImage: "house.fill")
-                    }
-                
-                LikedPostsView(isSignInViewPresented: $isSignInViewPresented)
-                    .tabItem {
-                        Label("", systemImage: "hand.thumbsup.fill")
-                    }
-                
-                CreatedPostsView(isSignInViewPresented: $isSignInViewPresented)
-                    .tabItem {
-                        Label("", systemImage: "pencil.and.scribble")
-                    }
-                
-                ProfileView(isSignInViewPresented: $isSignInViewPresented)
-                    .tabItem {
-                        Label("", systemImage: "person.fill")
-                    }
+            if !isSignInViewPresented {
+                TabView {
+                    FeedView(isSignInViewPresented: $isSignInViewPresented)
+                        .tabItem {
+                            Label("", systemImage: "house.fill")
+                        }
+                    
+                    LikedPostsView(isSignInViewPresented: $isSignInViewPresented)
+                        .tabItem {
+                            Label("", systemImage: "hand.thumbsup.fill")
+                        }
+                    
+                    CreatedPostsView(isSignInViewPresented: $isSignInViewPresented)
+                        .tabItem {
+                            Label("", systemImage: "pencil.and.scribble")
+                        }
+                    
+                    ProfileView(isSignInViewPresented: $isSignInViewPresented)
+                        .tabItem {
+                            Label("", systemImage: "person.fill")
+                        }
+                }
+                .tint(Color(uiColor: .label))
             }
-            .tint(Color(uiColor: .label))
         }
         .onChange(of: isSignInViewPresented) {
             if !isSignInViewPresented {

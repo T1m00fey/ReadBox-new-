@@ -17,16 +17,15 @@ const db = getFirestore();
 
 /* ─────────────── helper: рассылаем пуш подписчикам ─────────────── */
 async function pushToSubscribers({ authorUid, authorName, articleId, title }) {
-  /* 1. uid-ы подписчиков автора */
   const usersSnap = await db.collection("users")
     .where("subscribes", "array-contains", authorUid)
     .get();
+
   if (usersSnap.empty) {
     logger.info("📭 Подписчиков нет");
     return;
   }
 
-  /* 2. собираем FCM-токены */
   const tokens = [];
   usersSnap.forEach((doc) => {
     const d = doc.data();
@@ -37,28 +36,41 @@ async function pushToSubscribers({ authorUid, authorName, articleId, title }) {
       tokens.push(d.fcm_token);
     }
   });
+
   if (!tokens.length) {
     logger.info("🔇 У подписчиков нет токенов");
     return;
   }
 
-  /* 3. отправляем */
+  const imageUrl = `https://firebasestorage.googleapis.com/v0/b/readify-403a6.appspot.com/o/images%2F${encodeURIComponent(articleId)}.jpg?alt=media`;
+
   const rsp = await getMessaging().sendEachForMulticast({
     tokens,
     notification: {
-      title: authorName,        // ← заголовок пуша = имя автора
-      body:  title ?? "",       // ← тело пуша = титул статьи
+      title: authorName,
+      body: title ?? "",
+      image: imageUrl
     },
-    data: { articleId, authorUid },
+    data: {
+      articleId,
+      imageUrl
+    },
+    apns: {
+      payload: {
+        aps: {
+          "mutable-content": 1
+        }
+      }
+    }
   });
+
   logger.info(`✅ Успешно: ${rsp.successCount} / ${tokens.length}`);
 
-  /* 4. чистим битые токены */
   const dead = rsp.responses
     .map((r, i) =>
       !r.success &&
-      ["messaging/invalid-registration-token",
-       "messaging/registration-token-not-registered"].includes(r.error?.code)
+      ["messaging/invalid-registration-token", "messaging/registration-token-not-registered"]
+        .includes(r.error?.code)
         ? tokens[i]
         : null
     )

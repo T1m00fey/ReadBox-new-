@@ -15,14 +15,29 @@ final class ReadViewModel: ObservableObject {
     @Published var likesCount = 0
     @Published var fontSize = 0
     @Published var isFontSettingPopupPresented = false
-    @Published var contentHeight: CGFloat = 0
-    @Published var markdownText = """
-                                    """
     @Published var image = UIImage()
+    @Published var avatarImage: UIImage? = nil
     
-//    func plusReadArticle(userId: String, articlesRead: Int) async throws {
-//        try await UserManager.shared.plusReadArticle(userId: userId, articlesRead: articlesRead)
-//    }
+    @Published var selectedImageURL: URL? = nil
+    @Published var isImageFullscreenPresented = false
+    
+    func getAvatar(_ authorId: String) {
+        DispatchQueue.main.async {
+            let storage = Storage.storage()
+            let storageRef = storage.reference()
+            let islandRef = storageRef.child("avatars/\(authorId).jpg")
+            
+            islandRef.getData(maxSize: 1 * 5012 * 5012) { data, error in
+                if let error = error {
+                    print(error.localizedDescription)
+                } else {
+                    withAnimation {
+                        self.avatarImage = UIImage(data: data!)
+                    }
+                }
+            }
+        }
+    }
     
     func addLikedPost(userId: String, articleId: String) async throws {
         try await UserManager.shared.addLikedPost(id: userId, likedPost: articleId)

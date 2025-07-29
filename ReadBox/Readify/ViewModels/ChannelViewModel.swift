@@ -7,6 +7,7 @@
 
 import SwiftUI
 import Firebase
+import FirebaseStorage
 
 @MainActor
 final class ChannelViewModel: ObservableObject {
@@ -28,8 +29,28 @@ final class ChannelViewModel: ObservableObject {
     @Published var isLoadingShowing = true
     @Published var isAllLoading = false
     @Published var lastDocument: DocumentSnapshot? = nil
+    @Published var avatarImage: UIImage? = nil
+    @Published var authorId = ""
     
     var description = ""
+    
+    func getAvatar() {
+        DispatchQueue.main.async {
+            let storage = Storage.storage()
+            let storageRef = storage.reference()
+            let islandRef = storageRef.child("avatars/\(self.authorId).jpg")
+            
+            islandRef.getData(maxSize: 1 * 5012 * 5012) { data, error in
+                if let error = error {
+                    print(error.localizedDescription)
+                } else {
+                    withAnimation {
+                        self.avatarImage = UIImage(data: data!)
+                    }
+                }
+            }
+        }
+    }
     
     func getViews() {
         views = StorageManager.shared.getViews()

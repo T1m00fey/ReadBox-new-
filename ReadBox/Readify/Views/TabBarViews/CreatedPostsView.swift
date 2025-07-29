@@ -52,6 +52,8 @@ struct CreatedPostsView: View {
                                 withAnimation {
                                     viewModel.authorNameText = viewModel.user?.authorName ?? ""
                                     viewModel.descriptionText = viewModel.user?.authorDescription ?? ""
+                                    
+                                    viewModel.getAvatar()
                                 }
                             } catch {
                                 viewModel.isErrorPopupPresented = true
@@ -168,10 +170,10 @@ struct CreatedPostsView: View {
                                     .fontWeight(.light)
                                     .fontDesign(.rounded)
                                     .frame(minWidth: UIScreen.main.bounds.width - 20, alignment: .leading)
-                                    .padding(.top, 20)
+                                    .padding(.top, viewModel.user?.authorDescription == "" ? 50 : 20)
                                 
                                 if (viewModel.isArchivePresented && viewModel.archivePosts.count != 0)
-                                    || !(viewModel.isArchivePresented && viewModel.posts.count != 0) {
+                                    || (!viewModel.isArchivePresented && viewModel.posts.count != 0) {
                                     ForEach(
                                         isArchivePresented
                                         ? viewModel.archivePosts
@@ -203,6 +205,7 @@ struct CreatedPostsView: View {
                                                 .fontDesign(.rounded)
                                                 .foregroundStyle(Color.gray)
                                                 .multilineTextAlignment(.center)
+                                                .frame(width: UIScreen.main.bounds.width - 32)
                                             
                                             Text(NSLocalizedString("toPublicationsLabel", comment: ""))
                                                 .frame(width: UIScreen.main.bounds.width - 10, height: 50, alignment: .center)
@@ -218,13 +221,15 @@ struct CreatedPostsView: View {
                                                         viewModel.isArchivePresented = false
                                                     }
                                                 }
+                                                .frame(width: UIScreen.main.bounds.width - 32)
                                         }
                                     } else if viewModel.posts.count == 0 {
                                         VStack(spacing: 20) {
                                             
-                                            Image(systemName: "square.and.pencil")
+                                            Image(systemName: "pencil.and.scribble")
                                                 .resizable()
-                                                .frame(width: 100, height: 100)
+                                                .scaledToFit()
+                                                .frame(width: 100)
                                                 .foregroundStyle(Color.gray)
                                             
                                             Text(LocalizedStringKey("noArticlesAddedLabel"))
@@ -235,7 +240,8 @@ struct CreatedPostsView: View {
                                                 .multilineTextAlignment(.center)
                                             
                                         }
-                                        .padding(.top, viewModel.user?.authorDescription == "" ? 200 : 100 )
+                                        .frame(width: UIScreen.main.bounds.width - 32)
+                                        .padding(.top, 100)
                                     }
                                 }
                                 
@@ -253,9 +259,10 @@ struct CreatedPostsView: View {
                                 
                                 VStack(spacing: 20) {
                                     
-                                    Image(systemName: "square.and.pencil")
+                                    Image(systemName: "pencil.and.scribble")
                                         .resizable()
-                                        .frame(width: 100, height: 100)
+                                        .scaledToFit()
+                                        .frame(width: 100)
                                         .foregroundStyle(Color.gray)
                                     
                                     Text(LocalizedStringKey("noArticlesAddedLabel"))
@@ -267,7 +274,7 @@ struct CreatedPostsView: View {
                                     
                                 }
                                 .frame(width: UIScreen.main.bounds.width - 32)
-                                .padding(.top, viewModel.user?.authorDescription == "" ? 200 : 100)
+                                .padding(.top, 100)
                             }
                             
                             if !viewModel.isLoading
@@ -353,10 +360,15 @@ struct CreatedPostsView: View {
                         ZStack {
                             RoundedRectangle(cornerRadius: 30)
                                 .foregroundStyle(Color(uiColor: .secondarySystemBackground))
-                                .frame(width: UIScreen.main.bounds.width - 60, height: 150)
+                                .frame(width: UIScreen.main.bounds.width - 60, height: 250)
                                 .shadow(radius: 2)
                             
                             VStack(spacing: 25) {
+                                AvatarControlView(
+                                    authorId: viewModel.user?.userId ?? "",
+                                    avatarImage: $viewModel.avatarImage
+                                )
+                                
                                 VStack {
                                     TextField(LocalizedStringKey("nameLabel"), text: $viewModel.authorNameText)
                                         .frame(width: UIScreen.main.bounds.width - 92)
@@ -386,7 +398,7 @@ struct CreatedPostsView: View {
                                         .foregroundStyle(isDescriptionFocused ? Color(uiColor: .label) : Color.gray)
                                 }
                             }
-                            .frame(height: 160)
+                            .padding(.vertical, 5)
                             .onAppear {
                                 viewModel.isButtonEnable()
                             }
@@ -401,6 +413,24 @@ struct CreatedPostsView: View {
                             } else {
                                 Task {
                                     do {
+                                        if let avatar =  viewModel.avatarImage,
+                                           let data = avatar.jpegData(compressionQuality: 0.8),
+                                           let userId = viewModel.user?.userId
+                                        {
+                                            let ref = Storage.storage().reference().child("avatars/\(userId).jpg")
+                                            _ = try await ref.putDataAsync(data)
+                                        } else {
+                                            if let userId = viewModel.user?.userId {
+                                                let ref = Storage.storage().reference().child("avatars/\(userId).jpg")
+                                                do {
+                                                    try await ref.delete()
+                                                    StorageManager.shared.deleteImage(id: userId)
+                                                } catch {
+                                                    print("Ошибка при удалении аватара: \(error.localizedDescription)")
+                                                }
+                                            }
+                                        }
+                                    
                                         if viewModel.user?.authorName != viewModel.authorNameText {
                                             try await viewModel.removeCheckmarkStatus()
                                         }

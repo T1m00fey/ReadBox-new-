@@ -58,6 +58,21 @@ struct ReadView: View {
                                 .fontDesign(.rounded)
                                 .foregroundStyle(Color.gray)
                             
+                            if let avatar = viewModel.avatarImage {
+                                Image(uiImage: avatar)
+                                    .resizable()
+                                    .scaledToFill()
+                                    .frame(width: 40, height: 40)
+                                    .clipShape(Circle())
+                                    .overlay {
+                                        Circle()
+                                            .stroke(
+                                                Color(.label),
+                                                lineWidth: 0.1
+                                            )
+                                    }
+                            }
+                            
                             HStack(spacing: 0) {
                                 Button {
                                     withAnimation {
@@ -227,13 +242,21 @@ struct ReadView: View {
                         Markdown(
                             text.replacingOccurrences(of: "\n", with: "  \n").normalizeEmptyLines()
                         )
-                        .markdownImageProvider(.webImage)
+                        .markdownImageProvider(
+                            WebImageProvider(onImageTap: { url in
+                                viewModel.selectedImageURL = url
+                                viewModel.isImageFullscreenPresented = true
+                            })
+                        )
                         .markdownTextStyle(\.text) {
                             FontSize(CGFloat(viewModel.fontSize))
                         }
                         .markdownTheme(.gitHub)
                         .frame(width: UIScreen.main.bounds.width - 32, alignment: .topLeading)
                         .padding(.bottom, 50)
+                        .onDisappear {
+                            NotificationCenter.default.post(name: .stopAllVideoPlayback, object: nil)
+                        }
                     }
                     
                 }
@@ -247,9 +270,16 @@ struct ReadView: View {
                         viewModel.fetchImage(byId: id)
                     }
                     
+                    viewModel.getAvatar(authorId)
+                    
                     viewModel.likesCount = likesCount
                     
                     viewModel.fontSize = StorageManager.shared.getFontSize()
+                }
+                .fullScreenCover(isPresented: $viewModel.isImageFullscreenPresented) {
+                    if let url = viewModel.selectedImageURL {
+                        ZoomableImageView(imageURL: url)
+                    }
                 }
                 .popup(isPresented: $viewModel.isErrorPopupPresented) {
                     Text(viewModel.errorText)

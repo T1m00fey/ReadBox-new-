@@ -9,7 +9,12 @@ import SwiftUI
 import SDWebImageSwiftUI
 
 struct MemorySettingsView: View {
-    func clearCache() {
+    let sizeOfData: Double
+    
+    @Binding var successText: String
+    @Binding var isSuccessPopupPresented: Bool
+    
+    private func clearCache() {
         let userDefaults = UserDefaults.standard
         let dictionary = userDefaults.dictionaryRepresentation()
         
@@ -20,17 +25,21 @@ struct MemorySettingsView: View {
         }
         
         SDImageCache.shared.clear(with: .all)
-        
+
+        // Очистка видео из tmp
+        let tmp = FileManager.default.temporaryDirectory
+        let fileURLs = try? FileManager.default.contentsOfDirectory(at: tmp, includingPropertiesForKeys: nil)
+        fileURLs?.forEach { url in
+            if url.pathExtension == "mp4" {
+                try? FileManager.default.removeItem(at: url)
+            }
+        }
+
         userDefaults.synchronize()
         
         successText = NSLocalizedString("cacheClearedAlert", comment: "")
         isSuccessPopupPresented = true
     }
-    
-    let sizeOfData: Double
-    
-    @Binding var successText: String
-    @Binding var isSuccessPopupPresented: Bool
     
     var body: some View {
         VStack {

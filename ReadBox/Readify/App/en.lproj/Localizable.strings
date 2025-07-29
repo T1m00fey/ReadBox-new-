@@ -59,7 +59,7 @@
 "titlePlaceholder" = "Title...";
 "descriptionPlaceholder" = "Description...";
 "creationLabel" = "Creation";
-"titleTEError" = "The title must be no more than 100 characters long";
+"titleTEError" = "The publication must have a title";
 "uploadPhotoError" = "Couldn't upload photo";
 "descriptionTEError" = "Such a description is unacceptable";
 "imageError" = "Choose an image for your post";
@@ -107,3 +107,6 @@
 "fileDeletedFromTextCreateView" = "The file was deleted successfully ✓";
 "linkIsCopiedLabel" = "The link is copied ✓";
 "attachedFilesLabel" = "Attached files";
+"videoLabel" = "Video 📹";
+"photoLabel" = "Photo 📷";
+"underlinedLabel" = "Underlined";

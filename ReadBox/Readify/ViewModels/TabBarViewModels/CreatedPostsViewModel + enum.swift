@@ -48,6 +48,7 @@ final class CreatedPostsViewModel: ObservableObject {
     @Published var isAllLoaded = false
     @Published var isAllArchivedLoaded = false
     @Published var mediaURLs: [URL] = []
+    @Published var avatarImage: UIImage? = nil
     
     @Published var user: DBUser? = nil
     
@@ -62,6 +63,24 @@ final class CreatedPostsViewModel: ObservableObject {
     var isEditing = false
     
     var alertText = ""
+    
+    func getAvatar() {
+        DispatchQueue.main.async {
+            let storage = Storage.storage()
+            let storageRef = storage.reference()
+            let islandRef = storageRef.child("avatars/\(self.user?.userId ?? "").jpg")
+            
+            islandRef.getData(maxSize: 1 * 5012 * 5012) { data, error in
+                if let error = error {
+                    print(error.localizedDescription)
+                } else {
+                    withAnimation {
+                        self.avatarImage = UIImage(data: data!)
+                    }
+                }
+            }
+        }
+    }
     
     func isButtonEnable() {
         withAnimation {
@@ -139,6 +158,8 @@ final class CreatedPostsViewModel: ObservableObject {
             isLoading = true
             
             try? await loadUser()
+            
+            getAvatar()
         }
     }
     
