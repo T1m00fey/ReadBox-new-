@@ -25,6 +25,7 @@ final class ProfileViewModel: ObservableObject {
     @Published var isMailViewPresented = false
     @Published var isLoading = true
     @Published var isNeedToReload = false
+    @Published var isSubscribesViewPresented = false
     @Published var mailData = ComposeMailData(
         subject: "To the developer",
          recipients: ["support@ireadbox.ru"],
@@ -150,8 +151,8 @@ final class ProfileViewModel: ObservableObject {
             throw URLError(.fileDoesNotExist)
         }
         
-        try await UserManager.shared.deleteUser(user: user)
         try await AuthenticationManager.shared.delete()
+        try await UserManager.shared.deleteUser(user: user)
     }
     
     

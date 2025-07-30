@@ -191,8 +191,10 @@ final class CreatedPostsViewModel: ObservableObject {
             StorageManager.shared.deleteImage(id: id)
             
             let fileReference = Storage.storage().reference().child("images/\(id).jpg")
+            let videoReference = Storage.storage().reference().child("images/\(id).mp4")
             
             try? await fileReference.delete()
+            try? await videoReference.delete()
         }
         
         withAnimation {

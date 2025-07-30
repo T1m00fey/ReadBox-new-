@@ -7,6 +7,7 @@
 
 import SwiftUI
 import FirebaseStorage
+import AVFoundation
 
 struct PostView: View {
     let id: String
@@ -20,29 +21,47 @@ struct PostView: View {
     @Binding var selectedId: String
     
     @State private var image: UIImage? = nil
+    @State private var isVideo = false
     
     private func fetchImage() {
         let articleImage = StorageManager.shared.getImage(id: id)
-        
+
         if articleImage != nil {
             withAnimation {
                 image = articleImage
             }
         } else {
-            DispatchQueue.main.async {
-                let storage = Storage.storage()
-                let storageRef = storage.reference()
-                
-                let islandRef = storageRef.child("images/\(id).jpg")
-                
-                islandRef.getData(maxSize: 1 * 5012 * 50125) { data, error in
-                    if let error = error {
-                        print(error .localizedDescription)
-                    } else {
-                        // Data for "images/island.jpg" is returned
-                        withAnimation {
-                            self.image = UIImage(data: data!)
-                            StorageManager.shared.saveImage(id: id, image: image ?? UIImage())
+            // 1. Сначала пробуем загрузить .jpg
+            let imageRef = Storage.storage().reference().child("images/\(id).jpg")
+            imageRef.getData(maxSize: 5 * 1024 * 1024) { data, error in
+                if let data, let uiImage = UIImage(data: data) {
+                    withAnimation {
+                        self.image = uiImage
+                        StorageManager.shared.saveImage(id: id, image: uiImage)
+                    }
+                } else {
+                    // 2. Если не получилось — пробуем mp4
+                    print("📭 Нет изображения, пробуем видео")
+
+                    let videoRef = Storage.storage().reference().child("images/\(id).mp4")
+                    videoRef.downloadURL { url, error in
+                        guard let url else {
+                            print("❌ Нет видео-обложки: \(error?.localizedDescription ?? "неизвестно")")
+                            return
+                        }
+
+                        // 3. Генерируем превью из видео
+                        Task {
+                            let asset = AVAsset(url: url)
+                            let generator = AVAssetImageGenerator(asset: asset)
+                            generator.appliesPreferredTrackTransform = true
+                            if let cgImage = try? generator.copyCGImage(at: .zero, actualTime: nil) {
+                                let preview = UIImage(cgImage: cgImage)
+                                withAnimation {
+                                    self.image = preview
+                                    self.isVideo = true
+                                }
+                            }
                         }
                     }
                 }
@@ -66,6 +85,14 @@ struct PostView: View {
                             .frame(width: 100)
                             .clipShape(RoundedRectangle(cornerRadius: 20))
                             .padding(.vertical, 10)
+                        
+                        if isVideo {
+                            Image(systemName: "play.fill")
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 30)
+                                .foregroundStyle(Color(.secondarySystemBackground))
+                        }
                     }
                 }
                 

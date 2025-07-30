@@ -67,7 +67,7 @@ final class ArticlesManager {
         try await articleDocument(id: id).getDocument(as: AuthorId.self).authorId ?? ""
     }
     
-    func updatePost(id: String, title: String, image: UIImage, description: String, text: String, isArchive: Bool) async throws {
+    func updatePost(id: String, title: String, description: String, text: String, isArchive: Bool) async throws {
         let data: [String: Any] = [
             "title": title,
             "description": description,
@@ -76,24 +76,6 @@ final class ArticlesManager {
         ]
         
         try await articlesCollection.document(id).updateData(data)
-        
-        if image == UIImage() {
-            let fileReference = Storage.storage().reference().child("images/\(id).jpg")
-            
-            try? await fileReference.delete()
-            
-            StorageManager.shared.deleteImage(id: id)
-            
-        } else {
-            let storage = Storage.storage()
-            let ref = storage.reference(withPath: "images/\(id).jpg")
-            guard let imageData = image.jpegData(compressionQuality: 1) else { return }
-            
-            ref.putData(imageData)
-            
-            StorageManager.shared.saveImage(id: id, image: image)
-        }
-        
     }
     
     func updateIsArchiveStatus(id: String, isArchive: Bool) async throws {
@@ -112,7 +94,6 @@ final class ArticlesManager {
         title: String,
         description: String,
         text: String,
-        image: UIImage,
         isArchive: Bool,
         uploadingLanguage: String
     ) async throws -> String {
@@ -136,14 +117,6 @@ final class ArticlesManager {
         ]
         
         try await ref.setData(data)
-        
-        if image != UIImage() {
-            let storage = Storage.storage()
-            let ref = storage.reference(withPath: "images/\(newId).jpg")
-            guard let imageData = image.jpegData(compressionQuality: 1) else { return "" }
-            
-            ref.putData(imageData)
-        }
         
 //        try await UserManager.shared.updateCreatedPosts(newPost: newId)
         

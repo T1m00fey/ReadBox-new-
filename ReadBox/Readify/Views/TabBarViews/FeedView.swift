@@ -163,10 +163,9 @@ struct FeedView: View {
                                         .fontWeight(.light)
                                         .popoverTip(LanguageSwitchTip())
                                     
-                                    Text(StorageManager.shared.getLanguage() == "ru" ? "Ru" : "En")
-                                        .foregroundStyle(Color(.label))
+                                    Text(StorageManager.shared.getLanguage() == "ru" ? "RU" : "EN")
+                                        .foregroundStyle(Color.gray)
                                         .font(.system(size: 14))
-                                        .fontWeight(.light)
                                         .fontDesign(.rounded)
                                         .offset(y: -7)
                                 }

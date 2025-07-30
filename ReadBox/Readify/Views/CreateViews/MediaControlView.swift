@@ -144,7 +144,12 @@ struct MediaControlView: View {
                                     
                                     HStack(spacing: 12) {
                                         Button {
-                                            UIPasteboard.general.string = "![](\(url))"
+                                            let urlString = url
+                                                .absoluteString
+                                                .replacingOccurrences(of: "firebasestorage.googleapis.com", with: "readbox-links.online")
+                                                .replacingOccurrences(of: "contentImages", with: "cont")
+                                            
+                                            UIPasteboard.general.string = "![](\(urlString))"
                                             
                                             withAnimation {
                                                 errorText = NSLocalizedString("linkIsCopiedLabel", comment: "")

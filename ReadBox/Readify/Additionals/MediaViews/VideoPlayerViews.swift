@@ -171,13 +171,27 @@ struct AdaptiveVideoPlayerView: View {
     let cornerRadius: CGFloat
     var externalPlayer: AVPlayer? = nil
     let onVideoSizeReady: () -> Void
+    let width: CGFloat
+    
+    init(
+        url: URL,
+        cornerRadius: CGFloat,
+        externalPlayer: AVPlayer? = nil,
+        onVideoSizeReady: @escaping () -> Void,
+        width: CGFloat
+    ) {
+        self.url = url
+        self.cornerRadius = cornerRadius
+        self.externalPlayer = externalPlayer
+        self.onVideoSizeReady = onVideoSizeReady
+        self.width = width
+    }
 
     @State private var videoSize: CGSize?
 
     var body: some View {
         Group {
             if let size = videoSize {
-                let width = UIScreen.main.bounds.width - 32
                 let height = width * size.height / size.width
 
                 CustomVideoPlayerView(
@@ -192,7 +206,7 @@ struct AdaptiveVideoPlayerView: View {
                     size: .small,
                     speed: .fast
                 )
-                .frame(width: UIScreen.main.bounds.width - 32, height: 200)
+                .frame(width: width, height: 200)
                 .background(Color(.secondarySystemBackground))
                 .clipShape(RoundedRectangle(cornerRadius: 16))
             }
@@ -257,6 +271,13 @@ final class PlayerHolder: ObservableObject {
 struct TappableVideoPreview: View {
     let url: URL
     let cornerRadius: CGFloat
+    let width: CGFloat
+    
+    init(url: URL, cornerRadius: CGFloat, width: CGFloat = UIScreen.main.bounds.width - 32) {
+        self.url = url
+        self.cornerRadius = cornerRadius
+        self.width = width
+    }
 
     @StateObject private var playerHolder = PlayerHolder()
     @State private var hasInitialized = false
@@ -273,7 +294,8 @@ struct TappableVideoPreview: View {
                 externalPlayer: playerHolder.player,
                 onVideoSizeReady: {
                     isVideoSizeReady = true
-                }
+                },
+                width: width
             )
             .id(playerViewId)
             .onChange(of: isVideoSizeReady) {

@@ -99,6 +99,8 @@ struct YourApp: App {
                         if scenePhase == .inactive || scenePhase == .background {
                             let db = Firestore.firestore()
                             db.clearPersistence()
+                            
+                            StorageManager.shared.deleteText()
                         }
                     }
             }

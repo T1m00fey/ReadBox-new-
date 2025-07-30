@@ -361,7 +361,11 @@ final class TextCreateViewModel: ObservableObject {
             _ = try await ref.putDataAsync(videoData)
             let url = try await ref.downloadURL().absoluteString
             
-            let markdown = "\n\n![](\(url))\n\n"
+            let urlString = url
+                .replacingOccurrences(of: "firebasestorage.googleapis.com", with: "readbox-links.online")
+                .replacingOccurrences(of: "contentImages", with: "c")
+            
+            let markdown = "\n\n![](\(urlString))\n\n"
             if let range = Range(selectedRange, in: text) {
                 text.replaceSubrange(range, with: markdown)
             }
@@ -379,16 +383,30 @@ final class TextCreateViewModel: ObservableObject {
         image: UIImage,
         isArchive: Bool,
         uploadingLanguage: String,
-        mediaURLs: [URL]
+        mediaURLs: [URL],
+        isVideoCover: Bool,
+        videoURL: URL?
     ) async throws -> String {
+        let text = text
+            .replacingOccurrences(of: "readbox-links.online", with: "firebasestorage.googleapis.com")
+            .replacingOccurrences(of: "cont", with: "contentImages")
+        
         let id = try await ArticlesManager.shared.addNewPost(
             title: title,
             description: description,
             text: text,
-            image: image,
             isArchive: isArchive,
             uploadingLanguage: uploadingLanguage
         )
+        
+        if isVideoCover, let videoURL {
+            let ref = Storage.storage().reference(withPath: "images/\(id).mp4")
+            let videoData = try Data(contentsOf: videoURL)
+            _ = try await ref.putDataAsync(videoData)
+        } else if image != UIImage() {
+            let ref = Storage.storage().reference(withPath: "images/\(id).jpg")
+            _ = try await ref.putDataAsync(image.jpegData(compressionQuality: 0.9)!)
+        }
         
         let urls = mediaURLs.map { $0.absoluteString }
         try await ArticlesManager.shared.uploadMedia(URLs: urls, to: id)
@@ -403,23 +421,52 @@ final class TextCreateViewModel: ObservableObject {
         description: String,
         text: String,
         isArchive: Bool,
-        mediaURLs: [URL]
+        mediaURLs: [URL],
+        isVideoCover: Bool,
+        videoURL: URL?
     ) async throws {
+        let text = text
+            .replacingOccurrences(of: "readbox-links.online", with: "firebasestorage.googleapis.com")
+            .replacingOccurrences(of: "cont", with: "contentImages")
+        
         try await ArticlesManager.shared.updatePost(
             id: id,
             title: title,
-            image: image,
             description: description,
             text: text,
             isArchive: isArchive
         )
-        
+
+        if image == UIImage(), videoURL == nil {
+            await deleteCover(for: id, isVideo: true)
+            await deleteCover(for: id, isVideo: false)
+        } else if isVideoCover, let videoURL {
+            let ref = Storage.storage().reference(withPath: "images/\(id).mp4")
+            let data = try Data(contentsOf: videoURL)
+            _ = try await ref.putDataAsync(data)
+        } else if image != UIImage() {
+            let ref = Storage.storage().reference(withPath: "images/\(id).jpg")
+            let data = image.jpegData(compressionQuality: 0.9)!
+            _ = try await ref.putDataAsync(data)
+        }
+
         let urls = mediaURLs.map { $0.absoluteString }
-        
         try await ArticlesManager.shared.uploadMedia(URLs: urls, to: id)
     }
     
     func getNavigationTitle(_ isEditing: Bool) -> String {
         isEditing ? NSLocalizedString("editingLabel", comment: "") : NSLocalizedString("creationLabel", comment: "")
+    }
+    
+    func deleteCover(for id: String, isVideo: Bool) async {
+        let path = isVideo ? "videos/\(id).mp4" : "images/\(id).jpg"
+        let ref = Storage.storage().reference(withPath: path)
+        
+        do {
+            try await ref.delete()
+            print("✅ Удалена обложка: \(path)")
+        } catch {
+            print("❌ Не удалось удалить обложку: \(error.localizedDescription)")
+        }
     }
 }

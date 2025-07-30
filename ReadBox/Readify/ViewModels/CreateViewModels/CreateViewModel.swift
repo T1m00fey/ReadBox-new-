@@ -20,6 +20,9 @@ final class CreateViewModel: ObservableObject {
     @Published var image: UIImage? = nil
     @Published var imageItem: PhotosPickerItem? = nil
     
+    @Published var videoURL: URL? = nil
+    @Published var isVideoCover = false
+    
     @Published var descriptionText = NSLocalizedString("descriptionPlaceholder", comment: "")
     @Published var isDescriptionTESelected = false
     

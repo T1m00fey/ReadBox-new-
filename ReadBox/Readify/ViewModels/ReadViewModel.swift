@@ -17,6 +17,7 @@ final class ReadViewModel: ObservableObject {
     @Published var isFontSettingPopupPresented = false
     @Published var image = UIImage()
     @Published var avatarImage: UIImage? = nil
+    @Published var videoURL: URL? = nil
     
     @Published var selectedImageURL: URL? = nil
     @Published var isImageFullscreenPresented = false
@@ -52,27 +53,32 @@ final class ReadViewModel: ObservableObject {
     }
     
     func fetchImage(byId id: String) {
-        let articleImage = StorageManager.shared.getImage(id: id)
+        let image = StorageManager.shared.getImage(id: id)
         
-        if articleImage != nil {
+        if let image {
             withAnimation {
-                image = articleImage ?? UIImage()
+                self.image = image
             }
         } else {
-            DispatchQueue.main.async {
-                let storage = Storage.storage()
-                let storageRef = storage.reference()
-                
-                let islandRef = storageRef.child("images/\(id).jpg")
-                
-                islandRef.getData(maxSize: 1 * 5012 * 50125) { data, error in
-                    if let error = error {
-                        print(error .localizedDescription)
-                    } else {
-                        // Data for "images/island.jpg" is returned
-                        withAnimation {
-                            self.image = UIImage(data: data!)!
-                            StorageManager.shared.saveImage(id: id, image: self.image)
+            let imageRef = Storage.storage().reference().child("images/\(id).jpg")
+            
+            imageRef.getData(maxSize: 1 * 5012 * 5012) { data, error in
+                if let data {
+                    withAnimation {
+                        self.image = UIImage(data: data) ?? UIImage()
+                        StorageManager.shared.saveImage(id: id, image: self.image)
+                    }
+                } else {
+                    let videoRef = Storage.storage().reference().child("images/\(id).mp4")
+                    videoRef.downloadURL { url, error in
+                        if let url {
+                            DispatchQueue.main.async {
+                                withAnimation {
+                                    self.videoURL = url
+                                }
+                            }
+                        } else {
+                            print("Ни фото, ни видео не найдено")
                         }
                     }
                 }

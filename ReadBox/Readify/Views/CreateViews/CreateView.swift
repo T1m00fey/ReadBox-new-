@@ -83,7 +83,7 @@ struct CreateView: View {
                         }
                             
                         if !viewModel.isTitleTESelected && !viewModel.isDescriptionTESelected {
-                                PhotosPicker(selection: $viewModel.imageItem, matching: .images) {
+                            PhotosPicker(selection: $viewModel.imageItem, matching: .any(of: [.videos, .images])) {
                                     if viewModel.image == nil {
 //                                        Image(systemName: "plus.circle")
 //                                            .scaleEffect(3)
@@ -117,13 +117,31 @@ struct CreateView: View {
                                     } else {
                                             
                                         VStack {
-                                            Image(uiImage: viewModel.image ?? UIImage())
-                                                .resizable()
-                                                .scaledToFit()
-                                                .frame(width: UIScreen.main.bounds.width - 32)
-                                                .clipShape(RoundedRectangle(cornerRadius: 20))
-                                                .padding(.horizontal)
-                                                .padding(.top, 20)
+                                            if viewModel.isVideoCover {
+                                                ZStack {
+                                                    Image(uiImage: viewModel.image ?? UIImage())
+                                                        .resizable()
+                                                        .scaledToFit()
+                                                        .frame(width: UIScreen.main.bounds.width - 32)
+                                                        .clipShape(RoundedRectangle(cornerRadius: 20))
+                                                        .padding(.horizontal)
+                                                        .padding(.top, 20)
+                                                    
+                                                    Image(systemName: "play.fill")
+                                                        .resizable()
+                                                        .scaledToFit()
+                                                        .frame(width: 50)
+                                                        .foregroundStyle(Color(.secondarySystemBackground))
+                                                }
+                                            } else {
+                                                Image(uiImage: viewModel.image ?? UIImage())
+                                                    .resizable()
+                                                    .scaledToFit()
+                                                    .frame(width: UIScreen.main.bounds.width - 32)
+                                                    .clipShape(RoundedRectangle(cornerRadius: 20))
+                                                    .padding(.horizontal)
+                                                    .padding(.top, 20)
+                                            }
                                             
                                             ZStack {
                                                 RoundedRectangle(cornerRadius: 15)
@@ -151,23 +169,47 @@ struct CreateView: View {
                                     }
                                 }
 //                                .padding(.top, 30)
-                                .onChange(of: viewModel.imageItem) {
-                                    Task {
-                                        do {
-                                            guard let imageData = try await viewModel.imageItem?.loadTransferable(type: Data.self) else { return }
-                                            guard let inputImage = UIImage(data: imageData) else { return }
-                                            
-                                            withAnimation {
-                                                viewModel.image = inputImage
-                                            }
-                                        } catch {
-                                            withAnimation {
-                                                viewModel.errorText = error.localizedDescription
-                                                viewModel.isErrorPopupPresented = true
-                                            }
+                            .onChange(of: viewModel.imageItem) {
+                                Task {
+                                    guard let item = viewModel.imageItem else { return }
+
+                                    // Загружаем Data
+                                    guard let data = try? await item.loadTransferable(type: Data.self) else {
+                                        print("⚠️ Невозможно загрузить данные из файла")
+                                        return
+                                    }
+
+                                    // Пробуем как изображение
+                                    if let image = UIImage(data: data) {
+                                        print("🖼 Обложка — изображение")
+                                        withAnimation {
+                                            viewModel.image = image
+                                            viewModel.videoURL = nil
+                                            viewModel.isVideoCover = false
                                         }
+                                        return
+                                    }
+
+                                    // Иначе — это видео
+                                    print("🎞 Обложка — видео (по Data)")
+                                    let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".mp4")
+                                    try? data.write(to: tempURL)
+
+                                    // Генерируем превью
+                                    let asset = AVAsset(url: tempURL)
+                                    let generator = AVAssetImageGenerator(asset: asset)
+                                    generator.appliesPreferredTrackTransform = true
+                                    let cgImage = try? generator.copyCGImage(at: .zero, actualTime: nil)
+                                    let thumbnail = cgImage.map { UIImage(cgImage: $0) }
+
+                                    withAnimation {
+                                        viewModel.image = thumbnail
+                                        viewModel.videoURL = tempURL
+                                        viewModel.isVideoCover = true
                                     }
                                 }
+                            }
+
                         }
                         
                         
@@ -263,7 +305,9 @@ struct CreateView: View {
                         postsCount: $postsCount,
                         posts: $posts,
                         archivePosts: $archivePosts,
-                        isCreateViewPresented: $isCreateViewPresented
+                        isCreateViewPresented: $isCreateViewPresented,
+                        isVideoCover: viewModel.isVideoCover,
+                        videoURL: viewModel.videoURL
                     )
                 }
                 

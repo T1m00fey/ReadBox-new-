@@ -28,6 +28,9 @@ struct TextCreateView: View {
     
     @Binding var isCreateViewPresented: Bool
     
+    let isVideoCover: Bool
+    let videoURL: URL?
+    
     @StateObject private var viewModel = TextCreateViewModel()
     @FocusState var isTEFocused: Bool
     
@@ -46,7 +49,10 @@ struct TextCreateView: View {
                         if viewModel.isPreviewShowed {
                             
                             Markdown(
-                                viewModel.text.replacingOccurrences(of: "\n", with: "  \n").normalizeEmptyLines()
+                                viewModel.text
+                                    .replacingOccurrences(of: "\n", with: "  \n").normalizeEmptyLines()
+                                    .replacingOccurrences(of: "readbox-links.online", with: "firebasestorage.googleapis.com")
+                                    .replacingOccurrences(of: "cont", with: "contentImages")
                             )
                             .markdownImageProvider(
                                 WebImageProvider(onImageTap: { url in
@@ -71,6 +77,10 @@ struct TextCreateView: View {
                                 )
                                 .focused($isTEFocused)
                                 .padding(.horizontal)
+                                .onAppear {
+                                    viewModel.text = viewModel.text.replacingOccurrences(of: "firebasestorage.googleapis.com", with: "readbox-links.online")
+                                    viewModel.text = viewModel.text.replacingOccurrences(of: "contentImages", with: "cont")
+                                }
                         }
                         
                     }
@@ -253,7 +263,9 @@ struct TextCreateView: View {
                                     description: description,
                                     text: viewModel.text,
                                     isArchive: isArchive,
-                                    mediaURLs: mediaURLs
+                                    mediaURLs: mediaURLs,
+                                    isVideoCover: isVideoCover,
+                                    videoURL: videoURL
                                 )
                                 
                                 if isArchived != isArchive {
@@ -351,7 +363,9 @@ struct TextCreateView: View {
                                     image: image,
                                     isArchive: isArchive,
                                     uploadingLanguage: uploadingLanguage,
-                                    mediaURLs: mediaURLs
+                                    mediaURLs: mediaURLs,
+                                    isVideoCover: isVideoCover,
+                                    videoURL: videoURL
                                 )
                                 
                                 if !isArchive {
@@ -428,6 +442,11 @@ struct TextCreateView: View {
                 
                 let savedText = StorageManager.shared.getText()
                 viewModel.text = savedText == "" ? text : savedText
+            }
+            .onDisappear {
+                if viewModel.isPreviewShowed {
+                    StorageManager.shared.save(text: viewModel.text)
+                }
             }
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {

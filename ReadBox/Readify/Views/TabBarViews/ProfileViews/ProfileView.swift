@@ -24,11 +24,45 @@ struct ProfileView: View {
                 ScrollView {
                     VStack {
                         VStack {
+                            if let user = viewModel.user, !((user.subscribes ?? []).isEmpty) {
+                                NavigationLink {
+                                    SubscribesView(user: $viewModel.user)
+                                } label: {
+                                    ZStack {
+                                        RoundedRectangle(cornerRadius: 20)
+                                            .frame(width: UIScreen.main.bounds.width - 32)
+                                            .foregroundStyle(Color(.secondarySystemBackground))
+                                            .shadow(radius: 2)
+                                        
+                                        HStack {
+                                            Image(systemName: "bookmark.circle")
+                                                .font(.system(size: 35))
+                                                .foregroundStyle(Color.gray)
+                                            
+                                            Text(NSLocalizedString("yourSubscribesLabel", comment: ""))
+                                                .font(.system(size: 23))
+                                                .fontWeight(.light)
+                                                .fontDesign(.rounded)
+                                            
+                                            Spacer()
+                                            
+                                            Image(systemName: "chevron.right")
+                                                .font(.system(size: 25))
+                                                .foregroundStyle(Color.gray)
+                                        }
+                                        .frame(width: UIScreen.main.bounds.width - 64)
+                                        .padding(.vertical, 10)
+                                    }
+                                }
+                                .padding(.top, 10)
+                            }
+                            
                             Text(LocalizedStringKey("settingsLabel"))
-                                .font(.title)
+                                .font(.system(size: 25))
                                 .fontWeight(.light)
                                 .fontDesign(.rounded)
                                 .frame(width: UIScreen.main.bounds.width - 32, alignment: .leading)
+                                .padding(.top, 25)
                             
                             if let _ = viewModel.user {
                                 NavigationLink(destination: NewNameView(isSuccessPopupPresented: $viewModel.isSuccessPopupPresented, successText: $viewModel.successText, userID: viewModel.user?.userId)) {
@@ -43,14 +77,14 @@ struct ProfileView: View {
                                                 .font(.system(size: 35))
                                             
                                             Text(LocalizedStringKey("nameLabel"))
-                                                .font(.title3)
+                                                .font(.system(size: 23))
                                                 .fontWeight(.light)
                                                 .fontDesign(.rounded)
                                             
                                             Spacer()
                                             
                                             Image(systemName: "chevron.right")
-                                                .font(.title2)
+                                                .font(.system(size: 25))
                                                 .foregroundStyle(Color.gray)
                                         }
                                         .padding(.horizontal, 16)
@@ -73,14 +107,14 @@ struct ProfileView: View {
                                                 .font(.system(size: 35))
                                             
                                             Text(LocalizedStringKey("passwordTFPlaceholder"))
-                                                .font(.title3)
+                                                .font(.system(size: 23))
                                                 .fontWeight(.light)
                                                 .fontDesign(.rounded)
                                             
                                             Spacer()
                                             
                                             Image(systemName: "chevron.right")
-                                                .font(.title2)
+                                                .font(.system(size: 25))
                                                 .foregroundStyle(Color.gray)
                                         }
                                         .padding(.horizontal, 16)
@@ -102,14 +136,14 @@ struct ProfileView: View {
                                                 .font(.system(size: 30))
                                             
                                             Text(LocalizedStringKey("fontLabel"))
-                                                .font(.title3)
+                                                .font(.system(size: 23))
                                                 .fontWeight(.light)
                                                 .fontDesign(.rounded)
                                             
                                             Spacer()
                                             
                                             Image(systemName: "chevron.right")
-                                                .font(.title2)
+                                                .font(.system(size: 25))
                                                 .foregroundStyle(Color.gray)
                                         }
                                         .padding(.horizontal, 16)
@@ -135,11 +169,14 @@ struct ProfileView: View {
                                                 .padding(.leading, 3)
                                             
                                             Text(LocalizedStringKey("memorySettingsLabel"))
+                                                .font(.system(size: 23))
+                                                .fontWeight(.light)
+                                                .fontDesign(.rounded)
                                             
                                             Spacer()
                                             
                                             Image(systemName: "chevron.right")
-                                                .font(.title2)
+                                                .font(.system(size: 25))
                                                 .foregroundStyle(Color.gray)
                                         }
                                         .padding(.horizontal, 16)
@@ -161,14 +198,14 @@ struct ProfileView: View {
                                                 .font(.system(size: 35))
                                             
                                             Text(LocalizedStringKey("moreLabel"))
-                                                .font(.title3)
+                                                .font(.system(size: 23))
                                                 .fontWeight(.light)
                                                 .fontDesign(.rounded)
                                             
                                             Spacer()
                                             
                                             Image(systemName: "chevron.right")
-                                                .font(.title2)
+                                                .font(.system(size: 25))
                                                 .foregroundStyle(Color.gray)
                                         }
                                         .padding(.horizontal, 16)
@@ -195,7 +232,7 @@ struct ProfileView: View {
                                             Text(LocalizedStringKey("signOutLabel"))
                                                 .foregroundStyle(Color.red)
                                                 .fontWeight(.light)
-                                                .font(.title3)
+                                                .font(.system(size: 23))
                                                 .fontDesign(.rounded)
                                         }
                                     }
@@ -220,7 +257,7 @@ struct ProfileView: View {
                                             Text(LocalizedStringKey("deleteLabel"))
                                                 .foregroundStyle(Color.red)
                                                 .fontWeight(.light)
-                                                .font(.title3)
+                                                .font(.system(size: 23))
                                                 .fontDesign(.rounded)
                                         }
                                     }

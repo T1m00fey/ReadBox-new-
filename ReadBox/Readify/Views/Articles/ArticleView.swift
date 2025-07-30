@@ -17,6 +17,7 @@ struct ArticleView: View {
     let isArchive: Bool
     
     @State private var image: UIImage? = nil
+    @State private var videoURL: URL? = nil
     @State private var avatarImage: UIImage? = nil
     @State private var isExpanded = false
     
@@ -32,16 +33,23 @@ struct ArticleView: View {
                 image = articleImage
             }
         } else {
-            DispatchQueue.main.async {
-                let islandRef = storageRef.child("images/\(id).jpg")
-                
-                islandRef.getData(maxSize: 1 * 5012 * 5012) { data, error in
-                    if let error = error {
-                        print(error .localizedDescription)
-                    } else {
-                        withAnimation {
-                            self.image = UIImage(data: data!)
-                            StorageManager.shared.saveImage(id: id, image: image ?? UIImage())
+            let islandRef = storageRef.child("images/\(id).jpg")
+            
+            islandRef.getData(maxSize: 1 * 5012 * 5012) { data, error in
+                if let data  {
+                    withAnimation {
+                        self.image = UIImage(data: data)
+                        StorageManager.shared.saveImage(id: id, image: image ?? UIImage())
+                    }
+                } else {
+                    let videoRef = storageRef.child("images/\(id).mp4")
+                    videoRef.downloadURL { url, error in
+                        if let url {
+                            DispatchQueue.main.async {
+                                withAnimation {
+                                    self.videoURL = url
+                                }
+                            }
                         }
                     }
                 }
@@ -118,10 +126,14 @@ struct ArticleView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 30))
                         .shadow(radius: 2)
                 }
+            } else if let videoURL {
+                TappableVideoPreview(url: videoURL, cornerRadius: 30, width: UIScreen.main.bounds.width - 10)
+                    .frame(width: UIScreen.main.bounds.width - 10)
+                    .shadow(radius: 2)
             }
             
             ZStack {
-                RoundedRectangle(cornerRadius: 30)
+                RoundedRectangle(cornerRadius: 25)
                     .foregroundStyle(Color(uiColor: .secondarySystemBackground))
                     .frame(width: UIScreen.main.bounds.width - 10)
                     .shadow(radius: 2)

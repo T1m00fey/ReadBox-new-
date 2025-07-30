@@ -110,6 +110,9 @@ struct ReadView: View {
                                 .frame(width: UIScreen.main.bounds.width - 20)
                                 .clipShape(RoundedRectangle(cornerRadius: 10))
                                 .padding(.horizontal)
+                        } else if let videoURL = viewModel.videoURL {
+                            TappableVideoPreview(url: videoURL, cornerRadius: 10, width: UIScreen.main.bounds.width - 20)
+                                .frame(width: UIScreen.main.bounds.width - 20)
                         }
                     
                         HStack {
