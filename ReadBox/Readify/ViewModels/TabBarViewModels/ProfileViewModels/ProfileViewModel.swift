@@ -55,6 +55,28 @@ final class ProfileViewModel: ObservableObject {
     func signOut() async throws {
         try? await UserManager.shared.deleteFcmToken(from: user?.userId ?? "")
         try AuthenticationManager.shared.signOut()
+        
+        let userDefaults = UserDefaults.standard
+        let dictionary = userDefaults.dictionaryRepresentation()
+        
+        for key in dictionary.keys {
+            if key != "language" {
+                userDefaults.removeObject(forKey: key)
+            }
+        }
+        
+        await SDImageCache.shared.clear(with: .all)
+
+        // Очистка видео из tmp
+        let tmp = FileManager.default.temporaryDirectory
+        let fileURLs = try? FileManager.default.contentsOfDirectory(at: tmp, includingPropertiesForKeys: nil)
+        fileURLs?.forEach { url in
+            if url.pathExtension == "mp4" {
+                try? FileManager.default.removeItem(at: url)
+            }
+        }
+
+        userDefaults.synchronize()
     }
     
     func reload() {

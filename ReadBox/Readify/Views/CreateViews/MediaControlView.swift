@@ -176,7 +176,11 @@ struct MediaControlView: View {
                                                     try await ArticlesManager.shared.deleteImage(url: url)
                                                     
                                                     withAnimation {
-                                                        text = text.replacingOccurrences(of: "![](\(url))", with: "")
+                                                        let urlStr = url
+                                                            .absoluteString
+                                                            .replacingOccurrences(of: "firebasestorage.googleapis.com", with: "readbox-links.online")
+                                                            .replacingOccurrences(of: "contentImages", with: "cont")
+                                                        text = text.replacingOccurrences(of: "![](\(urlStr))", with: "")
                                                         mediaURLs.removeAll { $0 == url }
                                                         
                                                         errorText = NSLocalizedString("fileDeletedFromTextCreateView", comment: "")

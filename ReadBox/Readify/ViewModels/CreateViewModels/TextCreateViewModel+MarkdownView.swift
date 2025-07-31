@@ -23,23 +23,36 @@ struct MarkdownTextView: UIViewRepresentable {
     func makeUIView(context: Context) -> UITextView {
         let textView = UITextView()
         textView.font = UIFont.systemFont(ofSize: 16)
-        textView.textColor = UIColor.clear
         textView.delegate = context.coordinator
         textView.isEditable = true
         textView.isScrollEnabled = true
         return textView
     }
 
+//    func updateUIView(_ uiView: UITextView, context: Context) {
+//        // Обновляем текст, если он изменился
+//        if uiView.text != text {
+//            uiView.text = text
+//        }
+//        // Обновляем выделение курсора асинхронно, чтобы избежать ошибки "Modifying state during view update"
+//        DispatchQueue.main.async {
+//            if uiView.selectedRange != self.selectedRange {
+//                uiView.selectedRange = self.selectedRange
+//            }
+//        }
+//    }
+    
     func updateUIView(_ uiView: UITextView, context: Context) {
-        // Обновляем текст, если он изменился
+        // Обновляем только если текст изменился
         if uiView.text != text {
             uiView.text = text
-        }
-        // Обновляем выделение курсора асинхронно, чтобы избежать ошибки "Modifying state during view update"
-        DispatchQueue.main.async {
-            if uiView.selectedRange != self.selectedRange {
-                uiView.selectedRange = self.selectedRange
-            }
+            uiView.selectedRange = selectedRange
+
+            // Иногда после установки текста scroll прыгает — вернём прокрутку на место
+            uiView.scrollRangeToVisible(selectedRange)
+        } else if uiView.selectedRange != selectedRange {
+            uiView.selectedRange = selectedRange
+            uiView.scrollRangeToVisible(selectedRange)
         }
     }
 
@@ -51,9 +64,7 @@ struct MarkdownTextView: UIViewRepresentable {
         }
 
         func textViewDidChange(_ textView: UITextView) {
-            DispatchQueue.main.async {
-                self.parent.text = textView.text
-            }
+            self.parent.text = textView.text
         }
 
         func textViewDidChangeSelection(_ textView: UITextView) {
@@ -445,10 +456,15 @@ final class TextCreateViewModel: ObservableObject {
             let ref = Storage.storage().reference(withPath: "images/\(id).mp4")
             let data = try Data(contentsOf: videoURL)
             _ = try await ref.putDataAsync(data)
+            
+            await deleteCover(for: id, isVideo: false)
+            StorageManager.shared.deleteImage(id: id)
         } else if image != UIImage() {
             let ref = Storage.storage().reference(withPath: "images/\(id).jpg")
             let data = image.jpegData(compressionQuality: 0.9)!
             _ = try await ref.putDataAsync(data)
+            
+            await deleteCover(for: id, isVideo: true)
         }
 
         let urls = mediaURLs.map { $0.absoluteString }
@@ -460,7 +476,7 @@ final class TextCreateViewModel: ObservableObject {
     }
     
     func deleteCover(for id: String, isVideo: Bool) async {
-        let path = isVideo ? "videos/\(id).mp4" : "images/\(id).jpg"
+        let path = isVideo ? "images/\(id).mp4" : "images/\(id).jpg"
         let ref = Storage.storage().reference(withPath: path)
         
         do {

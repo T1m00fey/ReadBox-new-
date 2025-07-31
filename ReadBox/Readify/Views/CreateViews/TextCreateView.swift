@@ -502,7 +502,7 @@ struct TextCreateView: View {
                 ToolbarItem(placement: .principal) {
                     if viewModel.isImageUploading {
                         HStack(spacing: 5) {
-                            Text("Загружаем")
+                            Text(NSLocalizedString("uploadingLabel", comment: ""))
                                 .font(.system(size: 17))
                                 .fontWeight(.semibold)
                             

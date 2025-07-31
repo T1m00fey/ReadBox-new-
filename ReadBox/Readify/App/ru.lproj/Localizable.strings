@@ -116,3 +116,4 @@
 "mediaFilesListTipMessage" = "Здесь вы можете найти все прикрепленные к этой публикации файлы (фото и видео)";
 "attachingFilesTitleTip" = "Прикрепление файлов";
 "attachingFilesMessageTip" = "Вы можете добавить фото или видео в markdown";
+"uploadingLabel" = "Загружаем";
