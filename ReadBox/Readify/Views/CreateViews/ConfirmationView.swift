@@ -10,6 +10,8 @@ import SwiftUI
 struct ConfirmationView: View {
     @Binding var addingMode: Int
     
+    private let vibrationsService = VibrationsService.shared
+    
     var body: some View {
         VStack {
             Capsule()
@@ -24,6 +26,7 @@ struct ConfirmationView: View {
                 .frame(width: UIScreen.main.bounds.width - 32, alignment: .leading)
             
             Button {
+                vibrationsService.lightImpact()
                 addingMode = 1
             } label: {
                 ZStack {

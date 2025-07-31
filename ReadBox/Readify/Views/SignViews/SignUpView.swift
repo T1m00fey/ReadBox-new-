@@ -113,6 +113,7 @@ struct SignUpView: View {
                     
                     Task {
                         do {
+                            viewModel.vibrationsService.softImpact()
                             try await viewModel.signUp()
                             
                             isSignInViewPresented = false

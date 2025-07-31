@@ -347,6 +347,8 @@ struct CreatedPostsView: View {
                                 .padding(.bottom, 10)
                                 .popoverTip(AuthorMultiLanguageTip())
                                 .onTapGesture {
+                                    viewModel.vibrationsService.lightImpact()
+                                    
                                     viewModel.title = NSLocalizedString("titlePlaceholder", comment: "")
                                     viewModel.description = NSLocalizedString("descriptionPlaceholder", comment: "")
                                     viewModel.image = nil
@@ -360,7 +362,7 @@ struct CreatedPostsView: View {
                         ZStack {
                             RoundedRectangle(cornerRadius: 30)
                                 .foregroundStyle(Color(uiColor: .secondarySystemBackground))
-                                .frame(width: UIScreen.main.bounds.width - 60, height: 250)
+                                .frame(width: UIScreen.main.bounds.width - 60, height: 270)
                                 .shadow(radius: 2)
                             
                             VStack(spacing: 25) {
@@ -413,6 +415,8 @@ struct CreatedPostsView: View {
                             } else {
                                 Task {
                                     do {
+                                        viewModel.vibrationsService.softImpact()
+                                        
                                         if let avatar =  viewModel.avatarImage,
                                            let data = avatar.jpegData(compressionQuality: 0.8),
                                            let userId = viewModel.user?.userId

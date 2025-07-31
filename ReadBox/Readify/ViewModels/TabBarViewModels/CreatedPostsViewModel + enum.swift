@@ -54,6 +54,8 @@ final class CreatedPostsViewModel: ObservableObject {
     
     @Published var id = ""
     
+    let vibrationsService = VibrationsService.shared
+    
     var description = ""
     var title = ""
     var image: UIImage? = nil

@@ -12,6 +12,7 @@ import SwiftfulLoadingIndicators
 import _PhotosUI_SwiftUI
 import PopupView
 import FirebaseStorage
+import TipKit
 
 struct TextCreateView: View {
     let id: String
@@ -46,6 +47,41 @@ struct TextCreateView: View {
                     
                     VStack {
                         
+//                        ZStack {
+//
+//                            MarkdownTextView(text: $viewModel.text, selectedRange: $viewModel.selectedRange)
+//                                .padding(.vertical, 16)
+//                                .padding(.horizontal, 16)
+//                                .frame(width: UIScreen.main.bounds.width - 32, height: viewModel.heightOfTE, alignment: .topLeading)
+//                                .clipShape(RoundedRectangle(cornerRadius: 20))
+//                                .overlay(
+//                                    RoundedRectangle(cornerRadius: 20)
+//                                        .stroke(Color(uiColor: .label), lineWidth: 1)
+//                                )
+//                                .focused($isTEFocused)
+//
+//                            Markdown(
+//                                viewModel.text
+//                                    .replacingOccurrences(of: "\n", with: "  \n").normalizeEmptyLines()
+//                                    .replacingOccurrences(of: "readbox-links.online", with: "firebasestorage.googleapis.com")
+//                                    .replacingOccurrences(of: "cont", with: "contentImages")
+//                            )
+//                            .markdownImageProvider(
+//                                WebImageProvider(onImageTap: { url in
+//                                    viewModel.selectedImageURL = url
+//                                    viewModel.isImageFullScreenPresented = true
+//                                })
+//                            )
+//                            .padding(.vertical, 18)
+//                            .padding(.horizontal, 16)
+//                            .frame(width: UIScreen.main.bounds.width - 32, height: viewModel.heightOfTE, alignment: .topLeading)
+//                            .clipShape(RoundedRectangle(cornerRadius: 20))
+//                            .overlay(
+//                                RoundedRectangle(cornerRadius: 20)
+//                                    .stroke(Color(uiColor: .label), lineWidth: 1)
+//                            )
+//                        }
+                        
                         if viewModel.isPreviewShowed {
                             
                             Markdown(
@@ -65,7 +101,6 @@ struct TextCreateView: View {
                             .padding(.horizontal)
                             
                         } else {
-                            
                             MarkdownTextView(text: $viewModel.text, selectedRange: $viewModel.selectedRange)
                                 .padding(.horizontal, 16)
                                 .padding(.vertical, 16)
@@ -129,6 +164,7 @@ struct TextCreateView: View {
                                 .onTapGesture {
                                     viewModel.isMediaControlViewPresented.toggle()
                                 }
+                                .popoverTip(AuthorMediaListTip())
                             
                             ZStack {
                                 RoundedRectangle(cornerRadius: 20)
@@ -148,6 +184,7 @@ struct TextCreateView: View {
                                                 .shadow(radius: 2)
                                         }
                                         .disabled(viewModel.isImageUploading)
+//                                        .popoverTip(AuthorFileAttachTip())
                                         
                                         Menu(NSLocalizedString("titleLabel", comment: "")) {
                                             ForEach(1..<7) { num in
@@ -250,7 +287,7 @@ struct TextCreateView: View {
                 }
                 
                 if viewModel.addingMode > 0 {
-                    if isEditing {                        
+                    if isEditing {
                         Task {
                             do {
                                 let isArchived = try await ArticlesManager.shared.getIsArchive(of: id)
@@ -434,6 +471,9 @@ struct TextCreateView: View {
                     .animation(.bouncy)
                     .dragToDismiss(true)
                     .autohideIn(5)
+            }
+            .task {
+                try? Tips.configure()
             }
             .onAppear {
                 withAnimation {

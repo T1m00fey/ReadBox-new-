@@ -118,22 +118,6 @@ extension View {
                 if viewModel.user != nil {
                     viewModel.primaryLanguage = StorageManager.shared.getLanguage()
                     
-                    if viewModel.maxIndex == "" && viewModel.fromIndex == -1 {
-                        Task {
-                            do {
-                                try await viewModel.getMaxIndex()
-                                viewModel.fromIndex = Int(viewModel.maxIndex) ?? 1
-                                return
-                            } catch {
-                                withAnimation {
-                                    viewModel.errorText = error.localizedDescription
-                                }
-                            }
-                            
-                            viewModel.isErrorPopupPresented = true
-                        }
-                    }
-                    
                     Task {
                         do {
                             if viewModel.topArticlesIndexes == [] {
@@ -504,6 +488,8 @@ extension View {
                     withAnimation {
                         viewModel.posts = []
                         viewModel.archivePosts = []
+                        viewModel.isAllLoaded = false
+                        viewModel.lastPostSnapshot = nil
                     }
                     
                     Task {

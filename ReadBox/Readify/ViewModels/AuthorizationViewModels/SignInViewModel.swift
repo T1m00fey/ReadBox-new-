@@ -23,6 +23,8 @@ final class SignInViewModel: ObservableObject {
     
     @Published private(set) var user: DBUser? = nil
     
+    let vibrationsService = VibrationsService.shared
+    
     let privacyText = StorageManager.shared.getLanguage() == "en"
     ? "By using this application, you agree to the [terms of use](https://readbox-links.online/terms.html) and [privacy policy](https://readbox-links.online/privacy.html) regarding the processing of personal data by this application."
     : "Используя данное приложение, вы соглашаетесь с [условиями использования](https://readbox-links.online/terms.html) и [политикой конфиденциальности](https://readbox-links.online/privacy.html), касающейся обработки персональных данных этим приложением."

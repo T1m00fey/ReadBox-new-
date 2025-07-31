@@ -28,7 +28,7 @@ struct RootView: View {
     
     var body: some View {
         ZStack {
-            if !isSignInViewPresented {
+            if let _ = try? AuthenticationManager.shared.getAuthenticatedUser() {
                 TabView {
                     FeedView(isSignInViewPresented: $isSignInViewPresented)
                         .tabItem {
@@ -51,6 +51,11 @@ struct RootView: View {
                         }
                 }
                 .tint(Color(uiColor: .label))
+                .onAppear {
+                    UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
+                        print("Permission granted: \(granted)")
+                    }                                        
+                }
             }
         }
         .onChange(of: isSignInViewPresented) {
@@ -69,6 +74,7 @@ struct RootView: View {
         .onAppear {
             Task {
                 if let authUser = try? AuthenticationManager.shared.getAuthenticatedUser() {
+                    isSignInViewPresented = false
                     user = try? await UserManager.shared.getUser(userId: authUser.uid)
                     
                     try? await UserManager.shared.set(

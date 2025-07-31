@@ -37,7 +37,7 @@ struct AvatarControlView: View {
                         .foregroundStyle(Color(.label))
                         .font(.system(size: 25))
                         .offset(x: 30, y: -30)
-                        .shadow(radius: 1)
+                        .shadow(radius: 3)
                         .onTapGesture {
                             withAnimation {
                                 self.avatarImage = nil

@@ -139,6 +139,7 @@ struct ReadView: View {
                                     
                                     Task {
                                         do {
+                                            viewModel.vibrationsService.softImpact()
                                             try await viewModel.removeLikedPost(userId: user?.userId ?? "", articleId: id)
                                         } catch {
                                             withAnimation {
@@ -161,6 +162,7 @@ struct ReadView: View {
                                         
                                         Task {
                                             do {
+                                                viewModel.vibrationsService.softImpact()
                                                 try await viewModel.addLikedPost(userId: user?.userId ?? "", articleId: id)
                                             } catch {
                                                 withAnimation {
@@ -182,7 +184,7 @@ struct ReadView: View {
                                 Image(systemName: viewModel.isPostLiked ? "hand.thumbsup.fill" : "hand.thumbsup")
                                     .scaleEffect(1.2)
                                     .frame(width: 50, height: 50)
-                                    .background(Color(uiColor: .systemBackground))
+                                    .background(Color(uiColor: .secondarySystemBackground))
                                     .clipShape(RoundedRectangle(cornerRadius: 10))
                                     .shadow(radius: 2)
                             }
@@ -192,7 +194,7 @@ struct ReadView: View {
                                     RoundedRectangle(cornerRadius: 10)
                                         .foregroundStyle(
                                             isSubscribed
-                                            ? Color(uiColor: .systemBackground)
+                                            ? Color(uiColor: .secondarySystemBackground)
                                             : Color(uiColor: .label)
                                         )
                                         .shadow(radius: isSubscribed ? 2 : 0)
@@ -222,8 +224,10 @@ struct ReadView: View {
                                             withAnimation {
                                                 if isSubscribed {
                                                     user?.subscribes?.removeAll { $0 == authorId }
+                                                    viewModel.vibrationsService.lightImpact()
                                                 } else {
                                                     user?.subscribes?.append(authorId)
+                                                    viewModel.vibrationsService.successFeedback()
                                                 }
                                                 
                                                 isSubscribed.toggle()

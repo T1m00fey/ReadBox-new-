@@ -22,6 +22,8 @@ final class ReadViewModel: ObservableObject {
     @Published var selectedImageURL: URL? = nil
     @Published var isImageFullscreenPresented = false
     
+    let vibrationsService = VibrationsService.shared
+    
     func getAvatar(_ authorId: String) {
         DispatchQueue.main.async {
             let storage = Storage.storage()

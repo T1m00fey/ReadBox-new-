@@ -112,3 +112,7 @@
 "underlinedLabel" = "Underlined";
 "yourSubscribesLabel" = "Your subscribes";
 "subscribesLabel" = "Subscribes";
+"mediaFilesListTipTitle" = "Files";
+"mediaFilesListTipMessage" = "Here you can find all the files attached to this post (photos and videos)";
+"attachingFilesTitleTip" = "Attaching files";
+"attachingFilesMessageTip" = "You can add a photo or video to markdown";

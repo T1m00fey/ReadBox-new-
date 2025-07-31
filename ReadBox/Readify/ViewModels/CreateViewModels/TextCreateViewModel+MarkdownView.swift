@@ -9,6 +9,7 @@ import SwiftUI
 import PhotosUI
 import FirebaseStorage
 import MarkdownUI
+import TipKit
 
 @MainActor
 struct MarkdownTextView: UIViewRepresentable {
@@ -22,6 +23,7 @@ struct MarkdownTextView: UIViewRepresentable {
     func makeUIView(context: Context) -> UITextView {
         let textView = UITextView()
         textView.font = UIFont.systemFont(ofSize: 16)
+        textView.textColor = UIColor.clear
         textView.delegate = context.coordinator
         textView.isEditable = true
         textView.isScrollEnabled = true
@@ -75,7 +77,6 @@ enum MarkdownType {
     case orderedList
     case link
 }
-
 
 final class TextCreateViewModel: ObservableObject {
     @Published var text = ""
@@ -363,7 +364,7 @@ final class TextCreateViewModel: ObservableObject {
             
             let urlString = url
                 .replacingOccurrences(of: "firebasestorage.googleapis.com", with: "readbox-links.online")
-                .replacingOccurrences(of: "contentImages", with: "c")
+                .replacingOccurrences(of: "contentImages", with: "cont")
             
             let markdown = "\n\n![](\(urlString))\n\n"
             if let range = Range(selectedRange, in: text) {
