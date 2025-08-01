@@ -385,7 +385,6 @@ struct TextCreateView: View {
                             isCreateViewPresented = false
                         }
                         
-                        StorageManager.shared.deleteImage(id: id)
                         StorageManager.shared.deleteText()
                         
                     } else {

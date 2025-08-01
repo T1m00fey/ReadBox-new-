@@ -358,7 +358,11 @@ final class TextCreateViewModel: ObservableObject {
             print("🖼 Это изображение")
             let url = try await ArticlesManager.shared.uploadImage(id: id, image: image, folder: "contentImages")
 
-            let markdown = "\n\n![](\(url))\n\n"
+            let urlString = url
+                .replacingOccurrences(of: "firebasestorage.googleapis.com", with: "readbox-links.online")
+                .replacingOccurrences(of: "contentImages", with: "cont")
+            
+            let markdown = "\n\n![](\(urlString))\n\n"
             if let range = Range(selectedRange, in: text) {
                 text.replaceSubrange(range, with: markdown)
             }
@@ -458,7 +462,6 @@ final class TextCreateViewModel: ObservableObject {
             _ = try await ref.putDataAsync(data)
             
             await deleteCover(for: id, isVideo: false)
-            StorageManager.shared.deleteImage(id: id)
         } else if image != UIImage() {
             let ref = Storage.storage().reference(withPath: "images/\(id).jpg")
             let data = image.jpegData(compressionQuality: 0.9)!
@@ -466,6 +469,8 @@ final class TextCreateViewModel: ObservableObject {
             
             await deleteCover(for: id, isVideo: true)
         }
+        
+        StorageManager.shared.deleteImage(id: id)
 
         let urls = mediaURLs.map { $0.absoluteString }
         try await ArticlesManager.shared.uploadMedia(URLs: urls, to: id)

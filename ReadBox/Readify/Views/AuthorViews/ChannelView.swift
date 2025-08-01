@@ -128,7 +128,7 @@ struct ChannelView: View {
                                                     description: postToread.description,
                                                     mediaURLs: postToread.mediaURLs
                                                 )
-//                                                
+
                                                 dismiss()
                                             } else {
                                                 viewModel.description = postToread.description ?? NSLocalizedString("notFoundLabel", comment: "")
@@ -371,6 +371,9 @@ struct ChannelView: View {
                         
                     }
                 }
+                .fullScreenCover(isPresented: $viewModel.isZoomableImageViewPresented) {
+                    ZoomableImageView(image: viewModel.avatarImage)
+                }
                 .toolbar {
                     ZStack {
                         RoundedRectangle(cornerRadius: 20)
@@ -394,6 +397,9 @@ struct ChannelView: View {
                                                     lineWidth: 0.1
                                                 )
                                         }
+                                        .onTapGesture {
+                                            viewModel.isZoomableImageViewPresented = true
+                                        }
                                 }
                                 
                                 HStack(spacing: 0) {
@@ -406,7 +412,7 @@ struct ChannelView: View {
                                         Image(systemName: "checkmark.seal.fill")
                                             .foregroundStyle(Color.blue)
                                             .font(.footnote)
-                                            .padding(.top, 4)
+                                            .padding(.top, 1)
                                     }
                                 }
                                 

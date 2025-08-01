@@ -31,6 +31,7 @@ final class ChannelViewModel: ObservableObject {
     @Published var lastDocument: DocumentSnapshot? = nil
     @Published var avatarImage: UIImage? = nil
     @Published var authorId = ""
+    @Published var isZoomableImageViewPresented = false
     
     var description = ""
     

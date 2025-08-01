@@ -9,7 +9,14 @@ import SwiftUI
 import SDWebImageSwiftUI
 
 struct ZoomableImageView: View {
-    let imageURL: URL
+    let imageURL: URL?
+    let image: UIImage?
+    
+    init(imageURL: URL? = nil, image: UIImage? = nil) {
+        self.imageURL = imageURL
+        self.image = image
+    }
+    
     @Environment(\.dismiss) private var dismiss
 
     @State private var scale: CGFloat = 1
@@ -27,47 +34,56 @@ struct ZoomableImageView: View {
                     Color(.systemBackground)
                         .ignoresSafeArea()
 
-                    WebImage(url: imageURL)
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .scaleEffect(effectiveScale)
-                        .offset(x: limitedOffsetX(in: containerSize),
-                                y: limitedOffsetY(in: containerSize))
-                        .gesture(
-                            MagnificationGesture()
-                                .updating($gestureScale) { value, state, _ in
-                                    state = value
-                                }
-                                .onEnded { value in
-                                    scale = max(1.0, scale * value)
-                                }
-                        )
-                        .simultaneousGesture(
-                            DragGesture()
-                                .updating($gestureOffset) { value, state, _ in
-                                    if effectiveScale > 1 {
-                                        state = value.translation
-                                    }
-                                }
-                                .onEnded { value in
-                                    if effectiveScale > 1 {
-                                        offset.width += value.translation.width
-                                        offset.height += value.translation.height
-                                    } else {
-                                        offset = .zero
-                                    }
-                                }
-                        )
-                        .onTapGesture(count: 2) {
-                            withAnimation {
-                                if scale > 1 {
-                                    scale = 1
-                                    offset = .zero
-                                } else {
-                                    scale = 2.5
+                    
+                    Group {
+                        if let url = imageURL {
+                            WebImage(url: url)
+                                .resizable()
+                                .aspectRatio(contentMode: .fit)
+                        } else if let image {
+                            Image(uiImage: image)
+                                .resizable()
+                                .scaledToFit()
+                        }
+                    }
+                    .scaleEffect(effectiveScale)
+                    .offset(x: limitedOffsetX(in: containerSize),
+                            y: limitedOffsetY(in: containerSize))
+                    .gesture(
+                        MagnificationGesture()
+                            .updating($gestureScale) { value, state, _ in
+                                state = value
+                            }
+                            .onEnded { value in
+                                scale = max(1.0, scale * value)
+                            }
+                    )
+                    .simultaneousGesture(
+                        DragGesture()
+                            .updating($gestureOffset) { value, state, _ in
+                                if effectiveScale > 1 {
+                                    state = value.translation
                                 }
                             }
-                        }                        
+                            .onEnded { value in
+                                if effectiveScale > 1 {
+                                    offset.width += value.translation.width
+                                    offset.height += value.translation.height
+                                } else {
+                                    offset = .zero
+                                }
+                            }
+                    )
+                    .onTapGesture(count: 2) {
+                        withAnimation {
+                            if scale > 1 {
+                                scale = 1
+                                offset = .zero
+                            } else {
+                                scale = 2.5
+                            }
+                        }
+                    }
                 }
             }
             .toolbar {

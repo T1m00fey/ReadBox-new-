@@ -18,6 +18,7 @@ final class ReadViewModel: ObservableObject {
     @Published var image = UIImage()
     @Published var avatarImage: UIImage? = nil
     @Published var videoURL: URL? = nil
+    @Published var scrollOffset: CGFloat = 0
     
     @Published var selectedImageURL: URL? = nil
     @Published var isImageFullscreenPresented = false

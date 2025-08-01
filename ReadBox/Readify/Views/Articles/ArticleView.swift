@@ -107,7 +107,7 @@ struct ArticleView: View {
                             Image(systemName: "checkmark.seal.fill")
                                 .foregroundStyle(Color.blue)
                                 .font(.footnote)
-                                .padding(.top, 4)
+                                .padding(.top, 1)
                         }
                         
                         Spacer()

@@ -11,6 +11,13 @@ import MarkdownUI
 import SwiftfulLoadingIndicators
 import SDWebImageSwiftUI
 
+struct AuthorOffsetPreferenceKey: PreferenceKey {
+    static var defaultValue: CGFloat = .zero
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
+    }
+}
+
 struct ReadView: View {
     
     let id: String
@@ -39,7 +46,6 @@ struct ReadView: View {
                     .ignoresSafeArea()
                 
                 ScrollView(showsIndicators: false) {
-                    
                     VStack {
                         
                         Text(title)
@@ -95,7 +101,7 @@ struct ReadView: View {
                                     Image(systemName: "checkmark.seal.fill")
                                         .foregroundStyle(Color.blue)
                                         .font(.subheadline)
-                                        .padding(.top, 4)
+                                        .padding(.top, 1)
                                 }
                             }
                         }
@@ -110,6 +116,9 @@ struct ReadView: View {
                                 .frame(width: UIScreen.main.bounds.width - 20)
                                 .clipShape(RoundedRectangle(cornerRadius: 10))
                                 .padding(.horizontal)
+                                .onTapGesture {
+                                    viewModel.isImageFullscreenPresented = true
+                                }
                         } else if let videoURL = viewModel.videoURL {
                             TappableVideoPreview(url: videoURL, cornerRadius: 10, width: UIScreen.main.bounds.width - 20)
                                 .frame(width: UIScreen.main.bounds.width - 20)
@@ -286,6 +295,13 @@ struct ReadView: View {
                 .fullScreenCover(isPresented: $viewModel.isImageFullscreenPresented) {
                     if let url = viewModel.selectedImageURL {
                         ZoomableImageView(imageURL: url)
+                    } else {
+                        ZoomableImageView(image: viewModel.image)
+                    }
+                }
+                .onChange(of: viewModel.isImageFullscreenPresented) {
+                    if !viewModel.isImageFullscreenPresented {
+                        viewModel.selectedImageURL = nil
                     }
                 }
                 .popup(isPresented: $viewModel.isErrorPopupPresented) {
@@ -334,6 +350,30 @@ struct ReadView: View {
                         }
                         
                     }
+                    
+//                    ToolbarItem(placement: .principal) {
+//                        if let avatar = viewModel.avatarImage {
+//                            HStack(spacing: 0) {
+//                                Image(uiImage: avatar)
+//                                    .resizable()
+//                                    .scaledToFill()
+//                                    .frame(width: 35, height: 35)
+//                                    .clipShape(Circle())
+//                                    .overlay {
+//                                        Circle()
+//                                            .stroke(
+//                                                Color(.label),
+//                                                lineWidth: 0.1
+//                                            )
+//                                    }
+//                                
+//                                Image(systemName: "checkmark.seal.fill")
+//                                    .foregroundStyle(Color.blue)
+//                                    .font(.system(size: 10))
+//                            }
+//                            .opacity(viewModel.scrollOffset < 1760 ? 1 : 0)
+//                        }
+//                    }
                     
                     ToolbarItem(placement: .topBarLeading) {
                         

@@ -92,6 +92,9 @@ struct CreatedPostsView: View {
                             isChannelViewPresented: .constant(false)
                         )
                     }
+                    .fullScreenCover(isPresented: $viewModel.isZoomableImageViewPresented, content: {
+                        ZoomableImageView(image: viewModel.avatarImage)
+                    })
                     .makeToolbarForCreatedPostsView(with: viewModel)
                     .trackChangesOnCreatedPostsView(
                         viewModel: viewModel,
@@ -225,7 +228,6 @@ struct CreatedPostsView: View {
                                         }
                                     } else if viewModel.posts.count == 0 {
                                         VStack(spacing: 20) {
-                                            
                                             Image(systemName: "pencil.and.scribble")
                                                 .resizable()
                                                 .scaledToFit()
@@ -246,7 +248,7 @@ struct CreatedPostsView: View {
                                 }
                                 
                             } else {
-                                if viewModel.user?.authorDescription ?? "" != "" && !viewModel.isArchivePresented {
+                                if viewModel.user?.authorDescription ?? "" != "" {
                                     Text(viewModel.user?.authorDescription ?? NSLocalizedString("notFoundLabel", comment: ""))
                                         .font(.title3)
                                         .padding(.vertical, 20)
@@ -415,6 +417,10 @@ struct CreatedPostsView: View {
                             } else {
                                 Task {
                                     do {
+                                        withAnimation {
+                                            viewModel.isLoading = true
+                                        }
+                                        
                                         viewModel.vibrationsService.softImpact()
                                         
                                         if let avatar =  viewModel.avatarImage,
@@ -441,6 +447,7 @@ struct CreatedPostsView: View {
                                         try await viewModel.changeAuthorName(to: viewModel.authorNameText, description: viewModel.descriptionText)
                                         
                                         withAnimation {
+                                            viewModel.isLoading = false
                                             viewModel.isSettingViewPresented = false
                                             viewModel.user?.authorName = viewModel.authorNameText
                                             viewModel.user?.authorDescription = viewModel.descriptionText
@@ -449,6 +456,7 @@ struct CreatedPostsView: View {
                                         withAnimation {
                                             viewModel.errorText = error.localizedDescription
                                             viewModel.isErrorPopupPresented = true
+                                            viewModel.isLoading = false
                                         }
                                     }
                                 }
@@ -461,6 +469,15 @@ struct CreatedPostsView: View {
                                         ? Color(uiColor: .label)
                                         : Color.gray
                                     )
+                                
+                                if viewModel.isLoading {
+                                    LoadingIndicator(
+                                        animation: .circleRunner,
+                                        color: Color(.label),
+                                        size: .small,
+                                        speed: .fast
+                                    )
+                                }
                             }
                             .frame(width: UIScreen.main.bounds.width - 60, height: 50)
                             .background(Color(uiColor: .secondarySystemBackground))

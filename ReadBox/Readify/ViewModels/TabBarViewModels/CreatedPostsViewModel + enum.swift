@@ -49,6 +49,7 @@ final class CreatedPostsViewModel: ObservableObject {
     @Published var isAllArchivedLoaded = false
     @Published var mediaURLs: [URL] = []
     @Published var avatarImage: UIImage? = nil
+    @Published var isZoomableImageViewPresented = false
     
     @Published var user: DBUser? = nil
     
@@ -86,7 +87,7 @@ final class CreatedPostsViewModel: ObservableObject {
     
     func isButtonEnable() {
         withAnimation {
-            if authorNameText.count > 0 {
+            if authorNameText.count > 0 && !isLoading {
                 isButtonEnabled = true
             } else {
                 isButtonEnabled = false

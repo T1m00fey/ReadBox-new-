@@ -37,32 +37,6 @@ struct CustomVideoPlayerView: UIViewRepresentable {
         required init?(coder: NSCoder) {
             super.init(coder: coder)
         }
-        
-//        func setup(player: AVPlayer, cornerRadius: CGFloat, isLooping: Bool) {
-//            self.layer.sublayers?.forEach { $0.removeFromSuperlayer() }
-//
-//            playerLayer.player = player
-//            playerLayer.videoGravity = .resizeAspectFill
-//            playerLayer.masksToBounds = true
-//            playerLayer.cornerRadius = cornerRadius
-//
-//            self.layer.addSublayer(playerLayer)
-//
-//            if isLooping {
-//                NotificationCenter.default.addObserver(forName: .AVPlayerItemDidPlayToEndTime,
-//                                                       object: player.currentItem,
-//                                                       queue: .main) { _ in
-//                    player.seek(to: .zero)
-//                    player.play()
-//                }
-//            }
-//
-//            player.play()
-//            
-//            NotificationCenter.default.addObserver(forName: .stopAllVideoPlayback, object: nil, queue: .main) { _ in
-//                player.pause()
-//            }
-//        }
 
         func setup(player: AVPlayer, cornerRadius: CGFloat, isLooping: Bool) {
             self.layer.sublayers?.forEach { $0.removeFromSuperlayer() }
@@ -78,11 +52,16 @@ struct CustomVideoPlayerView: UIViewRepresentable {
                 if let observer = playbackEndedObserver {
                     NotificationCenter.default.removeObserver(observer)
                 }
+
                 playbackEndedObserver = NotificationCenter.default.addObserver(
                     forName: .AVPlayerItemDidPlayToEndTime,
-                    object: player.currentItem,
+                    object: nil,
                     queue: .main
-                ) { _ in
+                ) { [weak self] notification in
+                    guard let _ = self else { return }
+                    guard let item = notification.object as? AVPlayerItem,
+                          item == player.currentItem else { return }
+
                     player.seek(to: .zero)
                     player.play()
                 }
@@ -93,7 +72,6 @@ struct CustomVideoPlayerView: UIViewRepresentable {
             }
         }
 
-        
         override func layoutSubviews() {
             super.layoutSubviews()
             playerLayer.frame = bounds
@@ -110,25 +88,29 @@ struct CustomVideoPlayerView: UIViewRepresentable {
 }
 
 struct VideoFullscreenPresenter {
-    private static var delegateRetainBag: [FullscreenDelegate] = []
+    private static var delegateMap = NSMapTable<AVPlayerViewController, FullscreenDelegate>(
+        keyOptions: .weakMemory,
+        valueOptions: .strongMemory
+    )
 
     static func present(player: AVPlayer, onDismiss: @escaping (CMTime) -> Void) {
         let controller = AVPlayerViewController()
         controller.player = player
         controller.modalPresentationStyle = .fullScreen
 
-        let delegate = FullscreenDelegate(player: player, onDismiss: { _ in })
-        controller.delegate = delegate
-        delegateRetainBag.append(delegate)
-
-        delegate.onDismiss = { time in
+        let delegate = FullscreenDelegate(player: player) { time in
             onDismiss(time)
-            delegateRetainBag.removeAll { $0 === delegate }
+            delegateMap.removeObject(forKey: controller)
         }
+
+        controller.delegate = delegate
+        delegateMap.setObject(delegate, forKey: controller)
 
         if let topVC = topMostViewController() {
             topVC.present(controller, animated: true) {
-                player.play()
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                    player.play()
+                }
             }
         } else {
             print("⚠️ Failed to find top-most view controller.")
@@ -159,46 +141,42 @@ struct VideoFullscreenPresenter {
 
         func playerViewControllerWillEndDismissalTransition(_ controller: AVPlayerViewController) {
             let time = player?.currentTime() ?? .zero
-            print("📤 playerViewControllerWillEndDismissalTransition — captured time:", time.seconds)
+            print("📤 Dismissed at time:", time.seconds)
             onDismiss(time)
         }
     }
 }
 
-
 struct AdaptiveVideoPlayerView: View {
     let url: URL
     let cornerRadius: CGFloat
     var externalPlayer: AVPlayer? = nil
-    let onVideoSizeReady: () -> Void
     let width: CGFloat
+    let isReady: Bool
     
     init(
         url: URL,
         cornerRadius: CGFloat,
         externalPlayer: AVPlayer? = nil,
-        onVideoSizeReady: @escaping () -> Void,
-        width: CGFloat
+        width: CGFloat,
+        isReady: Bool
     ) {
         self.url = url
         self.cornerRadius = cornerRadius
         self.externalPlayer = externalPlayer
-        self.onVideoSizeReady = onVideoSizeReady
         self.width = width
+        self.isReady = isReady
     }
-
-    @State private var videoSize: CGSize?
 
     var body: some View {
         Group {
-            if let size = videoSize {
-                let height = width * size.height / size.width
-
+            if let player = externalPlayer, isReady {
                 CustomVideoPlayerView(
-                    player: externalPlayer ?? AVPlayer(url: url),
+                    player: player,
                     cornerRadius: cornerRadius
                 )
-                .frame(width: width, height: height)
+                .scaledToFit()
+                .frame(width: width)
             } else {
                 LoadingIndicator(
                     animation: .circleRunner,
@@ -211,28 +189,6 @@ struct AdaptiveVideoPlayerView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 16))
             }
         }
-        .onAppear(perform: loadVideoSize)
-    }
-
-    private func loadVideoSize() {
-        Task {
-            do {
-                let asset = AVAsset(url: url)
-                let tracks = try await asset.loadTracks(withMediaType: .video)
-                guard let track = tracks.first else { return }
-
-                let size = try await track.load(.naturalSize)
-                let transform = try await track.load(.preferredTransform)
-                let realSize = size.applying(transform)
-
-                await MainActor.run {
-                    self.videoSize = CGSize(width: abs(realSize.width), height: abs(realSize.height))
-                    onVideoSizeReady()
-                }
-            } catch {
-                print("⚠️ Failed to load video size:", error.localizedDescription)
-            }
-        }
     }
 }
 
@@ -241,8 +197,10 @@ final class PlayerHolder: ObservableObject {
 
     @Published var isPlaying: Bool = false
     @Published var isMuted: Bool = true
-    
-    private var readyObserver: NSKeyValueObservation?
+    @Published var isReadyToPlay: Bool = false
+
+    private var currentItemObserver: NSKeyValueObservation?
+    private var statusObserverForItem: NSKeyValueObservation?
     private var statusObserver: NSKeyValueObservation?
     private var muteObserver: NSKeyValueObservation?
 
@@ -258,13 +216,30 @@ final class PlayerHolder: ObservableObject {
                 self?.isMuted = player.isMuted
             }
         }
-
+        
+        currentItemObserver = player.observe(\.currentItem, options: [.new]) { [weak self] player, change in
+            guard let item = change.newValue as? AVPlayerItem else { return }
+            
+            self?.statusObserverForItem = item.observe(\.status, options: [.new]) { _, _ in
+                DispatchQueue.main.async {
+                    let isReady = item.status == .readyToPlay
+                    self?.isReadyToPlay = isReady
+                    
+                    if isReady {
+                        try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .moviePlayback)
+                        try? AVAudioSession.sharedInstance().setActive(true)
+                        self?.player.play()
+                    }
+                }
+            }
+        }
     }
 
     deinit {
         statusObserver?.invalidate()
         muteObserver?.invalidate()
-        muteObserver?.invalidate()
+        currentItemObserver?.invalidate()
+        statusObserverForItem?.invalidate()
     }
 }
 
@@ -273,18 +248,21 @@ struct TappableVideoPreview: View {
     let cornerRadius: CGFloat
     let width: CGFloat
     
-    init(url: URL, cornerRadius: CGFloat, width: CGFloat = UIScreen.main.bounds.width - 32) {
+    init(
+        url: URL,
+        cornerRadius: CGFloat,
+        width: CGFloat = UIScreen.main.bounds.width - 32
+    ) {
         self.url = url
         self.cornerRadius = cornerRadius
         self.width = width
     }
-
+    
     @StateObject private var playerHolder = PlayerHolder()
-    @State private var hasInitialized = false
+    
     @State private var playerViewId = UUID()
     @State private var resumeAfterFullscreenTime: CMTime? = nil
-    @State private var shouldReplaceItem = true
-    @State private var isVideoSizeReady = false
+    @State private var hasInitialized = false
 
     var body: some View {
         ZStack(alignment: .top) {
@@ -292,35 +270,22 @@ struct TappableVideoPreview: View {
                 url: url,
                 cornerRadius: cornerRadius,
                 externalPlayer: playerHolder.player,
-                onVideoSizeReady: {
-                    isVideoSizeReady = true
-                },
-                width: width
+                width: width,
+                isReady: playerHolder.isReadyToPlay
             )
             .id(playerViewId)
-            .onChange(of: isVideoSizeReady) {
-                guard isVideoSizeReady, shouldReplaceItem else {
-                    shouldReplaceItem = true
-                    return
-                }
+            .onAppear {
+                guard !hasInitialized else { return }
+                hasInitialized = true
+
+                let asset = AVURLAsset(url: url, options: [
+                    AVURLAssetPreferPreciseDurationAndTimingKey: false
+                ])
                 
-                let playerAsset: AVAsset
-
-                if VideoCacheManager.shared.isCached(url) {
-                    let cachedURL = VideoCacheManager.shared.cachedURL(for: url)
-                    playerAsset = AVAsset(url: cachedURL)
-                    print("📦 Используем кэшированное видео")
-                } else {
-                    playerAsset = AVURLAsset(url: url)
-                    print("🌐 Стримим видео из сети")
-
-                    Task.detached {
-                        _ = try? await VideoCacheManager.shared.downloadIfNeeded(from: url)
-                    }
-                }
-
-                let item = AVPlayerItem(asset: playerAsset)
+                let item = AVPlayerItem(asset: asset)
                 playerHolder.player.replaceCurrentItem(with: item)
+                playerHolder.player.automaticallyWaitsToMinimizeStalling = false
+                playerHolder.player.isMuted = true
 
                 if let resumeTime = resumeAfterFullscreenTime {
                     playerHolder.player.seek(to: resumeTime, toleranceBefore: .zero, toleranceAfter: .zero)
@@ -328,8 +293,6 @@ struct TappableVideoPreview: View {
                 } else {
                     try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .moviePlayback)
                     try? AVAudioSession.sharedInstance().setActive(true)
-                    playerHolder.player.isMuted = true
-                    playerHolder.player.play()
                 }
             }
 
@@ -349,7 +312,6 @@ struct TappableVideoPreview: View {
                             playerHolder.player.pause()
                             playerHolder.player.seek(to: returnTime, toleranceBefore: .zero, toleranceAfter: .zero)
                             resumeAfterFullscreenTime = returnTime
-                            shouldReplaceItem = false
                             playerViewId = UUID()
                         }
                     }

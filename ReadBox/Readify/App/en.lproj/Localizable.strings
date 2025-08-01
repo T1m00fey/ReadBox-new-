@@ -117,3 +117,4 @@
 "attachingFilesTitleTip" = "Attaching files";
 "attachingFilesMessageTip" = "You can add a photo or video to markdown";
 "uploadingLabel" = "Uploading";
+"durationCoverErrorLabel" = "The video cover should not exceed 1 minute";

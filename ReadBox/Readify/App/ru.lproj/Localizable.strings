@@ -117,3 +117,4 @@
 "attachingFilesTitleTip" = "Прикрепление файлов";
 "attachingFilesMessageTip" = "Вы можете добавить фото или видео в markdown";
 "uploadingLabel" = "Загружаем";
+"durationCoverErrorLabel" = "Видео-обложка не должна превышать 1 минуту";

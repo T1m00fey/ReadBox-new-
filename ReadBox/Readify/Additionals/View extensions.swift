@@ -328,7 +328,7 @@ extension View {
                                             Image(systemName: "checkmark.seal.fill")
                                                 .foregroundStyle(Color.blue)
                                                 .font(.footnote)
-                                                .padding(.top, 4)
+                                                .padding(.top, 1)
                                                 .redacted(reason: .placeholder)
                                             
                                             Spacer()
@@ -381,6 +381,9 @@ extension View {
                                                             lineWidth: 0.1
                                                         )
                                                 }
+                                                .onTapGesture {
+                                                    viewModel.isZoomableImageViewPresented = true
+                                                }
                                         }
                                         
                                         HStack(spacing: 0) {
@@ -393,7 +396,7 @@ extension View {
                                                 Image(systemName: "checkmark.seal.fill")
                                                     .foregroundStyle(Color.blue)
                                                     .font(.footnote)
-                                                    .padding(.top, 4)
+                                                    .padding(.top, 1)
                                             }
                                         }
                                         
@@ -420,21 +423,23 @@ extension View {
                                             }
                                             .offset(x: 10)
                                             
-                                            Button {
-                                                withAnimation {
-                                                    viewModel.isArchivePresented.toggle()
-                                                }
-                                            } label: {
-                                                if viewModel.isArchivePresented {
-                                                    Image(systemName: "rectangle.on.rectangle")
-                                                        .font(.system(size: 19))
-                                                        .fontWeight(.bold)
-                                                        .foregroundStyle(Color.gray)
-                                                } else {
-                                                    Image(systemName: "archivebox")
-                                                        .font(.system(size: 19))
-                                                        .fontWeight(.bold)
-                                                        .foregroundStyle(Color.gray)
+                                            if viewModel.archivePosts.count > 0 {
+                                                Button {
+                                                    withAnimation {
+                                                        viewModel.isArchivePresented.toggle()
+                                                    }
+                                                } label: {
+                                                    if viewModel.isArchivePresented {
+                                                        Image(systemName: "rectangle.on.rectangle")
+                                                            .font(.system(size: 19))
+                                                            .fontWeight(.bold)
+                                                            .foregroundStyle(Color.gray)
+                                                    } else {
+                                                        Image(systemName: "archivebox")
+                                                            .font(.system(size: 19))
+                                                            .fontWeight(.bold)
+                                                            .foregroundStyle(Color.gray)
+                                                    }
                                                 }
                                             }
                                         }
@@ -496,6 +501,12 @@ extension View {
                         do {
                             try await viewModel.getPosts()
                             try await viewModel.getArchivedPost()
+                            
+                            if viewModel.archivePosts.count <= 0 {
+                                withAnimation {
+                                    viewModel.isArchivePresented = false
+                                }
+                            }
                             
                             viewModel.isNewPublicationButtonPresented = true
                             

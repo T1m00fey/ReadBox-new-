@@ -197,6 +197,21 @@ struct CreateView: View {
 
                                     // Генерируем превью
                                     let asset = AVAsset(url: tempURL)
+                                    let duration = try await asset.load(.duration)
+                                    let secondsDuration = CMTimeGetSeconds(duration)
+                                    
+                                    guard secondsDuration <= 60 else {
+                                        withAnimation {
+                                            viewModel.errorText = NSLocalizedString("durationCoverErrorLabel", comment: "")
+                                            viewModel.isErrorPopupPresented = true
+                                            viewModel.image = nil
+                                            viewModel.videoURL = nil
+                                            viewModel.isVideoCover = false
+                                        }
+                                        
+                                        return
+                                    }
+                                    
                                     let generator = AVAssetImageGenerator(asset: asset)
                                     generator.appliesPreferredTrackTransform = true
                                     let cgImage = try? generator.copyCGImage(at: .zero, actualTime: nil)
