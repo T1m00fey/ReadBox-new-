@@ -11,12 +11,25 @@ import MarkdownUI
 import SwiftfulLoadingIndicators
 import SDWebImageSwiftUI
 
-struct AuthorOffsetPreferenceKey: PreferenceKey {
-    static var defaultValue: CGFloat = .zero
-    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
-        value = nextValue()
+struct VisibilityPreferenceKey: PreferenceKey {
+    static var defaultValue: [String: CGFloat] = [:]
+    static func reduce(value: inout [String: CGFloat], nextValue: () -> [String: CGFloat]) {
+        value.merge(nextValue()) { $1 }
     }
 }
+
+struct VisibilityTracker: View {
+    let id: String
+    var body: some View {
+        GeometryReader { proxy in
+            let frame = proxy.frame(in: .global)
+            Color.clear
+                .preference(key: VisibilityPreferenceKey.self, value: [id: frame.minY])
+        }
+        .frame(height: 0)
+    }
+}
+
 
 struct ReadView: View {
     
@@ -39,6 +52,8 @@ struct ReadView: View {
     
     @Environment(\.dismiss) var dismiss
     
+    @State private var pos: String?
+    
     var body: some View {
         NavigationStack {
             ZStack {
@@ -58,56 +73,60 @@ struct ReadView: View {
                             .frame(width: UIScreen.main.bounds.width, height: 1)
                             .foregroundStyle(Color.gray)
                         
-                        HStack {
-                            Text("by")
-                                .font(.system(size: 21))
-                                .fontDesign(.rounded)
-                                .foregroundStyle(Color.gray)
+                        ZStack {
+                            VisibilityTracker(id: "authorBlock")
                             
-                            if let avatar = viewModel.avatarImage {
-                                Image(uiImage: avatar)
-                                    .resizable()
-                                    .scaledToFill()
-                                    .frame(width: 40, height: 40)
-                                    .clipShape(Circle())
-                                    .overlay {
-                                        Circle()
-                                            .stroke(
-                                                Color(.label),
-                                                lineWidth: 0.1
-                                            )
-                                    }
-                            }
-                            
-                            HStack(spacing: 0) {
-                                Button {
-                                    withAnimation {
-                                        if authorName != "" {
-                                            isChannelViewPresented = true
-                                            
-                                            dismiss()
+                            HStack {
+                                Text("by")
+                                    .font(.system(size: 21))
+                                    .fontDesign(.rounded)
+                                    .foregroundStyle(Color.gray)
+                                
+                                if let avatar = viewModel.avatarImage {
+                                    Image(uiImage: avatar)
+                                        .resizable()
+                                        .scaledToFill()
+                                        .frame(width: 40, height: 40)
+                                        .clipShape(Circle())
+                                        .overlay {
+                                            Circle()
+                                                .stroke(
+                                                    Color(.label),
+                                                    lineWidth: 0.1
+                                                )
                                         }
-                                    }
-                                } label: {
-                                    Text(authorName == "" ? NSLocalizedString("notFoundLabel", comment: "") : authorName)
-                                        .font(.system(size: 21))
-                                        .multilineTextAlignment(.leading)
-                                        .lineLimit(2)
-                                        .fontDesign(.rounded)
-                                        .underline()
                                 }
                                 
-                                if isCheckmark {
-                                    Image(systemName: "checkmark.seal.fill")
-                                        .foregroundStyle(Color.blue)
-                                        .font(.subheadline)
-                                        .padding(.top, 1)
+                                HStack(spacing: 0) {
+                                    Button {
+                                        withAnimation {
+                                            if authorName != "" {
+                                                isChannelViewPresented = true
+                                                
+                                                dismiss()
+                                            }
+                                        }
+                                    } label: {
+                                        Text(authorName == "" ? NSLocalizedString("notFoundLabel", comment: "") : authorName)
+                                            .font(.system(size: 21))
+                                            .multilineTextAlignment(.leading)
+                                            .lineLimit(2)
+                                            .fontDesign(.rounded)
+                                            .underline()
+                                    }
+                                    
+                                    if isCheckmark {
+                                        Image(systemName: "checkmark.seal.fill")
+                                            .foregroundStyle(Color.blue)
+                                            .font(.subheadline)
+                                            .padding(.top, 1)
+                                    }
                                 }
                             }
+                            .frame(width: UIScreen.main.bounds.width - 32, alignment: .leading)
+                            .padding(.vertical, viewModel.image != UIImage() ? 20 : 0)
+                            .padding(.top, viewModel.image == UIImage() ? 10 : 0)
                         }
-                        .frame(width: UIScreen.main.bounds.width - 32, alignment: .leading)
-                        .padding(.vertical, viewModel.image != UIImage() ? 20 : 0)
-                        .padding(.top, viewModel.image == UIImage() ? 10 : 0)
                         
                         if viewModel.image != UIImage() {
                             Image(uiImage: viewModel.image)
@@ -276,6 +295,16 @@ struct ReadView: View {
                     }
                     
                 }
+                .onPreferenceChange(VisibilityPreferenceKey.self) { values in
+                    if let minY = values["authorBlock"] {
+                        let screenHeight = UIScreen.main.bounds.height
+                        
+                        withAnimation {
+                            viewModel.isAuthorBlockVisible = minY > 0 && minY < screenHeight
+                        }
+//                        print("👀 authorBlock is visible? \(isVisible)")
+                    }
+                }
                 .onAppear {
                     withAnimation {
                         if let subscribes = user?.subscribes {
@@ -351,29 +380,28 @@ struct ReadView: View {
                         
                     }
                     
-//                    ToolbarItem(placement: .principal) {
-//                        if let avatar = viewModel.avatarImage {
-//                            HStack(spacing: 0) {
-//                                Image(uiImage: avatar)
-//                                    .resizable()
-//                                    .scaledToFill()
-//                                    .frame(width: 35, height: 35)
-//                                    .clipShape(Circle())
-//                                    .overlay {
-//                                        Circle()
-//                                            .stroke(
-//                                                Color(.label),
-//                                                lineWidth: 0.1
-//                                            )
-//                                    }
-//                                
-//                                Image(systemName: "checkmark.seal.fill")
-//                                    .foregroundStyle(Color.blue)
-//                                    .font(.system(size: 10))
-//                            }
-//                            .opacity(viewModel.scrollOffset < 1760 ? 1 : 0)
-//                        }
-//                    }
+                    ToolbarItem(placement: .principal) {
+                        if let avatar = viewModel.avatarImage, !viewModel.isAuthorBlockVisible {
+                            HStack(spacing: 0) {
+                                Image(uiImage: avatar)
+                                    .resizable()
+                                    .scaledToFill()
+                                    .frame(width: 35, height: 35)
+                                    .clipShape(Circle())
+                                    .overlay {
+                                        Circle()
+                                            .stroke(
+                                                Color(.label),
+                                                lineWidth: 0.1
+                                            )
+                                    }
+                                
+                                Image(systemName: "checkmark.seal.fill")
+                                    .foregroundStyle(Color.blue)
+                                    .font(.system(size: 10))
+                            }
+                        }
+                    }
                     
                     ToolbarItem(placement: .topBarLeading) {
                         
@@ -399,6 +427,7 @@ struct ReadView: View {
                 
             }
         }
+        .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden()
     }
 }
