@@ -19,6 +19,8 @@ struct CreateView: View {
     let text: String
     let isEditing: Bool
     let mediaURLs: [URL]
+    let isVideo: Bool
+    let videoURL: URL?
     
     @Binding var postsCount: Int
     @Binding var posts: [PrePost]
@@ -375,6 +377,9 @@ struct CreateView: View {
                 if viewModel.isFirstAppear {
                     viewModel.mediaURLs = mediaURLs
                 }
+                
+                viewModel.isVideoCover = isVideo
+                viewModel.videoURL = videoURL
                 
             }
             .toolbar {

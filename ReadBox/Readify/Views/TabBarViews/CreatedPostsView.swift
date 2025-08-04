@@ -72,6 +72,8 @@ struct CreatedPostsView: View {
                             text: viewModel.text,
                             isEditing: viewModel.isEditing,
                             mediaURLs: viewModel.mediaURLs,
+                            isVideo: viewModel.isVideoCover,
+                            videoURL: viewModel.videoURL,
                             postsCount: $viewModel.postsCount,
                             posts: $viewModel.posts,
                             archivePosts: $viewModel.archivePosts
@@ -222,6 +224,7 @@ struct CreatedPostsView: View {
                                                 .onTapGesture {
                                                     withAnimation {
                                                         viewModel.isArchivePresented = false
+                                                        VibrationsService.shared.softImpact()
                                                     }
                                                 }
                                                 .frame(width: UIScreen.main.bounds.width - 32)

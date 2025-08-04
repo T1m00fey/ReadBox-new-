@@ -204,11 +204,24 @@ struct ChannelView: View {
                                 
                             }
                         } else {
+                            
+                            if viewModel.authorDescription != "" {
+                                Text(viewModel.authorDescription)
+                                    .font(.title3)
+                                    .padding(.vertical, 20)
+                                    .padding(.horizontal, 16)
+                                    .frame(width: UIScreen.main.bounds.width, alignment: .leading)
+                                    .background(Color(uiColor: .secondarySystemBackground))
+                                    .clipShape(RoundedRectangle(cornerRadius: 20))
+                                    .padding(.top, 50)
+                            }
+                            
                             VStack(spacing: 20) {
                                 
-                                Image(systemName: "square.and.pencil")
+                                Image(systemName: "pencil.and.scribble")
                                     .resizable()
-                                    .frame(width: 100, height: 100)
+                                    .scaledToFit()
+                                    .frame(width: 100, alignment: .center)
                                     .foregroundStyle(Color.gray)
                                 
                                 Text(LocalizedStringKey("noArticlesAddedLabel"))
@@ -217,8 +230,10 @@ struct ChannelView: View {
                                     .fontDesign(.rounded)
                                     .foregroundStyle(Color.gray)
                                     .multilineTextAlignment(.center)
+                                    .frame(width: UIScreen.main.bounds.width - 32)
                             }
                             .frame(height: UIScreen.main.bounds.height - 200, alignment: .center)
+                            .padding(.top, -150)
                         }
                         
                         if !viewModel.isLoading && !viewModel.isAllLoading && viewModel.posts.count >= 20 {

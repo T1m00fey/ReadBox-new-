@@ -245,7 +245,9 @@ struct FeedView: View {
                     )
                 })
                 .refreshable {
-                    viewModel.refresh()
+                    if !viewModel.isReadViewPresented {
+                        viewModel.refresh()
+                    }
                 }
                 
             }

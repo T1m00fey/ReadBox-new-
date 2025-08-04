@@ -153,19 +153,22 @@ struct AdaptiveVideoPlayerView: View {
     var externalPlayer: AVPlayer? = nil
     let width: CGFloat
     let isReady: Bool
+    let height: CGFloat?
     
     init(
         url: URL,
         cornerRadius: CGFloat,
         externalPlayer: AVPlayer? = nil,
         width: CGFloat,
-        isReady: Bool
+        isReady: Bool,
+        height: CGFloat?,
     ) {
         self.url = url
         self.cornerRadius = cornerRadius
         self.externalPlayer = externalPlayer
         self.width = width
         self.isReady = isReady
+        self.height = height
     }
 
     var body: some View {
@@ -175,8 +178,7 @@ struct AdaptiveVideoPlayerView: View {
                     player: player,
                     cornerRadius: cornerRadius
                 )
-                .scaledToFit()
-                .frame(width: width)
+                .frame(width: width, height: height)
             } else {
                 LoadingIndicator(
                     animation: .circleRunner,
@@ -263,15 +265,25 @@ struct TappableVideoPreview: View {
     @State private var playerViewId = UUID()
     @State private var resumeAfterFullscreenTime: CMTime? = nil
     @State private var hasInitialized = false
+    @State private var videoSize: CGSize? = nil
 
     var body: some View {
+        let calculatedHeight: CGFloat? = {
+            if let size = videoSize {
+                return width * size.height / size.width
+            } else {
+                return nil
+            }
+        }()
+        
         ZStack(alignment: .top) {
             AdaptiveVideoPlayerView(
                 url: url,
                 cornerRadius: cornerRadius,
                 externalPlayer: playerHolder.player,
                 width: width,
-                isReady: playerHolder.isReadyToPlay
+                isReady: playerHolder.isReadyToPlay,
+                height: calculatedHeight
             )
             .id(playerViewId)
             .onAppear {
@@ -294,6 +306,8 @@ struct TappableVideoPreview: View {
                     try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .moviePlayback)
                     try? AVAudioSession.sharedInstance().setActive(true)
                 }
+                
+                loadVideoSize()
             }
 
             Rectangle()
@@ -345,6 +359,23 @@ struct TappableVideoPreview: View {
                 }
             }
             .padding(8)
+        }
+    }
+    
+    private func loadVideoSize() {
+        Task {
+            let asset = AVAsset(url: url)
+            let tracks = try? await asset.loadTracks(withMediaType: .video)
+            if let track = tracks?.first {
+                let naturalSize = try? await track.load(.naturalSize)
+                let transform = try? await track.load(.preferredTransform)
+                let size = naturalSize ?? .zero
+                let t = transform ?? .identity
+                let realSize = size.applying(t)
+                await MainActor.run {
+                    self.videoSize = CGSize(width: abs(realSize.width), height: abs(realSize.height))
+                }
+            }
         }
     }
 }

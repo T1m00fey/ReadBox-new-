@@ -91,7 +91,12 @@ final class ChannelViewModel: ObservableObject {
         let (posts, lastDocument) = try await ArticlesManager.shared.getCreatedPosts(userId: authorId)
         
         if posts.isEmpty {
-            isAllLoading = true
+            isAllLoading = true            
+            withAnimation {
+                isLoading = false
+                isLoadingShowing = false
+            }
+            
             return
         }
         

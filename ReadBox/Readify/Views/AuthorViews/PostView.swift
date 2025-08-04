@@ -31,35 +31,48 @@ struct PostView: View {
                 image = articleImage
             }
         } else {
-            // 1. Сначала пробуем загрузить .jpg
-            let videoRef = Storage.storage().reference().child("images/\(id).mp4")
-            videoRef.downloadURL { url, error in
-                guard let url else {
-                    print("❌ Нет видео-обложки: \(error?.localizedDescription ?? "неизвестно")")
-                    return
-                }
-                
-                // ✅ Асинхронная генерация превью
-                Task.detached {
-                    let asset = AVAsset(url: url)
-                    
-                    do {
-                        let _ = try await asset.loadTracks(withMediaType: .video)
-                        
-                        let generator = AVAssetImageGenerator(asset: asset)
-                        generator.appliesPreferredTrackTransform = true
-                        let cgImage = try generator.copyCGImage(at: .zero, actualTime: nil)
-                        let preview = UIImage(cgImage: cgImage)
-                        
-                        await MainActor.run {
-                            withAnimation {
-                                self.image = preview
-                                self.isVideo = true
-                            }
+            let imageRef = Storage.storage().reference().child("images/\(id).jpg")
+            
+            imageRef.getData(maxSize: 1 * 5012 * 5012) { data, error in
+                if let data {
+                    withAnimation {
+                        image = UIImage(data: data) ?? UIImage()
+                        if let image {
+                            StorageManager.shared.saveImage(id: id, image: image)
+                            return
                         }
-                    } catch {
-                        print("❌ Не удалось создать превью: \(error)")
                     }
+                }
+            }
+        }
+        
+        let videoRef = Storage.storage().reference().child("images/\(id).mp4")
+        videoRef.downloadURL { url, error in
+            guard let url else {
+                print("❌ Нет видео-обложки: \(error?.localizedDescription ?? "неизвестно")")
+                return
+            }
+            
+            // ✅ Асинхронная генерация превью
+            Task.detached {
+                let asset = AVAsset(url: url)
+                
+                do {
+                    let _ = try await asset.loadTracks(withMediaType: .video)
+                    
+                    let generator = AVAssetImageGenerator(asset: asset)
+                    generator.appliesPreferredTrackTransform = true
+                    let cgImage = try generator.copyCGImage(at: .zero, actualTime: nil)
+                    let preview = UIImage(cgImage: cgImage)
+                    
+                    await MainActor.run {
+                        withAnimation {
+                            self.image = preview
+                            self.isVideo = true
+                        }
+                    }
+                } catch {
+                    print("❌ Не удалось создать превью: \(error)")
                 }
             }
         }

@@ -9,6 +9,8 @@ import SwiftUI
 import PopupView
 import SwiftfulLoadingIndicators
 import Shimmer
+import FirebaseStorage
+import AVFoundation
 
 // MARK: for FeedView
 extension View {
@@ -563,6 +565,8 @@ extension View {
                     viewModel.id = ""
                     viewModel.text = ""
                     viewModel.mediaURLs = []
+                    viewModel.videoURL = nil
+                    viewModel.isVideoCover = false
                 }
             }
             .onChange(of: viewModel.id) {
@@ -586,7 +590,32 @@ extension View {
                                 viewModel.title = prePost?.title ?? NSLocalizedString("notFoundLabel", comment: "")
                                 viewModel.image = StorageManager.shared.getImage(id: viewModel.id)
                                 viewModel.isEditing = true
+                                
+                                if viewModel.image == nil {
+                                    do {
+                                        let videoRef = Storage.storage().reference().child("images/\(viewModel.id).mp4")
+                                        let url = try await videoRef.downloadURL()
+                                        viewModel.videoURL = url
 
+                                        let asset = AVAsset(url: url)
+                                        let _ = try await asset.loadTracks(withMediaType: .video)
+
+                                        let generator = AVAssetImageGenerator(asset: asset)
+                                        generator.appliesPreferredTrackTransform = true
+                                        let cgImage = try generator.copyCGImage(at: .zero, actualTime: nil)
+                                        let preview = UIImage(cgImage: cgImage)
+
+                                        await MainActor.run {
+                                            withAnimation {
+                                                viewModel.image = preview
+                                                viewModel.isVideoCover = true
+                                            }
+                                        }
+                                    } catch {
+                                        print("❌ Видео не найдено или ошибка при генерации превью: \(error)")
+                                    }
+                                }
+                                
                                 viewModel.isCreateViewPresented = true
                             } catch {
                                 withAnimation {

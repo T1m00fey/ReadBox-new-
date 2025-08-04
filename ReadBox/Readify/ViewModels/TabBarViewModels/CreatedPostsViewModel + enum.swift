@@ -50,6 +50,8 @@ final class CreatedPostsViewModel: ObservableObject {
     @Published var mediaURLs: [URL] = []
     @Published var avatarImage: UIImage? = nil
     @Published var isZoomableImageViewPresented = false
+    @Published var isVideoCover = false
+    @Published var videoURL: URL? = nil
     
     @Published var user: DBUser? = nil
     
