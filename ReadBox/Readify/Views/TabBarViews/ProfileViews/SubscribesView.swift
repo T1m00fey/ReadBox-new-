@@ -251,5 +251,6 @@ struct ChannelListItem: View {
         .onAppear {
             getAvatar()
         }
+        .overlay(EnableSwipeBack().frame(width: 0, height: 0))
     }
 }

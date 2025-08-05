@@ -198,6 +198,7 @@ struct NewPasswordView: View {
             }
         }
         .navigationBarBackButtonHidden()
+        .overlay(EnableSwipeBack().frame(width: 0, height: 0))
     }
 }
 

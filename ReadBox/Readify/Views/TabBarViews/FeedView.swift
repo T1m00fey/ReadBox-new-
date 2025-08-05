@@ -247,6 +247,8 @@ struct FeedView: View {
                 .refreshable {
                     if !viewModel.isReadViewPresented {
                         viewModel.refresh()
+                    } else {
+                        viewModel.isReadViewPresented = false
                     }
                 }
                 

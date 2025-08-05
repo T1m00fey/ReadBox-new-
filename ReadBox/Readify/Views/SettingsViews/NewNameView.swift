@@ -149,6 +149,7 @@ struct NewNameView: View {
             }
         }
         .navigationBarBackButtonHidden()
+        .overlay(EnableSwipeBack().frame(width: 0, height: 0))
     }
 }
 

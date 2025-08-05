@@ -98,6 +98,8 @@ struct RootView: View {
                             isNeedToSubscribe: true
                         )
                         
+                        user?.subscribes?.append("qDWmcGOLPGVAzJth2I8G2cwcp9x1")
+                        
                     } else if StorageManager.shared.getLanguage() == "ru" && !(user?.subscribes?.contains(
                         "se8Any2drmcQg1sFoLXYXo4ttYt2"
                     ) ?? true) {
@@ -106,6 +108,8 @@ struct RootView: View {
                             on: "se8Any2drmcQg1sFoLXYXo4ttYt2",
                             isNeedToSubscribe: true
                         )
+                        
+                        user?.subscribes?.append("se8Any2drmcQg1sFoLXYXo4ttYt2")
                         
                     }
                 } else {
