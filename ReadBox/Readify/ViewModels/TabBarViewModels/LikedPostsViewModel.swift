@@ -182,6 +182,12 @@ final class LikedPostsViewModel: ObservableObject {
                 }
             }
         }
+        
+        if post == articles.last, articles.count >= 20 {
+            Task {
+                try? await getArticles()
+            }
+        }
     }
     
     func tapGestureHandler(on post: PrePost) {

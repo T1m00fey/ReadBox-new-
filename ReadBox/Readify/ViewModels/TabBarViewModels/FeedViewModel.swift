@@ -129,21 +129,6 @@ final class FeedViewModel: ObservableObject {
         Task {
             try? await loadUser()
         }
-        
-        Task {
-            do {
-                try await getMaxIndex()
-                fromIndex = Int(maxIndex) ?? 0
-
-                return
-            } catch {
-                withAnimation {
-                    errorText = error.localizedDescription
-                }
-            }
-            
-            isErrorPopupPresented = true
-        }
     }
     
     func getAuthorName(id: String) async throws -> String {
@@ -226,21 +211,21 @@ final class FeedViewModel: ObservableObject {
     
     func getArticles() async throws {
         Task {
-            let query = db.collection("articles")
+            var query = db.collection("articles")
                 .whereField("is_archive", isEqualTo: false)
                 .whereField("original_language", isEqualTo: StorageManager.shared.getLanguage())
                 .order(by: "date_created", descending: true)
                 .limit(to: 20)
             
             if let last = lastDocument {
-                query.start(afterDocument: last)
+                query = query.start(afterDocument: last)
             }
             
             do {
                 let snapshot = try await query.getDocuments()
                 let newPosts = snapshot.documents.compactMap { PrePost(document: $0) }
                 self.articles.append(contentsOf: newPosts)
-                self.lastDocument = articles.count % 20 == 0 ? snapshot.documents.last : nil
+                self.lastDocument = snapshot.documents.count == 20 ? snapshot.documents.last : nil
             } catch {
                 withAnimation {
                     errorText = error.localizedDescription
@@ -271,6 +256,16 @@ final class FeedViewModel: ObservableObject {
                     //                                                        viewModel.errorText = error.localizedDescription
                     //                                                        viewModel.isErrorPopupPresented = true
                     //                                                    }
+                }
+            }
+        }
+        
+        if articles.last == post && lastDocument != nil {
+            Task {
+                do {
+                    try await getArticles()
+                } catch {
+                    print("ERROR TO FETCH MORE POSTS: \(error.localizedDescription)")
                 }
             }
         }

@@ -171,7 +171,7 @@ final class CreatedPostsViewModel: ObservableObject {
     func deletePost(id: String) {
         Task {
             do {
-                if !(posts.first { $0.id == id }?.isArchive ?? true)  {
+                if let _ = posts.first(where: { $0.id == id})?.isArchive  {
                     withAnimation {
                         postsCount -= 1
                     }
@@ -208,10 +208,21 @@ final class CreatedPostsViewModel: ObservableObject {
                             print("🗑 Удалено: \(path)")
                         }
                     }
+                
+                withAnimation {
+                    if isArchivePresented {
+                        archivePosts.removeAll { $0.id == id }
+                    } else {
+                        posts.removeAll { $0.id == id }
+                    }
+                }
+                
+                self.id = ""
             } catch {
                 withAnimation {
                     errorText = error.localizedDescription
                     isErrorPopupPresented = true
+                    self.id = ""
                 }
             }
         }
@@ -225,16 +236,6 @@ final class CreatedPostsViewModel: ObservableObject {
             try? await fileReference.delete()
             try? await videoReference.delete()
         }
-        
-        withAnimation {
-            if isArchivePresented {
-                archivePosts.removeAll { $0.id == id }
-            } else {
-                posts.removeAll { $0.id == id }
-            }
-        }
-        
-        self.id = ""
     }
     
     func updateIsArchiveStatus() {

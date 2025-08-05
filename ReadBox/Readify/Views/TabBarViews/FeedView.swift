@@ -26,7 +26,7 @@ struct FeedView: View {
                 
                 ScrollView(showsIndicators: false) {
                     
-                    VStack {
+                    LazyVStack {
                         
                         TabView {
                             
@@ -92,44 +92,44 @@ struct FeedView: View {
                             }
                         }
                         
-                        if let _ = viewModel.lastDocument {
-                            if viewModel.articles != [] && !viewModel.isLoading {
-                                Button {
-                                    Task {
-                                        do {
-                                            try await viewModel.getArticles()
-                                            return
-                                        } catch {
-                                            withAnimation {
-                                                viewModel.errorText = error.localizedDescription
-                                            }
-                                        }
-                                        
-                                        viewModel.isErrorPopupPresented = true
-                                    }
-                                } label: {
-                                    HStack {
-                                        Image(systemName: "arrow.down")
-                                            .foregroundStyle(Color(uiColor: .label))
-                                            .font(.title3)
-                                            .fontWeight(.light)
-                                        
-                                        Text(LocalizedStringKey("loadMore"))
-                                            .font(.title3)
-                                            .fontDesign(.rounded)
-                                            .fontWeight(.light)
-                                    }
-                                    .padding(.horizontal, 16)
-                                    .padding(.vertical, 10)
-                                    .background(Color(uiColor: .secondarySystemBackground))
-                                    .clipShape(RoundedRectangle(cornerRadius: 10))
-                                    .shadow(radius: 2)
-                                    .padding(.top, 20)
-                                }
-                                .padding(.bottom, 10)
-                                
-                            }
-                        }
+//                        if let _ = viewModel.lastDocument {
+//                            if viewModel.articles != [] && !viewModel.isLoading {
+//                                Button {
+//                                    Task {
+//                                        do {
+//                                            try await viewModel.getArticles()
+//                                            return
+//                                        } catch {
+//                                            withAnimation {
+//                                                viewModel.errorText = error.localizedDescription
+//                                            }
+//                                        }
+//                                        
+//                                        viewModel.isErrorPopupPresented = true
+//                                    }
+//                                } label: {
+//                                    HStack {
+//                                        Image(systemName: "arrow.down")
+//                                            .foregroundStyle(Color(uiColor: .label))
+//                                            .font(.title3)
+//                                            .fontWeight(.light)
+//                                        
+//                                        Text(LocalizedStringKey("loadMore"))
+//                                            .font(.title3)
+//                                            .fontDesign(.rounded)
+//                                            .fontWeight(.light)
+//                                    }
+//                                    .padding(.horizontal, 16)
+//                                    .padding(.vertical, 10)
+//                                    .background(Color(uiColor: .secondarySystemBackground))
+//                                    .clipShape(RoundedRectangle(cornerRadius: 10))
+//                                    .shadow(radius: 2)
+//                                    .padding(.top, 20)
+//                                }
+//                                .padding(.bottom, 10)
+//                                
+//                            }
+//                        }
                         
                     }
                 }

@@ -33,7 +33,7 @@ struct ChannelView: View {
                     .ignoresSafeArea()
                 
                 ScrollView(showsIndicators: false) {
-                    VStack(spacing: 20) {
+                    LazyVStack(spacing: 20) {
                         if viewModel.isLoadingShowing {
                             Text("HelloWorldHelloWorld HelloWorld HelloWorld HelloWorldHelloWorld HelloWorld HelloWorld")
                                 .padding(.vertical, 20)
@@ -103,6 +103,13 @@ struct ChannelView: View {
                                 )
                                 .padding(.top, post.id == viewModel.posts[0].id ? 10 : 0)
                                 .padding(.bottom, post.id == viewModel.posts[viewModel.posts.count - 1].id ? 100 : 0)
+                                .onAppear {
+                                    if post == viewModel.posts.last, viewModel.posts.count >= 20 {
+                                        Task {
+                                            try? await viewModel.loadPosts(by: authorId)
+                                        }
+                                    }
+                                }
                                 .onTapGesture {
                                     viewModel.isLoadingPopupPresented = true
                                     

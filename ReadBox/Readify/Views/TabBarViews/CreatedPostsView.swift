@@ -114,7 +114,7 @@ struct CreatedPostsView: View {
                 
                 if viewModel.user?.authorName != "" && !viewModel.isSettingViewPresented {
                     ScrollView(showsIndicators: false) {
-                        VStack(spacing: 20) {
+                        LazyVStack(spacing: 20) {
                             if viewModel.isLoadingShowing {
                                 
                                 Text("HelloWorldHelloWorld HelloWorld HelloWorld HelloWorldHelloWorld HelloWorld HelloWorld")
@@ -199,6 +199,19 @@ struct CreatedPostsView: View {
                                         )
                                         .onTapGesture {
                                             viewModel.tapGestureHandler(on: post)
+                                        }
+                                        .onAppear {
+                                            let lastPost = viewModel.isArchivePresented
+                                            ? viewModel.archivePosts.last
+                                            : viewModel.posts.last
+                                            
+                                            if post == lastPost, !viewModel.isAllLoaded {
+                                                Task {
+                                                    viewModel.isArchivePresented
+                                                    ? try? await viewModel.getPosts()
+                                                    : try? await viewModel.getArchivedPost()
+                                                }
+                                            }
                                         }
                                     }
                                 } else if viewModel.archivePosts.count == 0 || viewModel.posts.count == 0 {
