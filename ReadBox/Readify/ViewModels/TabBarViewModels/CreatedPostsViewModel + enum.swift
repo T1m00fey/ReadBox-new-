@@ -171,9 +171,6 @@ final class CreatedPostsViewModel: ObservableObject {
     func deletePost(id: String) {
         Task {
             do {
-                try await ArticlesManager.shared.deletePost(id: id)
-                try await UserManager.shared.deleteCreatedPost(id: id)
-                
                 if !(posts.first { $0.id == id }?.isArchive ?? true)  {
                     withAnimation {
                         postsCount -= 1
@@ -184,6 +181,33 @@ final class CreatedPostsViewModel: ObservableObject {
                         postsCount: postsCount
                     )
                 }
+                
+                let mediaURLs = try await ArticlesManager.shared.getMediaURLs(from: id)
+                
+                try await ArticlesManager.shared.deletePost(id: id)
+                try await UserManager.shared.deleteCreatedPost(id: id)
+            
+                let storage = Storage.storage()
+                
+                let imageRef = storage.reference().child("images/\(id).jpg")
+                let videoRef = storage.reference().child("images/\(id).mp4")
+                try? await imageRef.delete()
+                try? await videoRef.delete()
+                
+                for url in mediaURLs {
+                        if let path = URLComponents(string: url.absoluteString)?
+                            .path
+                            .removingPercentEncoding?
+                            .replacingOccurrences(of: "/v0/b/\(storage.reference().bucket)/o/", with: "")
+                            .components(separatedBy: "?")
+                            .first?
+                            .replacingOccurrences(of: "%2F", with: "/") {
+
+                            let ref = storage.reference(withPath: path)
+                            try? await ref.delete()
+                            print("🗑 Удалено: \(path)")
+                        }
+                    }
             } catch {
                 withAnimation {
                     errorText = error.localizedDescription

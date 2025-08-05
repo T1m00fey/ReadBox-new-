@@ -541,6 +541,7 @@ struct TextCreateView: View {
             }
             .navigationBarTitleDisplayMode(.inline)
             .navigationBarBackButtonHidden()
+            .overlay(EnableSwipeBack().frame(width: 0, height: 0))
         }
     }
 }

@@ -138,6 +138,8 @@ final class ArticlesManager {
     }
     
     func uploadImage(id: String, image: UIImage, folder: String) async throws -> String {
+        let id = UUID().uuidString + id
+    
         let storage = Storage.storage()
         let ref = storage.reference(withPath: "\(folder)/\(id).jpg")
         
