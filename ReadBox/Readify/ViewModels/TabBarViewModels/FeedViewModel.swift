@@ -155,32 +155,47 @@ final class FeedViewModel: ObservableObject {
         topArticles = []
         
         for index in topArticlesIndexes {
-            do {
-                let isArchive = try await ArticlesManager.shared.getIsArchive(of: index)
-            
-                if isArchive {
+            if index != "" {
+                do {
+                    let isArchive = try await ArticlesManager.shared.getIsArchive(of: index)
+                
+                    if isArchive {
+                        withAnimation {
+                            topArticles.append(
+                                PrePost(
+                                    id: index,
+                                    title: NSLocalizedString("archiveArticleLabel", comment: ""),
+                                    authorId: "",
+                                    viewsCount: 0,
+                                    likesCount: 0
+                                )
+                            )
+                        }
+                    } else {
+                        let article = try await getArticle(id: index)
+                        
+                        withAnimation {
+                            topArticles.append(article)
+                        }
+                        
+                    }
+                } catch {
                     withAnimation {
+                        
                         topArticles.append(
                             PrePost(
                                 id: index,
-                                title: NSLocalizedString("archiveArticleLabel", comment: ""),
+                                title: NSLocalizedString("articleErrorLabel", comment: ""),
                                 authorId: "",
                                 viewsCount: 0,
                                 likesCount: 0
                             )
                         )
+                        
                     }
-                } else {
-                    let article = try await getArticle(id: index)
-                    
-                    withAnimation {
-                        topArticles.append(article)
-                    }
-                    
                 }
-            } catch {
+            } else {
                 withAnimation {
-                    
                     topArticles.append(
                         PrePost(
                             id: index,
@@ -190,7 +205,6 @@ final class FeedViewModel: ObservableObject {
                             likesCount: 0
                         )
                     )
-                    
                 }
             }
         }

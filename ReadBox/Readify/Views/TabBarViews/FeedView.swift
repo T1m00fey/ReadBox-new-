@@ -41,14 +41,16 @@ struct FeedView: View {
                                 }
                             } else {
                                 ForEach(viewModel.topArticles) { post in
-                                    TopArticleView(id: post.id, title: post.title, isArchive: post.isArchive)
-                                        .tabItem {}
-                                        .onAppear {
-                                            viewModel.onPostAppearing(post: post)
-                                        }
-                                        .onTapGesture {
-                                            viewModel.tapGestureHandler(on: post)
-                                        }
+                                    if post.id != "" {
+                                        TopArticleView(id: post.id, title: post.title, isArchive: post.isArchive)
+                                            .tabItem {}
+                                            .onAppear {
+                                                viewModel.onPostAppearing(post: post)
+                                            }
+                                            .onTapGesture {
+                                                viewModel.tapGestureHandler(on: post)
+                                            }
+                                    }
                                 }
                                 
                             }
