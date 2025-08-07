@@ -64,6 +64,7 @@
 "descriptionTEError" = "Такое описание недопустимо";
 "imageError" = "Выберите изображение для вашей публикации";
 "nextLabel" = "Далее →";
+"shortNextLabel" = "Далее";
 "titleLabel" = "Заголовок";
 "quoteLabel" = "Цитата";
 "strikeThroughLabel" = "Зачеркнутый";

@@ -44,6 +44,7 @@ struct MoreSettingView: View {
                             .fontWeight(.light)
                             .fontDesign(.rounded)
                             .foregroundStyle(Color(uiColor: .label))
+                            .lineLimit(1)
                         
                         Spacer()
                         
@@ -76,6 +77,7 @@ struct MoreSettingView: View {
                             .fontWeight(.light)
                             .fontDesign(.rounded)
                             .foregroundStyle(Color(uiColor: .label))
+                            .lineLimit(1)
                         
                         Spacer()
                         
@@ -108,6 +110,7 @@ struct MoreSettingView: View {
                             .fontWeight(.light)
                             .fontDesign(.rounded)
                             .foregroundStyle(Color(uiColor: .label))
+                            .lineLimit(1)
                         
                         Spacer()
                         

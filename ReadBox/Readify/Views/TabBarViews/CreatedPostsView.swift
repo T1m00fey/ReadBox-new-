@@ -435,6 +435,7 @@ struct CreatedPostsView: View {
                                     do {
                                         withAnimation {
                                             viewModel.isLoading = true
+                                            viewModel.isButtonEnabled = false
                                         }
                                         
                                         viewModel.vibrationsService.softImpact()
@@ -468,18 +469,27 @@ struct CreatedPostsView: View {
                                             viewModel.user?.authorName = viewModel.authorNameText
                                             viewModel.user?.authorDescription = viewModel.descriptionText
                                         }
+                                        
+                                        withAnimation {
+                                            viewModel.isButtonEnabled = false
+                                        }
                                     } catch {
                                         withAnimation {
                                             viewModel.errorText = error.localizedDescription
                                             viewModel.isErrorPopupPresented = true
                                             viewModel.isLoading = false
+                                            viewModel.isButtonEnabled = false
                                         }
                                     }
                                 }
                             }
                         } label: {
                             HStack {
-                                Text(LocalizedStringKey("nextLabel"))
+                                Text(
+                                    viewModel.isLoading
+                                    ? LocalizedStringKey("shortNextLabel")
+                                    : LocalizedStringKey("nextLabel")
+                                )
                                     .foregroundStyle(
                                         viewModel.isButtonEnabled
                                         ? Color(uiColor: .label)

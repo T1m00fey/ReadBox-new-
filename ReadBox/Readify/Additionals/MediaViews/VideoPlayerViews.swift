@@ -153,7 +153,7 @@ struct AdaptiveVideoPlayerView: View {
     var externalPlayer: AVPlayer? = nil
     let width: CGFloat
     let isReady: Bool
-    let height: CGFloat?
+    let height: CGFloat
     
     init(
         url: URL,
@@ -161,7 +161,7 @@ struct AdaptiveVideoPlayerView: View {
         externalPlayer: AVPlayer? = nil,
         width: CGFloat,
         isReady: Bool,
-        height: CGFloat?,
+        height: CGFloat
     ) {
         self.url = url
         self.cornerRadius = cornerRadius
@@ -186,7 +186,7 @@ struct AdaptiveVideoPlayerView: View {
                     size: .small,
                     speed: .fast
                 )
-                .frame(width: width, height: 200)
+                .frame(width: width, height: height > 300 ? 200 : height)
                 .background(Color(.secondarySystemBackground))
                 .clipShape(RoundedRectangle(cornerRadius: 16))
             }
@@ -249,15 +249,18 @@ struct TappableVideoPreview: View {
     let url: URL
     let cornerRadius: CGFloat
     let width: CGFloat
+    let height: CGFloat?
     
     init(
         url: URL,
         cornerRadius: CGFloat,
-        width: CGFloat = UIScreen.main.bounds.width - 32
+        width: CGFloat = UIScreen.main.bounds.width - 32,
+        height: CGFloat? = nil
     ) {
         self.url = url
         self.cornerRadius = cornerRadius
         self.width = width
+        self.height = height
     }
     
     @StateObject private var playerHolder = PlayerHolder()
@@ -283,7 +286,7 @@ struct TappableVideoPreview: View {
                 externalPlayer: playerHolder.player,
                 width: width,
                 isReady: playerHolder.isReadyToPlay,
-                height: calculatedHeight
+                height: height ?? calculatedHeight ?? 250
             )
             .id(playerViewId)
             .onAppear {

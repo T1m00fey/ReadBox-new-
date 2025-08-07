@@ -64,6 +64,7 @@
 "descriptionTEError" = "Such a description is unacceptable";
 "imageError" = "Choose an image for your post";
 "nextLabel" = "Next →";
+"shortNextLabel" = "Next";
 "titleLabel" = "Header";
 "quoteLabel" = "Quote";
 "strikeThroughLabel" = "Strikethrough";

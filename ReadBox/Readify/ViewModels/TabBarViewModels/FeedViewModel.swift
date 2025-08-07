@@ -212,6 +212,7 @@ final class FeedViewModel: ObservableObject {
     func getArticles() async throws {
         Task {
             var query = db.collection("articles")
+                .whereField("id", notIn: topArticlesIndexes)
                 .whereField("is_archive", isEqualTo: false)
                 .whereField("original_language", isEqualTo: StorageManager.shared.getLanguage())
                 .order(by: "date_created", descending: true)

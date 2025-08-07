@@ -50,7 +50,7 @@ struct AuthorDescription: Codable {
 
 struct DBUser: Codable, Equatable {
     let userId: String
-    let name: String?
+    var name: String?
     let email: String?
     let dateCreated: Date?
     var likedPosts: [String]?

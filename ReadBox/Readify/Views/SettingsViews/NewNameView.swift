@@ -9,8 +9,7 @@ import SwiftUI
 struct NewNameView: View {
     @Binding var isSuccessPopupPresented: Bool
     @Binding var successText: String
-    
-    let userID: String?
+    @Binding var user: DBUser?
     
     @FocusState var isNameTFFocused: Bool
     
@@ -64,35 +63,29 @@ struct NewNameView: View {
                     }
                     
                     Button {
-                        if userID != nil {
-                            Task {
-                                do {
-                                    try await viewModel.changeName(userID: userID ?? "", to: viewModel.nameText)
-                                    
-                                    isNameTFFocused = false
-                                    viewModel.nameText = ""
-                                    
-                                    dismiss()
-                                    
-                                    withAnimation {
-                                        successText = NSLocalizedString("nameChangedAlert", comment: "")
-                                    }
-                                    isSuccessPopupPresented = true
-                                    
-                                    return
-                                } catch {
-                                    print("Error: \(error.localizedDescription)")
-                                    
-                                    withAnimation {
-                                        viewModel.errorText = error.localizedDescription
-                                    }
-                                }
+                        Task {
+                            do {
+                                try await viewModel.changeName(userID: user?.userId ?? "", to: viewModel.nameText)
                                 
-                                viewModel.isErrorPopupPresented = true
-                            }
-                        } else {
-                            withAnimation {
-                                viewModel.errorText = "Error"
+                                user?.name = viewModel.nameText
+                                
+                                isNameTFFocused = false
+                                viewModel.nameText = ""
+                                
+                                dismiss()
+                                
+                                withAnimation {
+                                    successText = NSLocalizedString("nameChangedAlert", comment: "")
+                                }
+                                isSuccessPopupPresented = true
+                                
+                                return
+                            } catch {
+                                print("Error: \(error.localizedDescription)")
+                                
+                                withAnimation {
+                                    viewModel.errorText = error.localizedDescription
+                                }
                             }
                             
                             viewModel.isErrorPopupPresented = true
@@ -151,8 +144,4 @@ struct NewNameView: View {
         .navigationBarBackButtonHidden()
         .overlay(EnableSwipeBack().frame(width: 0, height: 0))
     }
-}
-
-#Preview {
-    NewNameView(isSuccessPopupPresented: .constant(false), successText: .constant(""), userID: "")
 }

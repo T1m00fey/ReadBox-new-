@@ -65,10 +65,16 @@ struct ProfileView: View {
                                 .padding(.top, 25)
                             
                             if let _ = viewModel.user {
-                                NavigationLink(destination: NewNameView(isSuccessPopupPresented: $viewModel.isSuccessPopupPresented, successText: $viewModel.successText, userID: viewModel.user?.userId)) {
+                                NavigationLink(
+                                    destination: NewNameView(
+                                        isSuccessPopupPresented: $viewModel.isSuccessPopupPresented,
+                                        successText: $viewModel.successText,
+                                        user: $viewModel.user
+                                    )
+                                ) {
                                     ZStack {
                                         RoundedRectangle(cornerRadius: 20)
-                                            .foregroundStyle(Color(uiColor: .secondarySystemBackground))
+                                                .foregroundStyle(Color(uiColor: .secondarySystemBackground))
                                             .shadow(radius: 2)
                                         
                                         HStack {
