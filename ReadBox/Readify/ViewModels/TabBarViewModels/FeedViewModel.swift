@@ -109,6 +109,7 @@ final class FeedViewModel: ObservableObject {
             articles = []
             authorsNames = [:]
             authorsCheckmarks = [:]
+            lastDocument = nil
             user = nil
         }
         
@@ -167,7 +168,8 @@ final class FeedViewModel: ObservableObject {
                                     title: NSLocalizedString("archiveArticleLabel", comment: ""),
                                     authorId: "",
                                     viewsCount: 0,
-                                    likesCount: 0
+                                    likesCount: 0,
+                                    isShortPost: false
                                 )
                             )
                         }
@@ -188,7 +190,8 @@ final class FeedViewModel: ObservableObject {
                                 title: NSLocalizedString("articleErrorLabel", comment: ""),
                                 authorId: "",
                                 viewsCount: 0,
-                                likesCount: 0
+                                likesCount: 0,
+                                isShortPost: false
                             )
                         )
                         
@@ -202,7 +205,8 @@ final class FeedViewModel: ObservableObject {
                             title: NSLocalizedString("articleErrorLabel", comment: ""),
                             authorId: "",
                             viewsCount: 0,
-                            likesCount: 0
+                            likesCount: 0,
+                            isShortPost: false
                         )
                     )
                 }
@@ -284,6 +288,23 @@ final class FeedViewModel: ObservableObject {
                 }
             }
         }
+        
+        if let isShort = post.isShortPost {
+            if isShort {
+                if user?.userId ?? "" != post.authorId {
+                    if !views.contains(id) {
+                        Task {
+                            do {
+                                try await ArticlesManager.shared.updateViews(at: id)
+                                
+                                views.append(id)
+                                saveViews()
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
     
     func tapGestureHandler(on post: PrePost) {
@@ -320,14 +341,18 @@ final class FeedViewModel: ObservableObject {
                         isDescriptionPopupPresented = true
                     }
                     
-                    if user?.userId ?? "" != post.authorId {
-                        if !views.contains(id) {
-                            Task {
-                                do {
-                                    try await ArticlesManager.shared.updateViews(at: id)
-                                    
-                                    views.append(id)
-                                    saveViews()
+                    if let isShort = post.isShortPost {
+                        if !isShort {
+                            if user?.userId ?? "" != post.authorId {
+                                if !views.contains(id) {
+                                    Task {
+                                        do {
+                                            try await ArticlesManager.shared.updateViews(at: id)
+                                            
+                                            views.append(id)
+                                            saveViews()
+                                        }
+                                    }
                                 }
                             }
                         }

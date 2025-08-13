@@ -62,16 +62,18 @@ struct ReadView: View {
                 
                 ScrollView(showsIndicators: false) {
                     VStack {
-                        
-                        Text(title)
-                            .fontWeight(.light)
-                            .fontDesign(.rounded)
-                            .font(.system(size: 26))
-                            .frame(width: UIScreen.main.bounds.width - 32, alignment: .leading)
-                        
-                        RoundedRectangle(cornerRadius: 0)
-                            .frame(width: UIScreen.main.bounds.width, height: 1)
-                            .foregroundStyle(Color.gray)
+                                                                        
+                        if !text.isEmpty {
+                            Text(title)
+                                .fontWeight(.light)
+                                .fontDesign(.rounded)
+                                .font(.system(size: 24))
+                                .frame(width: UIScreen.main.bounds.width - 32, alignment: .leading)
+                            
+                            RoundedRectangle(cornerRadius: 0)
+                                .frame(width: UIScreen.main.bounds.width, height: 1)
+                                .foregroundStyle(Color.gray)
+                        }
                         
                         ZStack {
                             VisibilityTracker(id: "authorBlock")
@@ -274,23 +276,29 @@ struct ReadView: View {
                         .padding(.horizontal)
                         .padding(.bottom, 20)
                         
-                        Markdown(
-                            text.replacingOccurrences(of: "\n", with: "  \n").normalizeEmptyLines()
-                        )
-                        .markdownImageProvider(
-                            WebImageProvider(onImageTap: { url in
-                                viewModel.selectedImageURL = url
-                                viewModel.isImageFullscreenPresented = true
-                            })
-                        )
-                        .markdownTextStyle(\.text) {
-                            FontSize(CGFloat(viewModel.fontSize))
-                        }
-                        .markdownTheme(.gitHub)
-                        .frame(width: UIScreen.main.bounds.width - 32, alignment: .topLeading)
-                        .padding(.bottom, 50)
-                        .onDisappear {
-                            NotificationCenter.default.post(name: .stopAllVideoPlayback, object: nil)
+                        if text.isEmpty {
+                            Text(title)
+                                .fontWeight(.light)
+                                .fontDesign(.rounded)
+                                .font(.system(size: 24))
+                                .frame(width: UIScreen.main.bounds.width - 32, alignment: .leading)
+                                .padding(.bottom, 50)
+                        } else {
+                            Markdown(
+                                text.replacingOccurrences(of: "\n", with: "  \n").normalizeEmptyLines()
+                            )
+                            .markdownImageProvider(
+                                WebImageProvider(onImageTap: { url in
+                                    viewModel.selectedImageURL = url
+                                    viewModel.isImageFullscreenPresented = true
+                                })
+                            )
+                            .markdownTextStyle(\.text) {
+                                FontSize(CGFloat(viewModel.fontSize))
+                            }
+                            .markdownTheme(.gitHub)
+                            .frame(width: UIScreen.main.bounds.width - 32, alignment: .topLeading)
+                            .padding(.bottom, 50)                            
                         }
                     }
                     
@@ -396,9 +404,11 @@ struct ReadView: View {
                                             )
                                     }
                                 
-                                Image(systemName: "checkmark.seal.fill")
-                                    .foregroundStyle(Color.blue)
-                                    .font(.system(size: 10))
+                                if isCheckmark {
+                                    Image(systemName: "checkmark.seal.fill")
+                                        .foregroundStyle(Color.blue)
+                                        .font(.system(size: 10))
+                                }
                             }
                         }
                     }
@@ -414,9 +424,8 @@ struct ReadView: View {
                             
                             if !isArchive {
                                 ShareLink(item: URL(string: "https://readbox-links.online/posts/?index=\(id)")!) {
-                                    Image(systemName: "square.and.arrow.up")
+                                    Image(systemName: "arrowshape.turn.up.right")
                                 }
-                                .padding(.bottom, 1)
                             }
                             
                         }

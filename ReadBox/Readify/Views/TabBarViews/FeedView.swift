@@ -67,7 +67,9 @@ struct FeedView: View {
                                     authorId: "",
                                     authorName: "Hello, World!",
                                     isCheckmark: true,
-                                    isArchive: false
+                                    isArchive: false,
+                                    isShortPost: false,
+                                    user: .constant(nil)
                                 )
                                 .redacted(reason: .placeholder)
                                 .padding(.top, 20)
@@ -81,9 +83,12 @@ struct FeedView: View {
                                     authorId: post.authorId ?? "",
                                     authorName: viewModel.authorsNames[post.authorId ?? ""] ?? "",
                                     isCheckmark: viewModel.authorsCheckmarks[post.authorId ?? ""] ?? false,
-                                    isArchive: post.isArchive ?? true
+                                    isArchive: post.isArchive ?? true,
+                                    isShortPost: post.isShortPost ?? false,
+                                    user: $viewModel.user
                                 )
                                 .onAppear {
+                                    print("👀 VIEW \(post.id)")
                                     viewModel.onPostAppearing(post: post)
                                 }
                                 .onTapGesture {

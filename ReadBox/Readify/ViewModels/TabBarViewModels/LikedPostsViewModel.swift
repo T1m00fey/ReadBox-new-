@@ -127,7 +127,8 @@ final class LikedPostsViewModel: ObservableObject {
                                 authorId: authorId,
                                 viewsCount: 0,
                                 likesCount: likesCount,
-                                isArchive: isArchive
+                                isArchive: isArchive,
+                                isShortPost: false
                             )
                         )
                     }
@@ -148,7 +149,8 @@ final class LikedPostsViewModel: ObservableObject {
                             title: NSLocalizedString("articleErrorLabel", comment: ""),
                             authorId: nil,
                             viewsCount: nil,
-                            likesCount: nil
+                            likesCount: nil,
+                            isShortPost: false
                         )
                     )
                 }

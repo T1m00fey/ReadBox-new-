@@ -65,11 +65,7 @@ struct CustomVideoPlayerView: UIViewRepresentable {
                     player.seek(to: .zero)
                     player.play()
                 }
-            }
-
-            NotificationCenter.default.addObserver(forName: .stopAllVideoPlayback, object: nil, queue: .main) { _ in
-                player.pause()
-            }
+            }            
         }
 
         override func layoutSubviews() {
@@ -209,28 +205,34 @@ final class PlayerHolder: ObservableObject {
     init() {
         statusObserver = player.observe(\.timeControlStatus, options: [.initial, .new]) { [weak self] player, _ in
             DispatchQueue.main.async {
-                self?.isPlaying = player.timeControlStatus == .playing
+                self?.isPlaying = (player.timeControlStatus == .playing || player.timeControlStatus == .waitingToPlayAtSpecifiedRate)
             }
         }
-        
+
         muteObserver = player.observe(\.isMuted, options: [.initial, .new]) { [weak self] player, _ in
-            DispatchQueue.main.async {
-                self?.isMuted = player.isMuted
-            }
+            DispatchQueue.main.async { self?.isMuted = player.isMuted }
         }
-        
-        currentItemObserver = player.observe(\.currentItem, options: [.new]) { [weak self] player, change in
-            guard let item = change.newValue as? AVPlayerItem else { return }
-            
-            self?.statusObserverForItem = item.observe(\.status, options: [.new]) { _, _ in
+
+        currentItemObserver = player.observe(\.currentItem, options: [.initial, .new]) { [weak self] player, _ in
+            guard let self = self else { return }
+
+            self.statusObserverForItem?.invalidate()
+            self.statusObserverForItem = nil
+
+            guard let item = player.currentItem else {
+                DispatchQueue.main.async { self.isReadyToPlay = false }
+                return
+            }
+
+            self.statusObserverForItem = item.observe(\.status, options: [.initial, .new]) { [weak self] item, _ in
+                guard let self = self else { return }
+                let ready = (item.status == .readyToPlay)
                 DispatchQueue.main.async {
-                    let isReady = item.status == .readyToPlay
-                    self?.isReadyToPlay = isReady
-                    
-                    if isReady {
+                    self.isReadyToPlay = ready
+                    if ready {
                         try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .moviePlayback)
                         try? AVAudioSession.sharedInstance().setActive(true)
-                        self?.player.play()
+                        self.player.play()
                     }
                 }
             }
@@ -296,21 +298,24 @@ struct TappableVideoPreview: View {
                 let asset = AVURLAsset(url: url, options: [
                     AVURLAssetPreferPreciseDurationAndTimingKey: false
                 ])
-                
                 let item = AVPlayerItem(asset: asset)
+
                 playerHolder.player.replaceCurrentItem(with: item)
-                playerHolder.player.automaticallyWaitsToMinimizeStalling = false
+                playerHolder.player.automaticallyWaitsToMinimizeStalling = true
                 playerHolder.player.isMuted = true
 
-                if let resumeTime = resumeAfterFullscreenTime {
-                    playerHolder.player.seek(to: resumeTime, toleranceBefore: .zero, toleranceAfter: .zero)
+                if let t = resumeAfterFullscreenTime {
+                    playerHolder.player.seek(to: t, toleranceBefore: .zero, toleranceAfter: .zero)
                     resumeAfterFullscreenTime = nil
                 } else {
                     try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .moviePlayback)
                     try? AVAudioSession.sharedInstance().setActive(true)
                 }
-                
+
                 loadVideoSize()
+            }
+            .onDisappear {
+                playerHolder.player.pause()
             }
 
             Rectangle()

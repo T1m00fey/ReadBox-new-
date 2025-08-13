@@ -48,8 +48,7 @@ struct CreateView: View {
                                 .padding(.horizontal, 16)
                                 .padding(.vertical, 5)
                                 .frame(width: UIScreen.main.bounds.width - 32)
-                                .frame(minHeight: 150)
-                                .frame(maxHeight: 250)
+                                .frame(height: viewModel.titleTEHeight)
                                 .scrollContentBackground(.hidden)
                                 .background(Color(uiColor: .secondarySystemBackground))
                                 .clipShape(RoundedRectangle(cornerRadius: 20))
@@ -59,7 +58,7 @@ struct CreateView: View {
                                 .onChange(of: isTitleTEFocused) {
                                     withAnimation {
                                         viewModel.isTitleTESelected = isTitleTEFocused ? true : false
-                                        viewModel.navigationTitle = isTitleTEFocused ? NSLocalizedString("titleLabel", comment: "") : viewModel.getNavigationTitle(isEditing)
+                                        viewModel.titleTEHeight = isTitleTEFocused ? 300 : 200
                                         
                                         if viewModel.isFirstTapOnTitleTE && !isEditing {
                                             withAnimation {
@@ -71,7 +70,7 @@ struct CreateView: View {
                                 }
                                 .tint(Color(uiColor: .label))
                             
-                            if !isEditing {
+                            if !viewModel.isDescriptionTESelected && !viewModel.isTitleTESelected {
                                 VStack(spacing: 10) {
                                     Text(NSLocalizedString("whichFeedUploadingToLabel", comment: ""))
                                         .font(.system(size: 17))

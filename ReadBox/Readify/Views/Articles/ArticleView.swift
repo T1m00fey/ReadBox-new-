@@ -15,11 +15,15 @@ struct ArticleView: View {
     let authorName: String
     let isCheckmark: Bool
     let isArchive: Bool
+    let isShortPost: Bool
+    
+    @Binding var user: DBUser?
     
     @State private var image: UIImage? = nil
     @State private var videoURL: URL? = nil
     @State private var avatarImage: UIImage? = nil
     @State private var isExpanded = false
+    @State private var isLiked = false
     
     private let maxTitleLen = 150
     
@@ -67,6 +71,38 @@ struct ArticleView: View {
                         self.avatarImage = UIImage(data: data!)
                     }
                 }
+            }
+        }
+    }
+    
+    private func updateLike() async throws {
+        let likesCount = try await ArticlesManager.shared.getLikesCount(byPostId: id)
+                        
+        if isLiked {
+            try await UserManager.shared.removeLikedPost(id: user?.userId ?? "", likedPost: id)
+            try await ArticlesManager.shared.updateLikes(at: id, likesCount: likesCount - 1)
+            
+            withAnimation {
+                user?.likedPosts?.removeAll {
+                    $0 == id
+                }
+            }
+        } else {
+            try await UserManager.shared.addLikedPost(id: user?.userId ?? "", likedPost: id)
+            try await ArticlesManager.shared.updateLikes(at: id, likesCount: likesCount + 1)
+            
+            withAnimation {
+                user?.likedPosts?.append(id)
+            }
+        }
+        
+        withAnimation {
+            isLiked.toggle()
+            
+            if isLiked {
+                VibrationsService.shared.softImpact()
+            } else {
+                VibrationsService.shared.lightImpact()
             }
         }
     }
@@ -144,9 +180,31 @@ struct ArticleView: View {
                         .fontDesign(.rounded)
                         .lineLimit(!isExpanded && title.count >= maxTitleLen ? 3 : nil)
                         .frame(width: UIScreen.main.bounds.width - 42, alignment: .leading)
-                        .padding(.vertical, 20)
+                        .padding(.top, 20)
+                        .padding(.bottom, !isExpanded && title.count >= maxTitleLen && isShortPost ? 10 : 0)
+                        .padding(.bottom, isShortPost ? 10 : 20)
                         .padding(.bottom, !isExpanded && title.count >= maxTitleLen ? 17 : 0)
                     
+                    if ((title.count >= maxTitleLen && isExpanded) || title.count < maxTitleLen) && isShortPost {
+                        HStack(spacing: 12) {
+                            ShareLink(item: URL(string: "https://readbox-links.online/posts/?index=\(id)")!) {
+                                Image(systemName: "arrowshape.turn.up.right")
+                                    .font(.system(size: 22))
+                            }
+                            
+                            Image(systemName: isLiked ? "hand.thumbsup.fill" : "hand.thumbsup")
+                                .font(.system(size: 22))
+                                .onTapGesture {
+                                    Task {
+                                        do {
+                                          try? await updateLike()
+                                        }
+                                    }
+                                }
+                        }
+                        .padding(.bottom, 15)
+                        .frame(width: UIScreen.main.bounds.width - 50, alignment: .trailing)
+                    }
                 }
                 
                 ZStack {
@@ -181,13 +239,16 @@ struct ArticleView: View {
                     }
                 }
                 .offset(y: 15)
-
             }
             
         }
         .onAppear{
             if image == nil && !isArchive {
                 fetchImage()
+            }
+            
+            if let user, let likedPosts = user.likedPosts {
+                isLiked = likedPosts.contains(id)
             }
         }
         

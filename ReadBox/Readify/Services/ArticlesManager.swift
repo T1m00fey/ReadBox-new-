@@ -72,7 +72,8 @@ final class ArticlesManager {
             "title": title,
             "description": description,
             "text": text,
-            "is_archive": isArchive
+            "is_archive": isArchive,
+            "is_short_post": text.isEmpty
         ]
         
         try await articlesCollection.document(id).updateData(data)
@@ -113,7 +114,8 @@ final class ArticlesManager {
             "original_language": uploadingLanguage,
             "author_id": try AuthenticationManager.shared.getAuthenticatedUser().uid,
             "is_archive": isArchive,
-            "date_created": Date()
+            "date_created": Date(),
+            "is_short_post": text.isEmpty
         ]
         
         try await ref.setData(data)

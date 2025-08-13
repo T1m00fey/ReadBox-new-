@@ -138,14 +138,15 @@ struct RootView: View {
                         
                         Task {
                             do {
-                                isReadViewPresented = false
-                                
                                 prePost = try? await ArticlesManager.shared.getPrePost(id: index)
                                 postToRead = try? await ArticlesManager.shared.getPostToRead(id: index)
                                 authorName = try? await UserManager.shared.getAuthorName(id: prePost?.authorId ?? "")
                                 isCheckmark = try? await UserManager.shared.getIsCheckmarkStatus(id: prePost?.authorId ?? "")
                                 
                                 isLoadingPopupPresented = false
+                                
+                                let authUser = try AuthenticationManager.shared.getAuthenticatedUser()
+                                user = try? await UserManager.shared.getUser(userId: authUser.uid)
                                 
                                 if user != nil {
                                     likedPosts = user?.likedPosts ?? []
@@ -155,7 +156,6 @@ struct RootView: View {
                                     } else {
                                         isReadViewPresented = true
                                     }
-                                    
                                 }
                             }
                         }

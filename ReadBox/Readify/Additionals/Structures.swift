@@ -140,6 +140,7 @@ struct PrePost: Identifiable, Codable, Equatable, Hashable {
     let viewsCount: Int?
     let likesCount: Int?
     var isArchive: Bool?
+    var isShortPost: Bool?
     
     init?(document: DocumentSnapshot) {
         let data = document.data()
@@ -161,6 +162,7 @@ struct PrePost: Identifiable, Codable, Equatable, Hashable {
         self.viewsCount = viewsCount
         self.likesCount = likesCount
         self.isArchive = isArchive
+        self.isShortPost = data?["is_short_post"] as? Bool
     }
     
     init(
@@ -169,7 +171,8 @@ struct PrePost: Identifiable, Codable, Equatable, Hashable {
         authorId: String?,
         viewsCount: Int?,
         likesCount: Int?,
-        isArchive: Bool? = nil
+        isArchive: Bool? = nil,
+        isShortPost: Bool?
     ) {
         self.id = id
         self.title = title
@@ -177,6 +180,7 @@ struct PrePost: Identifiable, Codable, Equatable, Hashable {
         self.viewsCount = viewsCount
         self.likesCount = likesCount
         self.isArchive = isArchive
+        self.isShortPost = isShortPost
     }
     
     enum CodingKeys: String, CodingKey {
@@ -186,6 +190,7 @@ struct PrePost: Identifiable, Codable, Equatable, Hashable {
         case authorId = "author_id"
         case viewsCount = "views_count"
         case isArchive = "is_archive"
+        case isShortPost = "is_short_post"
     }
 }
 

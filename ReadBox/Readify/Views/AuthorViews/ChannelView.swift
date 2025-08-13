@@ -126,7 +126,8 @@ struct ChannelView: View {
                                                     authorId: post.authorId,
                                                     viewsCount: post.viewsCount,
                                                     likesCount: post.likesCount,
-                                                    isArchive: post.isArchive
+                                                    isArchive: post.isArchive,
+                                                    isShortPost: post.isShortPost
                                                 )
                                                 
                                                 postToRead = PostToRead(
@@ -186,7 +187,8 @@ struct ChannelView: View {
                                                     authorId: post.authorId,
                                                     viewsCount: post.viewsCount,
                                                     likesCount: post.likesCount,
-                                                    isArchive: post.isArchive
+                                                    isArchive: post.isArchive,
+                                                    isShortPost: post.isShortPost
                                                 )
                                                 
                                                 postToRead = PostToRead(
@@ -445,9 +447,8 @@ struct ChannelView: View {
                                 Spacer()
                                 
                                 ShareLink(item: URL(string: "https://readbox-links.online/authors/?index=\(authorId)")!) {
-                                    Image(systemName: "square.and.arrow.up")
+                                    Image(systemName: "arrowshape.turn.up.right")
                                 }
-                                .padding(.bottom, 1)
                                 
                                 Button {
                                     dismiss()

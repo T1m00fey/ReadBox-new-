@@ -31,7 +31,9 @@ struct LikedPostsView: View {
                                 authorId: "",
                                 authorName: "ReadBox Author",
                                 isCheckmark: true,
-                                isArchive: false
+                                isArchive: false,
+                                isShortPost: false,
+                                user: .constant(nil)
                             )
                             .redacted(reason: .placeholder)
                             .padding(.top, 30)
@@ -67,7 +69,9 @@ struct LikedPostsView: View {
                                 authorId: article.authorId ?? "",
                                 authorName: viewModel.authorsNames[article.authorId ?? ""] ?? "",
                                 isCheckmark: viewModel.authorsCheckmarks[article.authorId ?? ""] ?? false,
-                                isArchive: article.isArchive ?? false
+                                isArchive: article.isArchive ?? false,
+                                isShortPost: article.isShortPost ?? false,
+                                user: $viewModel.user
                             )
                             .padding(.top, 30)
                             .padding(.horizontal)
@@ -79,42 +83,42 @@ struct LikedPostsView: View {
                             }
                         }
                         
-//                        if viewModel.indexesNeedToLoad.count > 0 && !viewModel.isLoading {
-//                            Button {
-//                                Task {
-//                                    do {
-//                                        try await viewModel.getArticles()
-//                                        return
-//                                    } catch {
-//                                        withAnimation {
-//                                            viewModel.errorText = error.localizedDescription
-//                                        }
-//                                    }
-//                                    
-//                                    viewModel.isErrorPopupPresented = true
-//                                }
-//                            } label: {
-//                                HStack {
-//                                    Image(systemName: "arrow.down")
-//                                        .foregroundStyle(Color(uiColor: .label))
-//                                        .font(.title3)
-//                                        .fontWeight(.light)
-//                                    
-//                                    Text(LocalizedStringKey("loadMore"))
-//                                        .font(.title3)
-//                                        .fontDesign(.rounded)
-//                                        .fontWeight(.light)
-//                                }
-//                                .padding(.horizontal, 16)
-//                                .padding(.vertical, 10)
-//                                .background(Color(uiColor: .secondarySystemBackground))
-//                                .clipShape(RoundedRectangle(cornerRadius: 10))
-//                                .shadow(radius: 2)
-//                                .padding(.top, 20)
-//                            }
-//                            .padding(.bottom, 10)
-//                            
-//                        }
+                        if viewModel.indexesNeedToLoad.count > 0 && !viewModel.isLoading {
+                            Button {
+                                Task {
+                                    do {
+                                        try await viewModel.getArticles()
+                                        return
+                                    } catch {
+                                        withAnimation {
+                                            viewModel.errorText = error.localizedDescription
+                                        }
+                                    }
+                                    
+                                    viewModel.isErrorPopupPresented = true
+                                }
+                            } label: {
+                                HStack {
+                                    Image(systemName: "arrow.down")
+                                        .foregroundStyle(Color(uiColor: .label))
+                                        .font(.title3)
+                                        .fontWeight(.light)
+                                    
+                                    Text(LocalizedStringKey("loadMore"))
+                                        .font(.title3)
+                                        .fontDesign(.rounded)
+                                        .fontWeight(.light)
+                                }
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 10)
+                                .background(Color(uiColor: .secondarySystemBackground))
+                                .clipShape(RoundedRectangle(cornerRadius: 10))
+                                .shadow(radius: 2)
+                                .padding(.top, 20)
+                            }
+                            .padding(.bottom, 10)
+                            
+                        }
                     }
                     
                 }

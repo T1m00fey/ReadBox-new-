@@ -321,7 +321,8 @@ struct TextCreateView: View {
                                                 authorId: userId,
                                                 viewsCount: post?.viewsCount,
                                                 likesCount: post?.likesCount,
-                                                isArchive: false
+                                                isArchive: false,
+                                                isShortPost: viewModel.text.isEmpty
                                             ),
                                             at: 0
                                         )
@@ -336,7 +337,8 @@ struct TextCreateView: View {
                                                 authorId: userId,
                                                 viewsCount: post?.viewsCount,
                                                 likesCount: post?.likesCount,
-                                                isArchive: false
+                                                isArchive: false,
+                                                isShortPost: viewModel.text.isEmpty
                                             ),
                                             at: 0
                                         )
@@ -352,7 +354,8 @@ struct TextCreateView: View {
                                                 authorId: userId,
                                                 viewsCount: post?.viewsCount,
                                                 likesCount: post?.likesCount,
-                                                isArchive: true
+                                                isArchive: true,
+                                                isShortPost: viewModel.text.isEmpty
                                             )
                                         }
                                     } else {
@@ -365,7 +368,8 @@ struct TextCreateView: View {
                                                 authorId: userId,
                                                 viewsCount: post?.viewsCount,
                                                 likesCount: post?.likesCount,
-                                                isArchive: false
+                                                isArchive: false,
+                                                isShortPost: viewModel.text.isEmpty
                                             )
                                         }
                                     }
@@ -416,7 +420,8 @@ struct TextCreateView: View {
                                             authorId: userId,
                                             viewsCount: 0,
                                             likesCount: 0,
-                                            isArchive: false
+                                            isArchive: false,
+                                            isShortPost: viewModel.text.isEmpty
                                         ),
                                         at: 0
                                     )
@@ -428,7 +433,8 @@ struct TextCreateView: View {
                                             authorId: userId,
                                             viewsCount: 0,
                                             likesCount: 0,
-                                            isArchive: true
+                                            isArchive: true,
+                                            isShortPost: viewModel.text.isEmpty
                                         ),
                                         at: 0
                                     )

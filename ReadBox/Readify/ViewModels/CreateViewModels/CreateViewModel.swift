@@ -40,6 +40,8 @@ final class CreateViewModel: ObservableObject {
     
     @Published var mediaURLs: [URL] = []
     
+    @Published var titleTEHeight: CGFloat = 200
+    
     func getNavigationTitle(_ isEditing: Bool) -> String {
         isEditing ? NSLocalizedString("editingLabel", comment: "") : NSLocalizedString("creationLabel", comment: "")
     }
