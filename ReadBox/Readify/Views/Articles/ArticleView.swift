@@ -159,11 +159,11 @@ struct ArticleView: View {
                         .resizable()
                         .scaledToFit()
                         .frame(width: UIScreen.main.bounds.width - 10)
-                        .clipShape(RoundedRectangle(cornerRadius: 30))
+                        .clipShape(RoundedRectangle(cornerRadius: 25))
                         .shadow(radius: 2)
                 }
             } else if let videoURL {
-                TappableVideoPreview(url: videoURL, cornerRadius: 30, width: UIScreen.main.bounds.width - 10)
+                TappableVideoPreview(url: videoURL, cornerRadius: 25, width: UIScreen.main.bounds.width - 10)
                     .frame(width: UIScreen.main.bounds.width - 10)
                     .shadow(radius: 2)
             }
