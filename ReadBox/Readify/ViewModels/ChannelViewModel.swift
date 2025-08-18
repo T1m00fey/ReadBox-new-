@@ -18,7 +18,6 @@ final class ChannelViewModel: ObservableObject {
     @Published var isErrorPopupPresented = false
     @Published var postOption = PostOptions.nothing
     @Published var id = ""
-    @Published var isDescriptionPopupPresented = false
     @Published var isReadViewPresented = false
     @Published var subscribersCount = 0
     @Published var authorDescription = ""
@@ -32,8 +31,7 @@ final class ChannelViewModel: ObservableObject {
     @Published var avatarImage: UIImage? = nil
     @Published var authorId = ""
     @Published var isZoomableImageViewPresented = false
-    
-    var description = ""
+    @Published var zoomableImage: UIImage? = nil
     
     func getAvatar() {
         DispatchQueue.main.async {

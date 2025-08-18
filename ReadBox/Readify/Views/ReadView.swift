@@ -135,7 +135,7 @@ struct ReadView: View {
                                 .resizable()
                                 .scaledToFit()
                                 .frame(width: UIScreen.main.bounds.width - 20)
-                                .clipShape(RoundedRectangle(cornerRadius: 10))
+                                .clipShape(RoundedRectangle(cornerRadius: 20))
                                 .padding(.horizontal)
                                 .onTapGesture {
                                     viewModel.isImageFullscreenPresented = true

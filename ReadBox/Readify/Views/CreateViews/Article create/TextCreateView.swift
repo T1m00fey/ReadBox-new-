@@ -18,7 +18,6 @@ struct TextCreateView: View {
     let id: String
     @Binding var title: String
     let image: UIImage
-    @Binding var description: String
     let text: String
     let isEditing: Bool
     let uploadingLanguage: String
@@ -297,7 +296,6 @@ struct TextCreateView: View {
                                     id: id,
                                     title: title,
                                     image: image,
-                                    description: description,
                                     text: viewModel.text,
                                     isArchive: isArchive,
                                     mediaURLs: mediaURLs,
@@ -398,7 +396,6 @@ struct TextCreateView: View {
                                 
                                 let newId = try await viewModel.addNewPost(
                                     title: title,
-                                    description: description,
                                     text: viewModel.text,
                                     image: image,
                                     isArchive: isArchive,

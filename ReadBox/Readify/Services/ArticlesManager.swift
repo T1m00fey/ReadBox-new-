@@ -67,10 +67,9 @@ final class ArticlesManager {
         try await articleDocument(id: id).getDocument(as: AuthorId.self).authorId ?? ""
     }
     
-    func updatePost(id: String, title: String, description: String, text: String, isArchive: Bool) async throws {
+    func updatePost(id: String, title: String, text: String, isArchive: Bool) async throws {
         let data: [String: Any] = [
             "title": title,
-            "description": description,
             "text": text,
             "is_archive": isArchive,
             "is_short_post": text.isEmpty
@@ -93,7 +92,6 @@ final class ArticlesManager {
     
     func addNewPost(
         title: String,
-        description: String,
         text: String,
         isArchive: Bool,
         uploadingLanguage: String
@@ -109,7 +107,6 @@ final class ArticlesManager {
             "likes_count": 0,
             "views_count": 0,
             "title": title,
-            "description": description,
             "text": text,
             "original_language": uploadingLanguage,
             "author_id": try AuthenticationManager.shared.getAuthenticatedUser().uid,

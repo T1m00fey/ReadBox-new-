@@ -71,7 +71,7 @@ final class UserManager {
     
     func getAuthorName(id: String) async throws -> String? {
         if id != "" {
-            return try await userDocument(userId: id)?.getDocument(as: AuthorName.self).authorName
+            return try await userDocument(userId: id)?.getDocument(as: AuthorName.self).name
         } else {
             return nil
         }
@@ -153,7 +153,7 @@ final class UserManager {
     
     func changeAuthorName(userId: String, to name: String, description: String) async throws {
         let data: [String: Any] = [
-            "author_name": name,
+            "name": name,
             "author_description": description
         ]
         

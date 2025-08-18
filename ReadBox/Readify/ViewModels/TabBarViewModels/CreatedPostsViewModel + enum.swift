@@ -58,8 +58,7 @@ final class CreatedPostsViewModel: ObservableObject {
     @Published var id = ""
     
     let vibrationsService = VibrationsService.shared
-    
-    var description = ""
+
     var title = ""
     var image: UIImage? = nil
     var text = ""
@@ -136,7 +135,6 @@ final class CreatedPostsViewModel: ObservableObject {
         let post = try await ArticlesManager.shared.getPostToRead(id: id)
         
         dateCreated = post.dateCreated ?? Date()
-        description = post.description ?? ""
         text = post.text ?? ""
         
         if let mediaURLs = post.mediaURLs {
@@ -338,13 +336,8 @@ final class CreatedPostsViewModel: ObservableObject {
                     isLoadingPopupPresented = true
                     try await getPostToRead(id: post.id)
                     
-                    if description == "" {
-                        isLoadingPopupPresented = false
-                        isReadViewPresented = true
-                    } else {
-                        isLoadingPopupPresented = false
-                        isDescriptionPopupPresented = true
-                    }
+                    isLoadingPopupPresented = false
+                    isReadViewPresented = true
                 } catch {
                     withAnimation {
                         errorText = error.localizedDescription

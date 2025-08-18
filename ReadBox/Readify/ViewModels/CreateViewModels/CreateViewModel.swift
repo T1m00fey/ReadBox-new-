@@ -9,10 +9,7 @@ import SwiftUI
 import _PhotosUI_SwiftUI
 
 final class CreateViewModel: ObservableObject {
-    @Published var isDescriptionAdded = false
-    
     @Published var isFirstTapOnTitleTE = true
-    @Published var isFirstTapOnDescriptionTE = true
     
     @Published var titleText = NSLocalizedString("titlePlaceholder", comment: "")
     @Published var isTitleTESelected = false
@@ -22,9 +19,6 @@ final class CreateViewModel: ObservableObject {
     
     @Published var videoURL: URL? = nil
     @Published var isVideoCover = false
-    
-    @Published var descriptionText = NSLocalizedString("descriptionPlaceholder", comment: "")
-    @Published var isDescriptionTESelected = false
     
     @Published var isErrorPopupPresented = false
     

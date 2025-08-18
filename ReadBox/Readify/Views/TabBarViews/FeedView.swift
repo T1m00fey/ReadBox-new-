@@ -69,7 +69,9 @@ struct FeedView: View {
                                     isCheckmark: true,
                                     isArchive: false,
                                     isShortPost: false,
-                                    user: .constant(nil)
+                                    user: .constant(nil),
+                                    isZoomableViewPresented: .constant(false),
+                                    zoomableImage: .constant(nil)
                                 )
                                 .redacted(reason: .placeholder)
                                 .padding(.top, 20)
@@ -85,7 +87,9 @@ struct FeedView: View {
                                     isCheckmark: viewModel.authorsCheckmarks[post.authorId ?? ""] ?? false,
                                     isArchive: post.isArchive ?? true,
                                     isShortPost: post.isShortPost ?? false,
-                                    user: $viewModel.user
+                                    user: $viewModel.user,
+                                    isZoomableViewPresented: $viewModel.isZoomableImageViewPresented,
+                                    zoomableImage: $viewModel.zoomableImage
                                 )
                                 .onAppear {
                                     print("👀 VIEW \(post.id)")
@@ -250,6 +254,11 @@ struct FeedView: View {
                         postToView: $viewModel.postToView,
                         postToRead: $viewModel.postToRead
                     )
+                })
+                .fullScreenCover(isPresented: $viewModel.isZoomableImageViewPresented, content: {
+                    if let image = viewModel.zoomableImage {
+                        ZoomableImageView(image: image)
+                    }
                 })
                 .refreshable {
                     if !viewModel.isReadViewPresented {

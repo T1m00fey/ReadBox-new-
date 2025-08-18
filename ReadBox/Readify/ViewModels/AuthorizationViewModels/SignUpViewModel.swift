@@ -44,7 +44,6 @@ final class SignUpViewModel: ObservableObject {
             email: authDataResult.email,
             dateCreated: Date(),
             likedPosts: [],
-            authorName: "",
             isCheckmark: false,
             createdPosts: [],
             subscribersCount: 0,

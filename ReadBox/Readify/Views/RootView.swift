@@ -151,11 +151,7 @@ struct RootView: View {
                                 if user != nil {
                                     likedPosts = user?.likedPosts ?? []
                                     
-                                    if let postToRead, postToRead.description != "" {
-                                        isDescriptionPopupPresented = true
-                                    } else {
-                                        isReadViewPresented = true
-                                    }
+                                    isReadViewPresented = true
                                 }
                             }
                         }
@@ -233,21 +229,6 @@ struct RootView: View {
         .fullScreenCover(isPresented: $isSignInViewPresented, content: {
             SignInView(isSignInViewPresented: $isSignInViewPresented)
         })
-        .popup(isPresented: $isDescriptionPopupPresented) {
-            DescriptionView(
-                isReadViewPresented: $isReadViewPresented,
-                errorText: .constant(""),
-                isErrorPopupPresented: .constant(false),
-                id: postToView?.id ?? "",
-                description: postToRead?.description ?? ""
-            )
-            .shadow(radius: 3)
-        } customize: {
-            $0
-                .type(.toast)
-                .appearFrom(.bottomSlide)
-                .dragToDismiss(true)
-        }
 
         .popup(isPresented: $isLoadingPopupPresented) {
             LoadingPopup()

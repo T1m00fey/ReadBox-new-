@@ -48,21 +48,6 @@ extension View {
                     .dragToDismiss(true)
                     .autohideIn(5)
             }
-            .popup(isPresented: isDescriptionPopupPresented) {
-                DescriptionView(
-                    isReadViewPresented: isReadViewPresented,
-                    errorText: errorText,
-                    isErrorPopupPresented: isErrorPopupPresented,
-                    id: viewModel.id,
-                    description: viewModel.description
-                )
-                .shadow(radius: 3)
-            } customize: {
-                $0
-                    .type(.toast)
-                    .appearFrom(.bottomSlide)
-                    .dragToDismiss(true)
-            }
     }
     
     @MainActor func trackChangesOnFeedView(
@@ -194,21 +179,6 @@ extension View {
                     .type(.toast)
                     .appearFrom(.bottomSlide)
             }
-            .popup(isPresented: isDescriptionPopupPresented) {
-                DescriptionView(
-                    isReadViewPresented: isReadViewPresented,
-                    errorText: errorText,
-                    isErrorPopupPresented: isErrorPopupPresented,
-                    id: viewModel.id,
-                    description: viewModel.description
-                )
-                .shadow(radius: 3)
-            } customize: {
-                $0
-                    .type(.toast)
-                    .appearFrom(.bottomSlide)
-                    .dragToDismiss(true)
-            }
     }
     
     func trackChangesOnLikedPosts(
@@ -293,17 +263,12 @@ extension View {
                     
                     ZStack {
                         RoundedRectangle(cornerRadius: 20)
-                            .frame(width: UIScreen.main.bounds.width, height: viewModel.user?.authorName == "" || viewModel.isSettingViewPresented ? 130 : 170)
+                            .frame(width: UIScreen.main.bounds.width, height: viewModel.isSettingViewPresented ? 130 : 170)
                             .foregroundStyle(Color(uiColor: .secondarySystemBackground))
                             .padding(.bottom, 40)
                             .shadow(radius: 10)
                         
-                        if viewModel.user?.authorName == "" && !viewModel.isLoadingShowing {
-                            Text(NSLocalizedString("becomeAuthorLabel", comment: ""))
-                                .font(.largeTitle)
-                                .fontWeight(.light)
-                                .frame(width: UIScreen.main.bounds.width - 32, alignment: .leading)
-                        } else if viewModel.isSettingViewPresented {
+                        if viewModel.isSettingViewPresented {
                             Text(NSLocalizedString("editingLabel", comment: ""))
                                 .font(.largeTitle)
                                 .fontWeight(.light)
@@ -389,7 +354,7 @@ extension View {
                                         }
                                         
                                         HStack(spacing: 0) {
-                                            Text(viewModel.user?.authorName ?? "")
+                                            Text(viewModel.user?.name ?? "")
                                                 .font(.system(size: 27))
                                                 .fontWeight(.light)
                                                 .lineLimit(1)
@@ -670,22 +635,7 @@ extension View {
                     .animation(.bouncy)
                     .dragToDismiss(true)
                     .autohideIn(5)
-            }
-            .popup(isPresented: isDescriptionPopupPresented) {
-                DescriptionView(
-                    isReadViewPresented: isReadViewPresented,
-                    errorText: errorText,
-                    isErrorPopupPresented: isErrorPopupPresented,
-                    id: viewModel.id,
-                    description: viewModel.description
-                )
-                .shadow(radius: 3)
-            } customize: {
-                $0
-                    .type(.toast)
-                    .appearFrom(.bottomSlide)
-                    .dragToDismiss(true)
-            }
+            }            
             .popup(isPresented: isSuccessPopupPresented) {
                 Text(viewModel.errorText)
                     .frame(width: UIScreen.main.bounds.width - 72, alignment: .leading)

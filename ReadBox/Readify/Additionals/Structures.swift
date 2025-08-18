@@ -9,10 +9,10 @@ import SwiftUI
 import Firebase
 
 struct AuthorName: Codable {
-    let authorName: String?
+    let name: String?
     
     enum CodingKeys: String, CodingKey {
-        case authorName = "author_name"
+        case name
     }
 }
 
@@ -54,7 +54,6 @@ struct DBUser: Codable, Equatable {
     let email: String?
     let dateCreated: Date?
     var likedPosts: [String]?
-    var authorName: String?
     let isCheckmark: Bool?
     let subscribersCount: Int?
     var subscribes: [String]?
@@ -69,7 +68,6 @@ struct DBUser: Codable, Equatable {
         self.email = auth.email
         self.dateCreated = Date()
         self.likedPosts = []
-        self.authorName = ""
         self.isCheckmark = false
         self.subscribes = []
         self.subscribersCount = 0
@@ -85,7 +83,6 @@ struct DBUser: Codable, Equatable {
         email: String? = nil,
         dateCreated: Date? = nil,
         likedPosts: [String]? = nil,
-        authorName: String? = nil,
         isCheckmark: Bool? = nil,
         createdPosts: [String]? = nil,
         subscribersCount: Int? = nil,
@@ -100,7 +97,6 @@ struct DBUser: Codable, Equatable {
         self.email = email
         self.dateCreated = dateCreated
         self.likedPosts = likedPosts
-        self.authorName = authorName
         self.isCheckmark = isCheckmark
         self.subscribersCount = subscribersCount
         self.subscribes = subscribes
@@ -116,7 +112,6 @@ struct DBUser: Codable, Equatable {
         case email = "email"
         case dateCreated = "date_created"
         case likedPosts = "liked_posts"
-        case authorName = "author_name"
         case isCheckmark = "is_checkmark"
         case subscribes = "subscribes"
         case subscribersCount = "subscribers_count"
@@ -197,13 +192,11 @@ struct PrePost: Identifiable, Codable, Equatable, Hashable {
 struct PostToRead: Codable {
     let dateCreated: Date?
     let text: String?
-    let description: String?
     let mediaURLs: [String]?
     
     enum CodingKeys: String, CodingKey {
         case dateCreated = "date_created"
         case text = "text"
-        case description = "description"
         case mediaURLs = "media_URLs"
     }
 }

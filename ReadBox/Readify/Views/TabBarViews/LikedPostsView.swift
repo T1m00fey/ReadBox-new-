@@ -33,10 +33,12 @@ struct LikedPostsView: View {
                                 isCheckmark: true,
                                 isArchive: false,
                                 isShortPost: false,
-                                user: .constant(nil)
+                                user: .constant(nil),
+                                isZoomableViewPresented: .constant(false),
+                                zoomableImage: .constant(nil)
                             )
                             .redacted(reason: .placeholder)
-                            .padding(.top, 30)
+                            .padding(.top, 20)
                             .padding(.horizontal)
                             .shimmering()
                         }
@@ -71,9 +73,11 @@ struct LikedPostsView: View {
                                 isCheckmark: viewModel.authorsCheckmarks[article.authorId ?? ""] ?? false,
                                 isArchive: article.isArchive ?? false,
                                 isShortPost: article.isShortPost ?? false,
-                                user: $viewModel.user
+                                user: $viewModel.user,
+                                isZoomableViewPresented: $viewModel.isZoomableViewPresented,
+                                zoomableImage: $viewModel.zoomableImage
                             )
-                            .padding(.top, 30)
+                            .padding(.top, 20)
                             .padding(.horizontal)
                             .onAppear {
                                 viewModel.onPostAppearing(article)
@@ -152,6 +156,11 @@ struct LikedPostsView: View {
                     postToView: $viewModel.postToView,
                     postToRead: $viewModel.postToRead
                 )
+            })
+            .fullScreenCover(isPresented: $viewModel.isZoomableViewPresented, content: {
+                if let image = viewModel.zoomableImage {
+                    ZoomableImageView(image: image)
+                }
             })
             .makePopupsForLikedView(
                 viewModel: viewModel,

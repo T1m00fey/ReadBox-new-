@@ -16,8 +16,11 @@ struct ArticleView: View {
     let isCheckmark: Bool
     let isArchive: Bool
     let isShortPost: Bool
+    let isChannelView: Bool
     
     @Binding var user: DBUser?
+    @Binding var isZoomableViewPresented: Bool
+    @Binding var zoomableImage: UIImage?
     
     @State private var image: UIImage? = nil
     @State private var videoURL: URL? = nil
@@ -26,6 +29,32 @@ struct ArticleView: View {
     @State private var isLiked = false
     
     private let maxTitleLen = 150
+    
+    init(
+        id: String,
+        title: String,
+        authorId: String,
+        authorName: String,
+        isCheckmark: Bool,
+        isArchive: Bool,
+        isShortPost: Bool,
+        isChannelView: Bool = false,
+        user: Binding<DBUser?>,
+        isZoomableViewPresented: Binding<Bool>,
+        zoomableImage: Binding<UIImage?>
+    ) {
+        self.id = id
+        self.title = title
+        self.authorId = authorId
+        self.authorName = authorName
+        self.isCheckmark = isCheckmark
+        self.isArchive = isArchive
+        self.isShortPost = isShortPost
+        self.isChannelView = isChannelView
+        self._user = user
+        self._isZoomableViewPresented = isZoomableViewPresented
+        self._zoomableImage = zoomableImage
+    }
     
     private func fetchImage() {
         let articleImage = StorageManager.shared.getImage(id: id)
@@ -79,6 +108,11 @@ struct ArticleView: View {
         let likesCount = try await ArticlesManager.shared.getLikesCount(byPostId: id)
                         
         if isLiked {
+            withAnimation {
+                isLiked.toggle()
+            }
+            VibrationsService.shared.lightImpact()
+            
             try await UserManager.shared.removeLikedPost(id: user?.userId ?? "", likedPost: id)
             try await ArticlesManager.shared.updateLikes(at: id, likesCount: likesCount - 1)
             
@@ -88,6 +122,11 @@ struct ArticleView: View {
                 }
             }
         } else {
+            withAnimation {
+                isLiked.toggle()
+            }
+            VibrationsService.shared.softImpact()
+            
             try await UserManager.shared.addLikedPost(id: user?.userId ?? "", likedPost: id)
             try await ArticlesManager.shared.updateLikes(at: id, likesCount: likesCount + 1)
             
@@ -95,27 +134,12 @@ struct ArticleView: View {
                 user?.likedPosts?.append(id)
             }
         }
-        
-        withAnimation {
-            isLiked.toggle()
-            
-            if isLiked {
-                VibrationsService.shared.softImpact()
-            } else {
-                VibrationsService.shared.lightImpact()
-            }
-        }
     }
     
     var body: some View {
         
-        VStack(spacing: -45) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 20)
-                    .frame(width: UIScreen.main.bounds.width - 10)
-                    .foregroundStyle(Color(uiColor: .secondarySystemBackground))
-                    .shadow(radius: 2)
-                
+        VStack {
+            if !isChannelView {
                 HStack {
                     if let avatarImage {
                         Image(uiImage: avatarImage)
@@ -130,13 +154,18 @@ struct ArticleView: View {
                                         lineWidth: 0.1
                                     )
                             )
+                            .onTapGesture {
+                                withAnimation {
+                                    zoomableImage = avatarImage
+                                    isZoomableViewPresented = true
+                                }
+                            }
                     }
                     
                     HStack(spacing: 0) {
                         Text(authorName)
                             .font(.system(size: 21))
                             .fontDesign(.rounded)
-                            .padding(.vertical, 20)
                             .lineLimit(1)
                         
                         if isCheckmark {
@@ -149,51 +178,48 @@ struct ArticleView: View {
                         Spacer()
                     }
                 }
-                .frame(width: UIScreen.main.bounds.width - 42, height: 90, alignment: .topLeading)
-                .padding(.bottom, 16)
+                .frame(width: UIScreen.main.bounds.width - 42, height: 40, alignment: .leading)
+                .padding(.top, 7)
+                .padding(.vertical, 5)
             }
             
             if let image = image {
-                ZStack {
-                    Image(uiImage: image)
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: UIScreen.main.bounds.width - 10)
-                        .clipShape(RoundedRectangle(cornerRadius: 25))
-                        .shadow(radius: 2)
-                }
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: UIScreen.main.bounds.width - 25)
+                    .clipShape(RoundedRectangle(cornerRadius: 20))
+                    .padding(.bottom, 10)
+                    .padding(.top, isChannelView ? 10 : 0)
+                    .onTapGesture {
+                        withAnimation {
+                            zoomableImage = image
+                            isZoomableViewPresented = true
+                        }
+                    }
             } else if let videoURL {
-                TappableVideoPreview(url: videoURL, cornerRadius: 25, width: UIScreen.main.bounds.width - 10)
-                    .frame(width: UIScreen.main.bounds.width - 10)
-                    .shadow(radius: 2)
+                TappableVideoPreview(url: videoURL, cornerRadius: 20, width: UIScreen.main.bounds.width - 10)
+                    .frame(width: UIScreen.main.bounds.width - 30)
+                    .padding(.bottom, 10)
+                    .padding(.top, isChannelView ? 10 : 0)
             }
             
             ZStack {
-                RoundedRectangle(cornerRadius: 25)
-                    .foregroundStyle(Color(uiColor: .secondarySystemBackground))
-                    .frame(width: UIScreen.main.bounds.width - 10)
-                    .shadow(radius: 2)
-                
                 VStack(spacing: 0) {
                     Text(title)
                         .font(.system(size: 19))
-                        .fontDesign(.rounded)
                         .lineLimit(!isExpanded && title.count >= maxTitleLen ? 3 : nil)
+                        .fontDesign(.rounded)
                         .frame(width: UIScreen.main.bounds.width - 42, alignment: .leading)
-                        .padding(.top, 20)
                         .padding(.bottom, !isExpanded && title.count >= maxTitleLen && isShortPost ? 10 : 0)
                         .padding(.bottom, isShortPost ? 10 : 20)
                         .padding(.bottom, !isExpanded && title.count >= maxTitleLen ? 17 : 0)
                     
                     if ((title.count >= maxTitleLen && isExpanded) || title.count < maxTitleLen) && isShortPost {
                         HStack(spacing: 12) {
-                            ShareLink(item: URL(string: "https://readbox-links.online/posts/?index=\(id)")!) {
-                                Image(systemName: "arrowshape.turn.up.right")
-                                    .font(.system(size: 22))
-                            }
-                            
                             Image(systemName: isLiked ? "hand.thumbsup.fill" : "hand.thumbsup")
-                                .font(.system(size: 22))
+                                .foregroundStyle(Color.gray)
+                                .font(.system(size: 20))
                                 .onTapGesture {
                                     Task {
                                         do {
@@ -201,9 +227,15 @@ struct ArticleView: View {
                                         }
                                     }
                                 }
+                            
+                            ShareLink(item: URL(string: "https://readbox-links.online/posts/?index=\(id)")!) {
+                                Image(systemName: "arrowshape.turn.up.right")
+                                    .foregroundStyle(Color.gray)
+                                    .font(.system(size: 20))
+                            }
                         }
                         .padding(.bottom, 15)
-                        .frame(width: UIScreen.main.bounds.width - 50, alignment: .trailing)
+                        .frame(width: UIScreen.main.bounds.width - 50, alignment: .leading)
                     }
                 }
                 
@@ -242,6 +274,12 @@ struct ArticleView: View {
             }
             
         }
+        .frame(width: UIScreen.main.bounds.width - 10)
+        .background(
+            RoundedRectangle(cornerRadius: 20)
+                .foregroundStyle(Color(.secondarySystemBackground))
+                .shadow(radius: 1)
+        )
         .onAppear{
             if image == nil && !isArchive {
                 fetchImage()
@@ -251,6 +289,5 @@ struct ArticleView: View {
                 isLiked = likedPosts.contains(id)
             }
         }
-        
     }
 }

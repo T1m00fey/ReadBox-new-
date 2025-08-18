@@ -15,7 +15,6 @@ struct CreateView: View {
     let id: String
     let title: String
     let image: UIImage?
-    let description: String
     let text: String
     let isEditing: Bool
     let mediaURLs: [URL]
@@ -42,48 +41,46 @@ struct CreateView: View {
                 ScrollView(showsIndicators: false) {
                     VStack {
                         
-                        if !viewModel.isDescriptionTESelected {
-                            TextEditor(text: $viewModel.titleText)
-                                .font(.title3)
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 5)
-                                .frame(width: UIScreen.main.bounds.width - 32)
-                                .frame(height: viewModel.titleTEHeight)
-                                .scrollContentBackground(.hidden)
-                                .background(Color(uiColor: .secondarySystemBackground))
-                                .clipShape(RoundedRectangle(cornerRadius: 20))
-                                .shadow(radius: 3)
-                                .focused($isTitleTEFocused)
-                                .padding(.horizontal)
-                                .onChange(of: isTitleTEFocused) {
-                                    withAnimation {
-                                        viewModel.isTitleTESelected = isTitleTEFocused ? true : false
-                                        viewModel.titleTEHeight = isTitleTEFocused ? 300 : 200
-                                        
-                                        if viewModel.isFirstTapOnTitleTE && !isEditing {
-                                            withAnimation {
-                                                viewModel.isFirstTapOnTitleTE = false
-                                                viewModel.titleText = ""
-                                            }
+                        TextEditor(text: $viewModel.titleText)
+                            .font(.title3)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 5)
+                            .frame(width: UIScreen.main.bounds.width - 32)
+                            .frame(height: viewModel.titleTEHeight)
+                            .scrollContentBackground(.hidden)
+                            .background(Color(uiColor: .secondarySystemBackground))
+                            .clipShape(RoundedRectangle(cornerRadius: 20))
+                            .shadow(radius: 3)
+                            .focused($isTitleTEFocused)
+                            .padding(.horizontal)
+                            .onChange(of: isTitleTEFocused) {
+                                withAnimation {
+                                    viewModel.isTitleTESelected = isTitleTEFocused ? true : false
+                                    viewModel.titleTEHeight = isTitleTEFocused ? 300 : 200
+                                    
+                                    if viewModel.isFirstTapOnTitleTE && !isEditing {
+                                        withAnimation {
+                                            viewModel.isFirstTapOnTitleTE = false
+                                            viewModel.titleText = ""
                                         }
                                     }
                                 }
-                                .tint(Color(uiColor: .label))
-                            
-                            if !viewModel.isDescriptionTESelected && !viewModel.isTitleTESelected {
-                                VStack(spacing: 10) {
-                                    Text(NSLocalizedString("whichFeedUploadingToLabel", comment: ""))
-                                        .font(.system(size: 17))
-                                        .foregroundStyle(.gray)
-                                        .frame(width: UIScreen.main.bounds.width - 36, alignment: .leading)
-                                    
-                                    CustomSegmentedControl(selectedLanguage: $viewModel.languageSelection)
-                                }
-                                .padding(.top, 20)
                             }
+                            .tint(Color(uiColor: .label))
+                        
+                        if !viewModel.isTitleTESelected {
+                            VStack(spacing: 10) {
+                                Text(NSLocalizedString("whichFeedUploadingToLabel", comment: ""))
+                                    .font(.system(size: 17))
+                                    .foregroundStyle(.gray)
+                                    .frame(width: UIScreen.main.bounds.width - 36, alignment: .leading)
+                                
+                                CustomSegmentedControl(selectedLanguage: $viewModel.languageSelection)
+                            }
+                            .padding(.top, 20)
                         }
                             
-                        if !viewModel.isTitleTESelected && !viewModel.isDescriptionTESelected {
+                        if !viewModel.isTitleTESelected {
                             PhotosPicker(selection: $viewModel.imageItem, matching: .any(of: [.videos, .images])) {
                                     if viewModel.image == nil {
 //                                        Image(systemName: "plus.circle")
@@ -228,64 +225,6 @@ struct CreateView: View {
 
                         }
                         
-                        
-                        if !viewModel.isTitleTESelected {
-                            
-                            if viewModel.isDescriptionAdded  {
-                                TextEditor(text: $viewModel.descriptionText)
-                                    .font(.title3)
-                                    .fontDesign(.rounded)
-                                    .padding(.horizontal, 16)
-                                    .padding(.vertical, 5)
-                                    .frame(width: UIScreen.main.bounds.width - 32)
-                                    .frame(minHeight: 150)
-                                    .frame(maxHeight: 300)
-                                    .scrollContentBackground(.hidden)
-                                    .background(Color(uiColor: .secondarySystemBackground))
-                                    .clipShape(RoundedRectangle(cornerRadius: 20))
-                                    .shadow(radius: 3)
-                                    .focused($isDescriptionTEFocused)
-                                    .onChange(of: isDescriptionTEFocused) {
-                                        withAnimation {
-                                            viewModel.isDescriptionTESelected = isDescriptionTEFocused ? true : false
-                                            viewModel.navigationTitle = isDescriptionTEFocused ? NSLocalizedString("descriptionLabel", comment: "") : viewModel.getNavigationTitle(isEditing)
-                                            
-                                            if viewModel.isFirstTapOnDescriptionTE && !isEditing {
-                                                withAnimation {
-                                                    viewModel.isFirstTapOnDescriptionTE = false
-                                                    viewModel.descriptionText = ""
-                                                }
-                                            }
-                                        }
-                                    }
-                                    .tint(Color(uiColor: .label))
-                                    .padding(.top, 30)
-                                    .padding(.horizontal)
-                                    .padding(.bottom, 100)
-                            } else {
-                                
-                                ZStack {
-                                    RoundedRectangle(cornerRadius: 15)
-                                        .frame(width: UIScreen.main.bounds.width - 32, height: 50)
-                                        .foregroundStyle(Color(uiColor: .secondarySystemBackground))
-                                        .shadow(radius: 2)
-                                    
-                                    Text(NSLocalizedString("addDescriptionLabel", comment: ""))
-                                        .font(.title2)
-                                        .fontDesign(.rounded)
-                                }
-                                .padding(.horizontal)
-                                .padding(.bottom, 100)
-                                .onTapGesture {
-                                    withAnimation {
-                                        viewModel.isDescriptionAdded = true
-                                    }
-                                }
-                                
-                            }
-                            
-                        }
-                        
                     }
                 }
                 .popup(isPresented: $viewModel.isErrorPopupPresented) {
@@ -313,7 +252,6 @@ struct CreateView: View {
                         id: id,
                         title: $viewModel.titleText,
                         image: viewModel.image ?? UIImage(),
-                        description: $viewModel.descriptionText,
                         text: text,
                         isEditing: isEditing,
                         uploadingLanguage: viewModel.languageSelection,
@@ -345,10 +283,6 @@ struct CreateView: View {
                                     viewModel.isErrorPopupPresented = true
                                 }
                             } else {
-                                if !viewModel.isDescriptionAdded {
-                                    viewModel.descriptionText = ""
-                                }
-                                
                                 viewModel.isTextCreateViewPresented = true
                             }
                         }
@@ -366,11 +300,6 @@ struct CreateView: View {
                 if viewModel.isFirstAppear {
                     viewModel.titleText = title
                     viewModel.image = image
-                    viewModel.descriptionText = description
-                }
-                
-                if isEditing && description != "" {
-                    viewModel.isDescriptionAdded = true
                 }
                 
                 if viewModel.isFirstAppear {

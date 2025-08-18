@@ -55,15 +55,18 @@ struct ChannelView: View {
                                 .shimmering()
                             
                             ForEach(0..<3) { num in
-                                PostView(
+                                ArticleView(
                                     id: "-1",
                                     title: "Hello, World!",
-                                    likesCount: 10,
-                                    viewsCount: 10,
+                                    authorId: "",
+                                    authorName: "",
+                                    isCheckmark: true,
                                     isArchive: false,
-                                    isAuthorView: false,
-                                    postOption: $viewModel.postOption,
-                                    selectedId: $viewModel.id
+                                    isShortPost: false,
+                                    isChannelView: true,
+                                    user: .constant(nil),
+                                    isZoomableViewPresented: .constant(false),
+                                    zoomableImage: .constant(nil)
                                 )
                                 .redacted(reason: .placeholder)
                                 .padding(.top, num == 0 ? 10 : 0)
@@ -91,15 +94,18 @@ struct ChannelView: View {
                                 .padding(.top, viewModel.authorDescription == "" ? 50 : 20)
                             
                             ForEach(viewModel.posts) { post in
-                                PostView(
+                                ArticleView(
                                     id: post.id,
                                     title: post.title ?? NSLocalizedString("notFoundLabel", comment: ""),
-                                    likesCount: post.likesCount ?? 0,
-                                    viewsCount: post.viewsCount ?? 0,
-                                    isArchive: post.isArchive ?? false,
-                                    isAuthorView: false,
-                                    postOption: $viewModel.postOption,
-                                    selectedId: $viewModel.id
+                                    authorId: post.authorId ?? "",
+                                    authorName: authorName,
+                                    isCheckmark: isCheckmark,
+                                    isArchive: false,
+                                    isShortPost: post.isShortPost ?? false,
+                                    isChannelView: true,
+                                    user: $user,
+                                    isZoomableViewPresented: $viewModel.isZoomableImageViewPresented,
+                                    zoomableImage: $viewModel.zoomableImage
                                 )
                                 .padding(.top, post.id == viewModel.posts[0].id ? 10 : 0)
                                 .padding(.bottom, post.id == viewModel.posts[viewModel.posts.count - 1].id ? 100 : 0)
@@ -117,33 +123,25 @@ struct ChannelView: View {
                                         do {
                                             let postToread = try await ArticlesManager.shared.getPostToRead(id: post.id)
                                             
-                                            if postToread.description == "" {
-                                                viewModel.isLoadingPopupPresented = false
-                                                
-                                                postToView = PrePost(
-                                                    id: post.id,
-                                                    title: post.title,
-                                                    authorId: post.authorId,
-                                                    viewsCount: post.viewsCount,
-                                                    likesCount: post.likesCount,
-                                                    isArchive: post.isArchive,
-                                                    isShortPost: post.isShortPost
-                                                )
-                                                
-                                                postToRead = PostToRead(
-                                                    dateCreated: postToread.dateCreated,
-                                                    text: postToread.text,
-                                                    description: postToread.description,
-                                                    mediaURLs: postToread.mediaURLs
-                                                )
+                                            viewModel.isLoadingPopupPresented = false
+                                            
+                                            postToView = PrePost(
+                                                id: post.id,
+                                                title: post.title,
+                                                authorId: post.authorId,
+                                                viewsCount: post.viewsCount,
+                                                likesCount: post.likesCount,
+                                                isArchive: post.isArchive,
+                                                isShortPost: post.isShortPost
+                                            )
+                                            
+                                            postToRead = PostToRead(
+                                                dateCreated: postToread.dateCreated,
+                                                text: postToread.text,
+                                                mediaURLs: postToread.mediaURLs
+                                            )
 
-                                                dismiss()
-                                            } else {
-                                                viewModel.description = postToread.description ?? NSLocalizedString("notFoundLabel", comment: "")
-                                                
-                                                viewModel.isLoadingPopupPresented = false
-                                                viewModel.isDescriptionPopupPresented = true
-                                            }
+                                            dismiss()
 
                                         } catch {
                                             withAnimation {
@@ -194,7 +192,6 @@ struct ChannelView: View {
                                                 postToRead = PostToRead(
                                                     dateCreated: postToread.dateCreated,
                                                     text: postToread.text,
-                                                    description: postToread.description,
                                                     mediaURLs: postToread.mediaURLs
                                                 )
 
@@ -302,22 +299,7 @@ struct ChannelView: View {
                         .animation(.bouncy)
                         .dragToDismiss(true)
                         .autohideIn(5)
-                }
-                .popup(isPresented: $viewModel.isDescriptionPopupPresented) {
-                    DescriptionView(
-                        isReadViewPresented: $viewModel.isReadViewPresented,
-                        errorText: $viewModel.errorText,
-                        isErrorPopupPresented: $viewModel.isErrorPopupPresented,
-                        id: viewModel.id,
-                        description: viewModel.description
-                    )
-                    .shadow(radius: 3)
-                } customize: {
-                    $0
-                        .type(.toast)
-                        .appearFrom(.bottomSlide)
-                        .dragToDismiss(true)
-                }
+                }               
                 .popup(isPresented: $viewModel.isLoadingPopupPresented) {
                     LoadingPopup()
                         .shadow(radius: 3)
@@ -325,6 +307,11 @@ struct ChannelView: View {
                     $0
                         .type(.toast)
                         .appearFrom(.bottomSlide)
+                }
+                .fullScreenCover(isPresented: $viewModel.isZoomableImageViewPresented) {
+                    if let image = viewModel.zoomableImage {
+                        ZoomableImageView(image: image)
+                    }
                 }
                 .onAppear(perform: {
                     viewModel.isLoading = false

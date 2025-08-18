@@ -50,7 +50,7 @@ struct CreatedPostsView: View {
                                 try await viewModel.loadUser()
                                 
                                 withAnimation {
-                                    viewModel.authorNameText = viewModel.user?.authorName ?? ""
+                                    viewModel.authorNameText = viewModel.user?.name ?? ""
                                     viewModel.descriptionText = viewModel.user?.authorDescription ?? ""
                                     
                                     viewModel.getAvatar()
@@ -68,7 +68,6 @@ struct CreatedPostsView: View {
                             id:  viewModel.id,
                             title: viewModel.title,
                             image: viewModel.image,
-                            description: viewModel.description,
                             text: viewModel.text,
                             isEditing: viewModel.isEditing,
                             mediaURLs: viewModel.mediaURLs,
@@ -87,7 +86,7 @@ struct CreatedPostsView: View {
                             dateCreated: viewModel.dateCreated,
                             likesCount: viewModel.likesCount,
                             authorId: viewModel.user?.userId ?? "",
-                            authorName: viewModel.user?.authorName ??  NSLocalizedString("notFoundLabel", comment: ""),
+                            authorName: viewModel.user?.name ??  NSLocalizedString("notFoundLabel", comment: ""),
                             isCheckmark: viewModel.user?.isCheckmark ?? false,
                             isArchive: false,
                             user: $viewModel.user,
@@ -112,7 +111,7 @@ struct CreatedPostsView: View {
                         errorText: $viewModel.errorText
                     )
                 
-                if viewModel.user?.authorName != "" && !viewModel.isSettingViewPresented {
+                if viewModel.user?.name != "" && !viewModel.isSettingViewPresented {
                     ScrollView(showsIndicators: false) {
                         LazyVStack(spacing: 20) {
                             if viewModel.isLoadingShowing {
@@ -295,49 +294,49 @@ struct CreatedPostsView: View {
                                 .padding(.top, 100)
                             }
                             
-                            if !viewModel.isLoading
-                                && ((viewModel.isArchivePresented && !viewModel.isAllArchivedLoaded && viewModel.archivePosts.count >= 20)
-                                    || (!viewModel.isArchivePresented && !viewModel.isAllLoaded && viewModel.posts.count >= 20)) {
-                                Button {
-                                    Task {
-                                        do {
-                                            if viewModel.isArchivePresented {
-                                                try await viewModel.getPosts()
-                                            } else {
-                                                try await viewModel.getArchivedPost()
-                                            }
-                                            return
-                                        } catch {
-                                            withAnimation {
-                                                viewModel.errorText = error.localizedDescription
-                                            }
-                                        }
-                                        
-                                        viewModel.isErrorPopupPresented = true
-                                    }
-                                } label: {
-                                    HStack {
-                                        Image(systemName: "arrow.down")
-                                            .foregroundStyle(Color(uiColor: .label))
-                                            .font(.title3)
-                                            .fontWeight(.light)
-                                        
-                                        Text(LocalizedStringKey("loadMore"))
-                                            .font(.title3)
-                                            .fontDesign(.rounded)
-                                            .fontWeight(.light)
-                                    }
-                                    .padding(.horizontal, 16)
-                                    .padding(.vertical, 10)
-                                    .background(Color(uiColor: .secondarySystemBackground))
-                                    .clipShape(RoundedRectangle(cornerRadius: 10))
-                                    .shadow(radius: 2)
-                                    .padding(.bottom, 20)
-                                }
-                                .padding(.bottom, 10)
-                                .offset(y: -30)
-                                
-                            }
+//                            if !viewModel.isLoading
+//                                && ((viewModel.isArchivePresented && !viewModel.isAllArchivedLoaded && viewModel.archivePosts.count >= 20)
+//                                    || (!viewModel.isArchivePresented && !viewModel.isAllLoaded && viewModel.posts.count >= 20)) {
+//                                Button {
+//                                    Task {
+//                                        do {
+//                                            if viewModel.isArchivePresented {
+//                                                try await viewModel.getPosts()
+//                                            } else {
+//                                                try await viewModel.getArchivedPost()
+//                                            }
+//                                            return
+//                                        } catch {
+//                                            withAnimation {
+//                                                viewModel.errorText = error.localizedDescription
+//                                            }
+//                                        }
+//                                        
+//                                        viewModel.isErrorPopupPresented = true
+//                                    }
+//                                } label: {
+//                                    HStack {
+//                                        Image(systemName: "arrow.down")
+//                                            .foregroundStyle(Color(uiColor: .label))
+//                                            .font(.title3)
+//                                            .fontWeight(.light)
+//                                        
+//                                        Text(LocalizedStringKey("loadMore"))
+//                                            .font(.title3)
+//                                            .fontDesign(.rounded)
+//                                            .fontWeight(.light)
+//                                    }
+//                                    .padding(.horizontal, 16)
+//                                    .padding(.vertical, 10)
+//                                    .background(Color(uiColor: .secondarySystemBackground))
+//                                    .clipShape(RoundedRectangle(cornerRadius: 10))
+//                                    .shadow(radius: 2)
+//                                    .padding(.bottom, 20)
+//                                }
+//                                .padding(.bottom, 10)
+//                                .offset(y: -30)
+//                                
+//                            }
                             
                         }
                     }
@@ -350,7 +349,7 @@ struct CreatedPostsView: View {
                         try? Tips.configure()
                     }
                     
-                    if !viewModel.isLoading && viewModel.isNewPublicationButtonPresented && viewModel.user?.authorName != "" {
+                    if !viewModel.isLoading && viewModel.isNewPublicationButtonPresented && viewModel.user?.name != "" {
                         VStack {
                             Spacer()
                             
@@ -368,14 +367,13 @@ struct CreatedPostsView: View {
                                     viewModel.vibrationsService.lightImpact()
                                     
                                     viewModel.title = NSLocalizedString("titlePlaceholder", comment: "")
-                                    viewModel.description = NSLocalizedString("descriptionPlaceholder", comment: "")
                                     viewModel.image = nil
                                     viewModel.isEditing = false
                                     viewModel.isCreateViewPresented = true
                                 }
                         }
                     }
-                } else if viewModel.user?.authorName ?? "" == "" || viewModel.isSettingViewPresented == true {
+                } else if viewModel.user?.name ?? "" == "" || viewModel.isSettingViewPresented == true {
                     VStack {
                         ZStack {
                             RoundedRectangle(cornerRadius: 30)
@@ -458,7 +456,7 @@ struct CreatedPostsView: View {
                                             }
                                         }
                                     
-                                        if viewModel.user?.authorName != viewModel.authorNameText {
+                                        if viewModel.user?.name != viewModel.authorNameText {
                                             try await viewModel.removeCheckmarkStatus()
                                         }
                                         try await viewModel.changeAuthorName(to: viewModel.authorNameText, description: viewModel.descriptionText)
@@ -466,7 +464,7 @@ struct CreatedPostsView: View {
                                         withAnimation {
                                             viewModel.isLoading = false
                                             viewModel.isSettingViewPresented = false
-                                            viewModel.user?.authorName = viewModel.authorNameText
+                                            viewModel.user?.name = viewModel.authorNameText
                                             viewModel.user?.authorDescription = viewModel.descriptionText
                                         }
                                         

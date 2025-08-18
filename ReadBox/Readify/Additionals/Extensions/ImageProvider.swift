@@ -27,7 +27,7 @@ struct WebImageProvider: ImageProvider {
     func makeImage(url: URL?) -> some View {
         if let url {
             if url.pathExtension.lowercased() == "mp4" {
-                TappableVideoPreview(url: url, cornerRadius: 16)
+                TappableVideoPreview(url: url, cornerRadius: 20)
             } else {
                 WebImage(url: url) { image in
                     image.resizable()
@@ -40,7 +40,7 @@ struct WebImageProvider: ImageProvider {
                     )
                     .frame(width: UIScreen.main.bounds.width - 32, height: 200)
                     .background(Color(.secondarySystemBackground))
-                    .clipShape(RoundedRectangle(cornerRadius: 16))
+                    .clipShape(RoundedRectangle(cornerRadius: 20))
                 }
                 .onSuccess { _, _, _ in
                     print("HERE: web image")
@@ -54,7 +54,7 @@ struct WebImageProvider: ImageProvider {
                 .transition(.fade(duration: 0.5))
                 .scaledToFit()
                 .frame(width: UIScreen.main.bounds.width - 32)
-                .clipShape(RoundedRectangle(cornerRadius: 16))
+                .clipShape(RoundedRectangle(cornerRadius: 20))
             }
         } else {
             EmptyView()

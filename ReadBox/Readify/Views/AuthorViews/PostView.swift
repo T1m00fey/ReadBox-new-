@@ -83,7 +83,7 @@ struct PostView: View {
             RoundedRectangle(cornerRadius: 20)
                 .frame(width: UIScreen.main.bounds.width - 10)
                 .foregroundStyle(Color(uiColor: .secondarySystemBackground))
-                .shadow(radius: 2)
+                .shadow(radius: 1)
             
             HStack {
                 if let image = image {

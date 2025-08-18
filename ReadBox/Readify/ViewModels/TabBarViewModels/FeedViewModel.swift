@@ -36,10 +36,11 @@ final class FeedViewModel: ObservableObject {
     @Published var isVersionPopupViewPresented = false
     @Published var isBlur = false
     @Published var lastDocument: DocumentSnapshot? = nil
+    @Published var isZoomableImageViewPresented = false
+    @Published var zoomableImage: UIImage? = nil
     
     @Published var user: DBUser? = nil
     
-    var description = ""
     var title = ""
     var image = UIImage()
     var dateCreated = Date()
@@ -224,7 +225,6 @@ final class FeedViewModel: ObservableObject {
         
         dateCreated = post.dateCreated ?? Date()
         text = post.text ?? NSLocalizedString("notFoundLabel", comment: "")
-        description = post.description ?? NSLocalizedString("notFoundLabel", comment: "")
     }
     
     func getArticles() async throws {
@@ -292,12 +292,12 @@ final class FeedViewModel: ObservableObject {
         if let isShort = post.isShortPost {
             if isShort {
                 if user?.userId ?? "" != post.authorId {
-                    if !views.contains(id) {
+                    if !views.contains(post.id) {
                         Task {
                             do {
-                                try await ArticlesManager.shared.updateViews(at: id)
+                                try await ArticlesManager.shared.updateViews(at: post.id)
                                 
-                                views.append(id)
+                                views.append(post.id)
                                 saveViews()
                             }
                         }
@@ -335,11 +335,7 @@ final class FeedViewModel: ObservableObject {
                     
                     isLoadingPopupPresented = false
                     
-                    if description == "" {
-                        isReadViewPresented = true
-                    } else {
-                        isDescriptionPopupPresented = true
-                    }
+                    isReadViewPresented = true
                     
                     if let isShort = post.isShortPost {
                         if !isShort {

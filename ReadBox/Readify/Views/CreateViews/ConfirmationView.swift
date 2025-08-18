@@ -20,7 +20,7 @@ struct ConfirmationView: View {
                 .padding(.top, 5)
             
             Text(LocalizedStringKey("publishItLabel"))
-                .font(.title)
+                .font(.system(size: 27))
                 .fontWeight(.light)
                 .fontDesign(.rounded)
                 .frame(width: UIScreen.main.bounds.width - 32, alignment: .leading)
@@ -32,7 +32,7 @@ struct ConfirmationView: View {
                 ZStack {
                     RoundedRectangle(cornerRadius: 20)
                         .foregroundStyle(Color(uiColor: .label))
-                        .shadow(radius: 2)
+                        .shadow(radius: 1)
                     
                     HStack {
                         Image(systemName: "paperplane")
@@ -40,7 +40,7 @@ struct ConfirmationView: View {
                             .font(.system(size: 25))
                         
                         Text(LocalizedStringKey("publishLabel"))
-                            .font(.title2)
+                            .font(.system(size: 21))
                             .fontWeight(.light)
                             .fontDesign(.rounded)
                             .foregroundStyle(Color(uiColor: .systemBackground))
@@ -56,7 +56,7 @@ struct ConfirmationView: View {
                 ZStack {
                     RoundedRectangle(cornerRadius: 20)
                         .foregroundStyle(Color(uiColor: .systemBackground))
-                        .shadow(radius: 2)
+                        .shadow(radius: 1)
                     
                     HStack {
                         Image(systemName: "archivebox")
@@ -64,7 +64,7 @@ struct ConfirmationView: View {
                             .font(.system(size: 25))
                         
                         Text(LocalizedStringKey("saveToArchiveLabel"))
-                            .font(.title2)
+                            .font(.system(size: 21))
                             .fontWeight(.light)
                             .fontDesign(.rounded)
                             .foregroundStyle(Color.gray)

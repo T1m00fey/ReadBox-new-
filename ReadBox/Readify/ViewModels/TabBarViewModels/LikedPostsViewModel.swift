@@ -27,8 +27,9 @@ final class LikedPostsViewModel: ObservableObject {
     @Published var isLoadingPopupPresented = false
     @Published var isLoadingShowed = true
     @Published var postToRead: PostToRead? = nil
+    @Published var isZoomableViewPresented = false
+    @Published var zoomableImage: UIImage? = nil
     
-    var description = ""
     var title = ""
     var image = UIImage()
     var dateCreated = Date()
@@ -46,11 +47,9 @@ final class LikedPostsViewModel: ObservableObject {
                 
                 dateCreated = post.dateCreated ?? Date()
                 text = post.text ?? NSLocalizedString("notFoundLabel", comment: "")
-                description = post.description ?? NSLocalizedString("notFoundLabel", comment: "")
             } catch {
                 dateCreated = Date()
                 text = ""
-                description = ""
             }
             
             isLoadingPopupPresented = false
@@ -63,7 +62,7 @@ final class LikedPostsViewModel: ObservableObject {
     }
     
     func getAuthorName(id: String) async throws -> String {
-        try await UserManager.shared.getUser(userId: id)?.authorName ?? ""
+        try await UserManager.shared.getUser(userId: id)?.name ?? ""
     }
     
     func getAuthorIsCheckmarkStatus(id: String) async throws -> Bool {
@@ -216,17 +215,11 @@ final class LikedPostsViewModel: ObservableObject {
                     
                     if post.isArchive ?? true {
                         image = UIImage()
-                        description = ""
                         text = ""
                     }
                     
-                    if description == "" {
-                        isLoadingPopupPresented = false
-                        isReadViewPresented = true
-                    } else {
-                        isLoadingPopupPresented = false
-                        isDescriptionPopupPresented = true
-                    }
+                    isLoadingPopupPresented = false
+                    isReadViewPresented = true
                 }
             }
         } else {

@@ -394,7 +394,6 @@ final class TextCreateViewModel: ObservableObject {
     
     func addNewPost(
         title: String,
-        description: String,
         text: String,
         image: UIImage,
         isArchive: Bool,
@@ -409,7 +408,6 @@ final class TextCreateViewModel: ObservableObject {
         
         let id = try await ArticlesManager.shared.addNewPost(
             title: title,
-            description: description,
             text: text,
             isArchive: isArchive,
             uploadingLanguage: uploadingLanguage
@@ -434,7 +432,6 @@ final class TextCreateViewModel: ObservableObject {
         id: String,
         title: String,
         image: UIImage,
-        description: String,
         text: String,
         isArchive: Bool,
         mediaURLs: [URL],
@@ -448,7 +445,6 @@ final class TextCreateViewModel: ObservableObject {
         try await ArticlesManager.shared.updatePost(
             id: id,
             title: title,
-            description: description,
             text: text,
             isArchive: isArchive
         )
