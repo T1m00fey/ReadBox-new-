@@ -96,10 +96,10 @@ struct CreateView: View {
 //                                            .padding(.horizontal)
                                         
                                         ZStack {
-                                            RoundedRectangle(cornerRadius: 15)
+                                            RoundedRectangle(cornerRadius: 20)
                                                 .frame(width: UIScreen.main.bounds.width - 32, height: 50)
                                                 .foregroundStyle(Color(uiColor: .secondarySystemBackground))
-                                                .shadow(radius: 2)
+                                                .shadow(radius: 1)
                                             
                                             HStack {
                                                 Text(NSLocalizedString("addPhotoLabel", comment: ""))

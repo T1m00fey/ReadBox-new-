@@ -383,7 +383,9 @@ struct ChannelView: View {
                     }
                 }
                 .fullScreenCover(isPresented: $viewModel.isZoomableImageViewPresented) {
-                    ZoomableImageView(image: viewModel.avatarImage)
+                    if let avatar = viewModel.avatarImage {
+                        ZoomableImageView(image: avatar)
+                    }
                 }
                 .toolbar {
                     ZStack {

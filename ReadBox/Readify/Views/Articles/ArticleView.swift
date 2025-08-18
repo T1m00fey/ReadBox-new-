@@ -190,7 +190,7 @@ struct ArticleView: View {
                     .frame(width: UIScreen.main.bounds.width - 25)
                     .clipShape(RoundedRectangle(cornerRadius: 20))
                     .padding(.bottom, 10)
-                    .padding(.top, isChannelView ? 10 : 0)
+                    .padding(.top, isChannelView ? 20 : 0)
                     .onTapGesture {
                         withAnimation {
                             zoomableImage = image
@@ -201,7 +201,7 @@ struct ArticleView: View {
                 TappableVideoPreview(url: videoURL, cornerRadius: 20, width: UIScreen.main.bounds.width - 10)
                     .frame(width: UIScreen.main.bounds.width - 30)
                     .padding(.bottom, 10)
-                    .padding(.top, isChannelView ? 10 : 0)
+                    .padding(.top, isChannelView ? 20 : 0)
             }
             
             ZStack {
