@@ -13,7 +13,7 @@ import Shimmer
 import TipKit
 
 struct CreatedPostsView: View {
-    @Binding var isSignInViewPresented: Bool
+    @Binding var isWelcomeViewPresented: Bool
     
     @StateObject var viewModel = CreatedPostsViewModel()
     
@@ -96,10 +96,13 @@ struct CreatedPostsView: View {
                     .fullScreenCover(isPresented: $viewModel.isZoomableImageViewPresented, content: {
                         ZoomableImageView(image: viewModel.avatarImage)
                     })
+                    .fullScreenCover(isPresented: $viewModel.isPostCreateViewPresented, content: {
+                        PostCreateView()
+                    })
                     .makeToolbarForCreatedPostsView(with: viewModel)
                     .trackChangesOnCreatedPostsView(
                         viewModel: viewModel,
-                        isSignInViewPresented: isSignInViewPresented
+                        isWelcomeViewPresented: isWelcomeViewPresented
                     )
                     .makePopupsForCreatedPostsView(
                         viewModel: viewModel,
@@ -108,6 +111,8 @@ struct CreatedPostsView: View {
                         isSuccessPopupPresented: $viewModel.isSuccessPopupPresented,
                         isLoadingPopupPresented: $viewModel.isLoadingPopupPresented,
                         isReadViewPresented: $viewModel.isReadViewPresented,
+                        isConfirmationPopupPresented: $viewModel.isConfirmationPopupPresented,
+                        addingMode: $viewModel.addingMode,
                         errorText: $viewModel.errorText
                     )
                 
@@ -364,12 +369,13 @@ struct CreatedPostsView: View {
                                 .padding(.bottom, 10)
                                 .popoverTip(AuthorMultiLanguageTip())
                                 .onTapGesture {
-                                    viewModel.vibrationsService.lightImpact()
-                                    
-                                    viewModel.title = NSLocalizedString("titlePlaceholder", comment: "")
-                                    viewModel.image = nil
-                                    viewModel.isEditing = false
-                                    viewModel.isCreateViewPresented = true
+//                                    viewModel.vibrationsService.lightImpact()
+//                                    
+//                                    viewModel.title = NSLocalizedString("titlePlaceholder", comment: "")
+//                                    viewModel.image = nil
+//                                    viewModel.isEditing = false
+//                                    viewModel.isCreateViewPresented = true
+                                    viewModel.isConfirmationPopupPresented = true
                                 }
                         }
                     }

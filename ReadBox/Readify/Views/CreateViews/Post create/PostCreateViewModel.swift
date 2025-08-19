@@ -6,7 +6,9 @@
 //
 
 import SwiftUI
+import PhotosUI
 
 final class PostCreateViewModel: ObservableObject {
     @Published var text = ""
+    @Published var imageItem: PhotosPickerItem? = nil
 }

@@ -10,7 +10,7 @@ import SwiftUIMailView
 import SwiftfulLoadingIndicators
 
 struct ProfileView: View {
-    @Binding var isSignInViewPresented: Bool
+    @Binding var isWelcomeViewPresented: Bool
     
     @StateObject var viewModel = ProfileViewModel()
     
@@ -346,8 +346,8 @@ struct ProfileView: View {
                 .refreshable {
                     viewModel.reload()
                 }
-                .onChange(of: isSignInViewPresented) {
-                    if !isSignInViewPresented {
+                .onChange(of: isWelcomeViewPresented) {
+                    if !isWelcomeViewPresented {
                         viewModel.reload()
                     }
                 }
@@ -373,7 +373,7 @@ struct ProfileView: View {
                         Task {
                             do {
                                 try await viewModel.delete()
-                                isSignInViewPresented = true
+                                isWelcomeViewPresented = true
                                 return
                             } catch {
                                 withAnimation {
@@ -394,7 +394,7 @@ struct ProfileView: View {
                         Task {
                             do {
                                 try await viewModel.signOut()
-                                isSignInViewPresented = true
+                                isWelcomeViewPresented = true
                                 return
                             } catch {
                                 withAnimation {
@@ -416,7 +416,7 @@ struct ProfileView: View {
                         .padding(.horizontal, 16)
                         .padding(.vertical, 16)
                         .foregroundStyle(Color.white)
-                        .background(Color.green)
+                        .background(Color(.secondarySystemBackground))
                         .clipShape(RoundedRectangle(cornerRadius: 10))
                         .padding(.top, 20)
                 } customize: {
@@ -427,8 +427,8 @@ struct ProfileView: View {
                         .dragToDismiss(true)
                         .autohideIn(5)
                 }
-                .onChange(of: isSignInViewPresented) {
-                    if !isSignInViewPresented {
+                .onChange(of: isWelcomeViewPresented) {
+                    if !isWelcomeViewPresented {
                         viewModel.isNeedToReload = true
                     }
                 }

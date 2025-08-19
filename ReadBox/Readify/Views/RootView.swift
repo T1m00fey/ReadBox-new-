@@ -18,7 +18,7 @@ struct RootView: View {
     @State private var isCheckmark: Bool? = false
     @State private var likedPosts: [String] = []
     @State private var isChannelViewPresented = false
-    @State private var isSignInViewPresented = false
+    @State private var isWelcomeViewPresented = false
     @State private var postToView: PrePost? = nil
     @State private var authorId = ""
     @State private var isLoadingPopupPresented = false
@@ -30,22 +30,22 @@ struct RootView: View {
         ZStack {
             if let _ = try? AuthenticationManager.shared.getAuthenticatedUser() {
                 TabView {
-                    FeedView(isSignInViewPresented: $isSignInViewPresented)
+                    FeedView(isWelcomeViewPresented: $isWelcomeViewPresented)
                         .tabItem {
                             Label("", systemImage: "house.fill")
                         }
                     
-                    LikedPostsView(isSignInViewPresented: $isSignInViewPresented)
+                    LikedPostsView(isWelcomeViewPresented: $isWelcomeViewPresented)
                         .tabItem {
                             Label("", systemImage: "hand.thumbsup.fill")
                         }
                     
-                    CreatedPostsView(isSignInViewPresented: $isSignInViewPresented)
+                    CreatedPostsView(isWelcomeViewPresented: $isWelcomeViewPresented)
                         .tabItem {
                             Label("", systemImage: "pencil.and.scribble")
                         }
                     
-                    ProfileView(isSignInViewPresented: $isSignInViewPresented)
+                    ProfileView(isWelcomeViewPresented: $isWelcomeViewPresented)
                         .tabItem {
                             Label("", systemImage: "person.fill")
                         }
@@ -58,8 +58,8 @@ struct RootView: View {
                 }
             }
         }
-        .onChange(of: isSignInViewPresented) {
-            if !isSignInViewPresented {
+        .onChange(of: isWelcomeViewPresented) {
+            if !isWelcomeViewPresented {
                 Task {
                     let authUser = try? AuthenticationManager.shared.getAuthenticatedUser()
                     let user = try? await UserManager.shared.getUser(userId: authUser?.uid ?? "")
@@ -74,7 +74,7 @@ struct RootView: View {
         .onAppear {
             Task {
                 if let authUser = try? AuthenticationManager.shared.getAuthenticatedUser() {
-                    isSignInViewPresented = false
+                    isWelcomeViewPresented = false
                     user = try? await UserManager.shared.getUser(userId: authUser.uid)
                     
                     try? await UserManager.shared.set(
@@ -113,7 +113,7 @@ struct RootView: View {
                         
                     }
                 } else {
-                    isSignInViewPresented = true
+                    isWelcomeViewPresented = true
                 }
             }
         }
@@ -226,10 +226,9 @@ struct RootView: View {
             )
             .tint(Color(uiColor: .label))
         })
-        .fullScreenCover(isPresented: $isSignInViewPresented, content: {
-            SignInView(isSignInViewPresented: $isSignInViewPresented)
+        .fullScreenCover(isPresented: $isWelcomeViewPresented, content: {
+            WelcomeView(isSignInViewPreseted: $isWelcomeViewPresented)
         })
-
         .popup(isPresented: $isLoadingPopupPresented) {
             LoadingPopup()
                 .shadow(radius: 3)

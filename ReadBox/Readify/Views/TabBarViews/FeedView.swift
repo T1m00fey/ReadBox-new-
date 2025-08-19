@@ -12,7 +12,7 @@ import Shimmer
 import TipKit
 
 struct FeedView: View {
-    @Binding var isSignInViewPresented: Bool
+    @Binding var isWelcomeViewPresented: Bool
     
     @StateObject var viewModel = FeedViewModel()
     
@@ -156,7 +156,7 @@ struct FeedView: View {
                 )
                 .trackChangesOnFeedView(
                     viewModel: viewModel,
-                    isSignInViewPresented: isSignInViewPresented
+                    isWelcomeViewPresented: isWelcomeViewPresented
                 )
                 .toolbar {
                     ToolbarItem(placement: .topBarLeading) {

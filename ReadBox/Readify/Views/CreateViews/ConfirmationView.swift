@@ -10,7 +10,22 @@ import SwiftUI
 struct ConfirmationView: View {
     @Binding var addingMode: Int
     
+    let popupType: PopupType
+    
     private let vibrationsService = VibrationsService.shared
+    
+    enum PopupType {
+        case publishType
+        case postType
+    }
+    
+    init(
+        addingMode: Binding<Int>,
+        popupType: PopupType = .publishType
+    ) {
+        self._addingMode = addingMode
+        self.popupType = popupType
+    }
     
     var body: some View {
         VStack {
@@ -19,7 +34,11 @@ struct ConfirmationView: View {
                 .foregroundStyle(Color.gray)
                 .padding(.top, 5)
             
-            Text(LocalizedStringKey("publishItLabel"))
+            Text(
+                popupType == .publishType
+                ? LocalizedStringKey("publishItLabel")
+                : "Что публикуем?"
+            )
                 .font(.system(size: 27))
                 .fontWeight(.light)
                 .fontDesign(.rounded)
@@ -39,7 +58,11 @@ struct ConfirmationView: View {
                             .foregroundStyle(Color(uiColor: .systemBackground))
                             .font(.system(size: 25))
                         
-                        Text(LocalizedStringKey("publishLabel"))
+                        Text(
+                            popupType == .publishType
+                            ? LocalizedStringKey("publishLabel")
+                            : "Пост"
+                        )
                             .font(.system(size: 21))
                             .fontWeight(.light)
                             .fontDesign(.rounded)
@@ -51,6 +74,10 @@ struct ConfirmationView: View {
             .frame(width: UIScreen.main.bounds.width - 32, height: 60)
             
             Button {
+                if popupType == .postType {
+                    vibrationsService.lightImpact()
+                }
+                
                 addingMode = 2
             } label: {
                 ZStack {
@@ -63,7 +90,11 @@ struct ConfirmationView: View {
                             .foregroundStyle(Color.gray)
                             .font(.system(size: 25))
                         
-                        Text(LocalizedStringKey("saveToArchiveLabel"))
+                        Text(
+                            popupType == .publishType
+                            ? LocalizedStringKey("saveToArchiveLabel")
+                            : "Статью"
+                        )
                             .font(.system(size: 21))
                             .fontWeight(.light)
                             .fontDesign(.rounded)

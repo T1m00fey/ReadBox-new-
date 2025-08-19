@@ -52,6 +52,9 @@ final class CreatedPostsViewModel: ObservableObject {
     @Published var isZoomableImageViewPresented = false
     @Published var isVideoCover = false
     @Published var videoURL: URL? = nil
+    @Published var addingMode = 0
+    @Published var isConfirmationPopupPresented = false
+    @Published var isPostCreateViewPresented = false
     
     @Published var user: DBUser? = nil
     

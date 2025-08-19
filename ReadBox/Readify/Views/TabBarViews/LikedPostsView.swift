@@ -10,7 +10,7 @@ import SwiftfulLoadingIndicators
 import Shimmer
 
 struct LikedPostsView: View {
-    @Binding var isSignInViewPresented: Bool
+    @Binding var isWelcomeViewPresented: Bool
     
     @StateObject var viewModel = LikedPostsViewModel()
     
@@ -172,7 +172,7 @@ struct LikedPostsView: View {
             )
             .trackChangesOnLikedPosts(
                 viewModel: viewModel,
-                isSignInViewPresented: isSignInViewPresented
+                isWelcomeViewPresented: isWelcomeViewPresented
             )
             .onAppear {
                 if viewModel.isLoading {

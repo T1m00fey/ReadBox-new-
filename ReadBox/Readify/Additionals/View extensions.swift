@@ -52,11 +52,11 @@ extension View {
     
     @MainActor func trackChangesOnFeedView(
         viewModel: FeedViewModel,
-        isSignInViewPresented: Bool
+        isWelcomeViewPresented: Bool
     ) -> some View {
         self
-            .onChange(of: isSignInViewPresented) {
-                if !isSignInViewPresented {
+            .onChange(of: isWelcomeViewPresented) {
+                if !isWelcomeViewPresented {
                     viewModel.refresh()
                 }
             }
@@ -183,7 +183,7 @@ extension View {
     
     func trackChangesOnLikedPosts(
         viewModel: LikedPostsViewModel,
-        isSignInViewPresented: Bool
+        isWelcomeViewPresented: Bool
     ) -> some View {
         self
             .onChange(of: viewModel.user) {
@@ -223,8 +223,8 @@ extension View {
                     viewModel.postToView = nil
                 }
             }
-            .onChange(of: isSignInViewPresented) {
-                if !isSignInViewPresented {
+            .onChange(of: isWelcomeViewPresented) {
+                if !isWelcomeViewPresented {
                     viewModel.isNeedToReload = true
                 }
             }
@@ -445,7 +445,7 @@ extension View {
     
     func trackChangesOnCreatedPostsView(
         viewModel: CreatedPostsViewModel,
-        isSignInViewPresented: Bool
+        isWelcomeViewPresented: Bool
     ) -> some View {
         self
             .onChange(of: viewModel.isDescriptionPopupPresented) {
@@ -511,8 +511,8 @@ extension View {
 //                    }
 //                }
 //            }
-            .onChange(of: isSignInViewPresented) {
-                if !isSignInViewPresented {
+            .onChange(of: isWelcomeViewPresented) {
+                if !isWelcomeViewPresented {
                     viewModel.reload()
                 }
             }
@@ -607,6 +607,13 @@ extension View {
                     
                 }
             }
+            .onChange(of: viewModel.addingMode) {
+                if viewModel.addingMode == 1 {
+                    viewModel.isPostCreateViewPresented = true
+                } else if viewModel.addingMode == 2 {
+                    print("")
+                }
+            }
     }
     
     func makePopupsForCreatedPostsView(
@@ -616,6 +623,8 @@ extension View {
         isSuccessPopupPresented: Binding<Bool>,
         isLoadingPopupPresented: Binding<Bool>,
         isReadViewPresented: Binding<Bool>,
+        isConfirmationPopupPresented: Binding<Bool>,
+        addingMode: Binding<Int>,
         errorText: Binding<String>
     ) -> some View {
         self
@@ -642,7 +651,7 @@ extension View {
                     .padding(.horizontal, 16)
                     .padding(.vertical, 16)
                     .foregroundStyle(Color.white)
-                    .background(Color.green)
+                    .background(Color(.secondarySystemBackground))
                     .clipShape(RoundedRectangle(cornerRadius: 10))
                     .padding(.top, 20)
             } customize: {
@@ -660,6 +669,18 @@ extension View {
                 $0
                     .type(.toast)
                     .appearFrom(.bottomSlide)
+            }
+            .popup(isPresented: isConfirmationPopupPresented) {
+                ConfirmationView(
+                    addingMode: addingMode,
+                    popupType: .postType
+                )
+                .shadow(radius: 3)
+            } customize: {
+                $0
+                    .type(.toast)
+                    .appearFrom(.bottomSlide)
+                    .dragToDismiss(true)
             }
     }
 }

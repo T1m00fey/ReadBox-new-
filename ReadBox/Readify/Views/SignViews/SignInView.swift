@@ -10,12 +10,14 @@ import PopupView
 import SwiftfulLoadingIndicators
 
 struct SignInView: View {
-    @Binding var isSignInViewPresented: Bool
+    @Binding var isWelcomeViewPresented: Bool
     
     @StateObject var viewModel = SignInViewModel()
     
     @FocusState var isSecondTFFocused: Bool
     @FocusState var isThirdTFFocused: Bool
+    
+    @Environment(\.dismiss) var dismiss
     
     var body: some View {
         NavigationStack {
@@ -96,7 +98,7 @@ struct SignInView: View {
                                 viewModel.vibrationsService.softImpact()
                                 try await viewModel.signIn()
                                 
-                                isSignInViewPresented = false
+                                isWelcomeViewPresented = false
                                 
                                 viewModel.emailText = ""
                                 viewModel.passwordText = ""
@@ -152,14 +154,14 @@ struct SignInView: View {
                     Spacer()
                     
                     HStack(spacing: 40) {
-                        Button {
-                            viewModel.isSignUpViewPresented = true
-                        } label: {
-                            Text(LocalizedStringKey("signUpLabel"))
-                                .font(.system(size: 18))
-                                .fontDesign(.rounded)
-                                .underline()
-                        }
+//                        Button {
+//                            viewModel.isSignUpViewPresented = true
+//                        } label: {
+//                            Text(LocalizedStringKey("signUpLabel"))
+//                                .font(.system(size: 18))
+//                                .fontDesign(.rounded)
+//                                .underline()
+//                        }
                         
                         Button {
                             viewModel.isForgotPasswordPresented = true
@@ -178,6 +180,19 @@ struct SignInView: View {
                 }
                 .padding(.bottom, 20)
                 .ignoresSafeArea(.keyboard)
+            }
+            .navigationBarBackButtonHidden()
+            .overlay(
+                EnableSwipeBack()
+                    .frame(width: 0, height: 0)
+            )
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Image(systemName: "arrow.left")
+                        .onTapGesture {
+                            dismiss()
+                        }
+                }
             }
             .popup(isPresented: $viewModel.isErrorPopupPresented) {
                 Text(viewModel.errorText)
@@ -201,7 +216,7 @@ struct SignInView: View {
                     .padding(.horizontal, 16)
                     .padding(.vertical, 16)
                     .foregroundStyle(Color.white)
-                    .background(Color.green)
+                    .background(Color(.secondarySystemBackground))
                     .clipShape(RoundedRectangle(cornerRadius: 10))
             } customize: {
                 $0
@@ -212,7 +227,7 @@ struct SignInView: View {
                     .autohideIn(5)
             }
             .fullScreenCover(isPresented: $viewModel.isSignUpViewPresented) {
-                SignUpView(isSignInViewPresented: $isSignInViewPresented)
+                SignUpView(isWelcomeViewPresented: $isWelcomeViewPresented)
             }
             .onDisappear {
                 isSecondTFFocused = false

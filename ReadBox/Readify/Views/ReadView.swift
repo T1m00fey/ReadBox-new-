@@ -278,7 +278,6 @@ struct ReadView: View {
                         
                         if text.isEmpty {
                             Text(title)
-                                .fontWeight(.light)
                                 .fontDesign(.rounded)
                                 .font(.system(size: 24))
                                 .frame(width: UIScreen.main.bounds.width - 32, alignment: .leading)
