@@ -238,7 +238,7 @@ struct ChannelView: View {
                     .padding(.horizontal)
                     
                 }
-                .padding(.top, 20)
+                .padding(.top, 50)
                 .popup(isPresented: $viewModel.isErrorPopupPresented) {
                     Text(viewModel.errorText)
                         .frame(width: UIScreen.main.bounds.width - 72, alignment: .leading)
@@ -285,38 +285,42 @@ struct ChannelView: View {
                     )
                 })
                 .onAppear(perform: {
-                    viewModel.isLoading = false
-                    viewModel.authorId = authorId
-                    
-                    viewModel.isSubscribed = viewModel.isSubscribed(user, on: authorId)
-                    
-                    viewModel.getViews()
-                    viewModel.getAvatar()
-                    
-                    Task {
-                        viewModel.isLoading = true
+                    if !viewModel.isDataLoaded {
+                        viewModel.isLoading = false
+                        viewModel.authorId = authorId
                         
-                        do {
-                            try await viewModel.getAuthorDescription(id: authorId)
-                            try await viewModel.getSubscribersCount(authorId: authorId)
-                            try await viewModel.getPostsCount(authorId: authorId)
-                        } catch {
-                            withAnimation {
-                                viewModel.errorText = error.localizedDescription
-                                viewModel.isErrorPopupPresented = true
+                        viewModel.isSubscribed = viewModel.isSubscribed(user, on: authorId)
+                        
+                        viewModel.getViews()
+                        viewModel.getAvatar()
+                        
+                        Task {
+                            viewModel.isLoading = true
+                            
+                            do {
+                                try await viewModel.getAuthorDescription(id: authorId)
+                                try await viewModel.getSubscribersCount(authorId: authorId)
+                                try await viewModel.getPostsCount(authorId: authorId)
+                            } catch {
+                                withAnimation {
+                                    viewModel.errorText = error.localizedDescription
+                                    viewModel.isErrorPopupPresented = true
+                                }
                             }
                         }
-                    }
-                    
-                    Task {
-                        do {
-                            try await viewModel.loadPosts(by: authorId)
-                        } catch {
-                            withAnimation {
-                                viewModel.errorText = NSLocalizedString("loadDataErrorLabel", comment: "")
-                                viewModel.isErrorPopupPresented = true
+                        
+                        Task {
+                            do {
+                                try await viewModel.loadPosts(by: authorId)
+                            } catch {
+                                withAnimation {
+                                    viewModel.errorText = NSLocalizedString("loadDataErrorLabel", comment: "")
+                                    viewModel.isErrorPopupPresented = true
+                                }
                             }
                         }
+                        
+                        viewModel.isDataLoaded = true
                     }
                 })
                 .refreshable {
@@ -436,7 +440,7 @@ private extension ChannelView {
                 .foregroundStyle(Color(uiColor: .secondarySystemBackground))
                 .shadow(radius: 10)
             
-            VStack(spacing: -5) {
+            VStack(spacing: -3) {
                 HStack {
                     if let avatar = viewModel.avatarImage {
                         Image(uiImage: avatar)
@@ -481,7 +485,7 @@ private extension ChannelView {
                         Image(systemName: "arrowshape.turn.up.right")
                             .font(.system(size: 22))
                     }
-                    .padding(.trailing, )
+                    .padding(.trailing, 2)
                     
                     Button {
                         dismiss()

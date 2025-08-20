@@ -178,9 +178,9 @@ struct ArticleView: View {
                     if !isShortPost {
                         Text(NSLocalizedString("articleLabel", comment: ""))
                             .font(.system(size: 12))
-                            .foregroundStyle(Color(.systemGray5))
+                            .foregroundStyle(Color(.systemGray6))
                             .padding(.all, 5)
-                            .background(Color(.systemGray3))
+                            .background(Color(.systemGray4))
                             .clipShape(RoundedRectangle(cornerRadius: 5))
                     }
                 }

@@ -214,7 +214,7 @@ struct ReadView: View {
                                     .frame(width: 50, height: 50)
                                     .background(Color(uiColor: .secondarySystemBackground))
                                     .clipShape(RoundedRectangle(cornerRadius: 10))
-                                    .shadow(radius: 2)
+                                    .shadow(radius: 1)
                             }
                             
                             if authorId != "" && authorId != user?.userId {
@@ -225,7 +225,7 @@ struct ReadView: View {
                                             ? Color(uiColor: .secondarySystemBackground)
                                             : Color(uiColor: .label)
                                         )
-                                        .shadow(radius: isSubscribed ? 2 : 0)
+                                        .shadow(radius: isSubscribed ? 1 : 0)
                                         .frame(width: 120)
                                     
                                     Text(
@@ -374,13 +374,17 @@ struct ReadView: View {
                         }
                     }
                 }
+                .overlay(
+                    EnableSwipeBack()
+                        .frame(width: 0, height: 0)
+                )
                 .toolbar {
-                    ToolbarItem(placement: .topBarTrailing) {
+                    ToolbarItem(placement: .topBarLeading) {
                         
                         Button {
                             dismiss()
                         } label: {
-                            Image(systemName: "xmark")
+                            Image(systemName: "arrow.left")
                         }
                         
                     }
@@ -410,13 +414,15 @@ struct ReadView: View {
                         }
                     }
                     
-                    ToolbarItem(placement: .topBarLeading) {
+                    ToolbarItem(placement: .topBarTrailing) {
                         
                         HStack {
-                            Button {
-                                viewModel.isFontSettingPopupPresented.toggle()
-                            } label: {
-                                Image(systemName: "book.pages")
+                            if text != "" {
+                                Button {
+                                    viewModel.isFontSettingPopupPresented.toggle()
+                                } label: {
+                                    Image(systemName: "book.pages")
+                                }
                             }
                             
                             if !isArchive {

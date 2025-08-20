@@ -17,7 +17,7 @@ struct FeedView: View {
     @StateObject var viewModel = FeedViewModel()
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             
             ZStack {
                 
@@ -144,6 +144,7 @@ struct FeedView: View {
                         
                     }
                 }
+                .padding(.top, 30)
                 .disabled(viewModel.isBlur ? true : false)
                 .blur(radius: viewModel.isBlur ? 5 : 0)
                 .makePopupsForFeedView(
@@ -158,58 +159,6 @@ struct FeedView: View {
                     viewModel: viewModel,
                     isWelcomeViewPresented: isWelcomeViewPresented
                 )
-                .toolbar {
-                    ToolbarItem(placement: .topBarLeading) {
-                        ZStack {
-                            RoundedRectangle(cornerRadius: 20)
-                                .frame(width: UIScreen.main.bounds.width, height: 130)
-                                .foregroundStyle(Color(uiColor: .secondarySystemBackground))
-                                .padding(.bottom, 40)
-                                .shadow(radius: 10)
-                            
-                            HStack {
-                                HStack(spacing: 1) {
-                                    Text("ReadBox")
-                                        .font(.largeTitle)
-                                        .fontWeight(.light)
-                                        .popoverTip(LanguageSwitchTip())
-                                    
-                                    Text(StorageManager.shared.getLanguage() == "ru" ? "RU" : "EN")
-                                        .foregroundStyle(Color.gray)
-                                        .font(.system(size: 14))
-                                        .fontDesign(.rounded)
-                                        .offset(y: -7)
-                                }
-                                .onTapGesture {
-                                    let currentLanguage = StorageManager.shared.getLanguage()
-                                    
-                                    withAnimation {
-                                        if !viewModel.isLoading {
-                                            viewModel.refresh()
-                                            
-                                            StorageManager.shared.setLanguage(
-                                                to: currentLanguage == "en"
-                                                    ? "ru"
-                                                    : "en"
-                                            )
-                                        }
-                                    }
-                                }
-                                
-                                if viewModel.isLoading {
-                                    LoadingIndicator(
-                                        animation: .circleRunner,
-                                        color: Color(uiColor: .label),
-                                        size: .small, speed: .fast
-                                    )
-                                }
-                            }
-                            .frame(width: UIScreen.main.bounds.width - 32, alignment: .leading)
-                            
-                        }
-                        .padding(.leading, 6)
-                    }
-                }
                 .task {
                     try? Tips.configure()
                 }
@@ -230,7 +179,7 @@ struct FeedView: View {
                     
                     viewModel.getRelevantVersion()
                 }
-                .fullScreenCover(isPresented: $viewModel.isReadViewPresented, content: {
+                .navigationDestination(isPresented: $viewModel.isReadViewPresented, destination: {
                     ReadView(
                         id: viewModel.id,
                         title: viewModel.title,
@@ -266,6 +215,12 @@ struct FeedView: View {
                     }
                 }
                 
+                VStack {
+                    headerView
+                    
+                    Spacer()
+                }.ignoresSafeArea()
+                
             }
             .popup(isPresented: $viewModel.isVersionPopupViewPresented) {
                 VersionPopupView(isCritical: viewModel.relevantVersion?.isCritical ?? false)
@@ -282,7 +237,57 @@ struct FeedView: View {
     }
 }
 
-
+private extension FeedView {
+    var headerView: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 20)
+                .frame(width: UIScreen.main.bounds.width, height: 120)
+                .foregroundStyle(Color(uiColor: .secondarySystemBackground))
+                .shadow(radius: 10)
+            
+            HStack {
+                HStack(spacing: 1) {
+                    Text("ReadBox")
+                        .font(.system(size: 32))
+                        .fontWeight(.light)
+                        .popoverTip(LanguageSwitchTip())
+                    
+                    Text(StorageManager.shared.getLanguage() == "ru" ? "RU" : "EN")
+                        .foregroundStyle(Color.gray)
+                        .font(.system(size: 14))
+                        .fontDesign(.rounded)
+                        .offset(y: -7)
+                }
+                .onTapGesture {
+                    let currentLanguage = StorageManager.shared.getLanguage()
+                    
+                    withAnimation {
+                        if !viewModel.isLoading {
+                            viewModel.refresh()
+                            
+                            StorageManager.shared.setLanguage(
+                                to: currentLanguage == "en"
+                                    ? "ru"
+                                    : "en"
+                            )
+                        }
+                    }
+                }
+                
+                if viewModel.isLoading {
+                    LoadingIndicator(
+                        animation: .circleRunner,
+                        color: Color(uiColor: .label),
+                        size: .small, speed: .fast
+                    )
+                }
+            }
+            .frame(width: UIScreen.main.bounds.width - 32, alignment: .leading)
+            .padding(.top, 30)
+            
+        }
+    }
+}
 
 
 
