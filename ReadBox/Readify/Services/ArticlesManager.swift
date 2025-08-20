@@ -53,6 +53,10 @@ final class ArticlesManager {
         try await articleDocument(id: articleId).updateData(data)
     }
     
+    func getViews(at id: String) async throws -> Int {
+        try await articleDocument(id: id).getDocument(as: ViewsCount.self).viewsCount
+    }
+    
     func updateViews(at id: String) async throws {
         let viewsCount = try await articleDocument(id: id).getDocument(as: ViewsCount.self).viewsCount
         

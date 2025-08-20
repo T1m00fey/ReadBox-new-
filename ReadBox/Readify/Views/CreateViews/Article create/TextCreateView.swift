@@ -309,32 +309,36 @@ struct TextCreateView: View {
                                     try await UserManager.shared.updatePostsCount(userId: userId, postsCount: postsCount)
                                     
                                     if isArchived {
-                                        let post = archivePosts.first { $0.id == id }
                                         archivePosts.removeAll { $0.id == id }
+                                        
+                                        let viewsCount = try await ArticlesManager.shared.getViews(at: id)
+                                        let likesCount = try await ArticlesManager.shared.getLikesCount(byPostId: id)
                                         
                                         posts.insert(
                                             PrePost(
                                                 id: id,
                                                 title: title,
                                                 authorId: userId,
-                                                viewsCount: post?.viewsCount,
-                                                likesCount: post?.likesCount,
+                                                viewsCount: viewsCount,
+                                                likesCount: likesCount,
                                                 isArchive: false,
                                                 isShortPost: viewModel.text.isEmpty
                                             ),
                                             at: 0
                                         )
                                     } else {
-                                        let post = posts.first { $0.id == id }
                                         posts.removeAll { $0.id == id }
+                                        
+                                        let viewsCount = try await ArticlesManager.shared.getViews(at: id)
+                                        let likesCount = try await ArticlesManager.shared.getLikesCount(byPostId: id)
                                         
                                         archivePosts.insert(
                                             PrePost(
                                                 id: id,
                                                 title: title,
                                                 authorId: userId,
-                                                viewsCount: post?.viewsCount,
-                                                likesCount: post?.likesCount,
+                                                viewsCount: viewsCount,
+                                                likesCount: likesCount,
                                                 isArchive: false,
                                                 isShortPost: viewModel.text.isEmpty
                                             ),
@@ -343,29 +347,31 @@ struct TextCreateView: View {
                                     }
                                 } else {
                                     if isArchive {
-                                        let post = archivePosts.first { $0.id == id }
+                                        let viewsCount = try await ArticlesManager.shared.getViews(at: id)
+                                        let likesCount = try await ArticlesManager.shared.getLikesCount(byPostId: id)
                                         
                                         if let index = archivePosts.firstIndex(where: { $0.id == id }) {
                                             archivePosts[index] = PrePost(
                                                 id: id,
                                                 title: title,
                                                 authorId: userId,
-                                                viewsCount: post?.viewsCount,
-                                                likesCount: post?.likesCount,
+                                                viewsCount: viewsCount,
+                                                likesCount: likesCount,
                                                 isArchive: true,
                                                 isShortPost: viewModel.text.isEmpty
                                             )
                                         }
                                     } else {
-                                        let post = posts.first { $0.id == id }
+                                        let viewsCount = try await ArticlesManager.shared.getViews(at: id)
+                                        let likesCount = try await ArticlesManager.shared.getLikesCount(byPostId: id)
                                         
                                         if let index = posts.firstIndex(where: { $0.id == id }) {
                                             posts[index] = PrePost(
                                                 id: id,
                                                 title: title,
                                                 authorId: userId,
-                                                viewsCount: post?.viewsCount,
-                                                likesCount: post?.likesCount,
+                                                viewsCount: viewsCount,
+                                                likesCount: likesCount,
                                                 isArchive: false,
                                                 isShortPost: viewModel.text.isEmpty
                                             )

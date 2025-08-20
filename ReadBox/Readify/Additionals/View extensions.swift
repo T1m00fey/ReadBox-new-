@@ -539,57 +539,68 @@ extension View {
                     var prePost: PrePost? = nil
                     
                     if viewModel.isArchivePresented {
-                        prePost = viewModel.archivePosts.filter { $0.id == viewModel.id }[0]
+                        prePost = viewModel.archivePosts.first { $0.id == viewModel.id }
                     } else {
-                        prePost = viewModel.posts.filter { $0.id == viewModel.id }[0]
+                        prePost = viewModel.posts.first { $0.id == viewModel.id }
                     }
                     
                     switch viewModel.postOption {
                     case .editing:
-                        viewModel.isLoadingPopupPresented = true
-                        
-                        Task {
-                            do {
-                                try await viewModel.getPostToRead(id: viewModel.id)
+                        if let prePost, let isShortPost = prePost.isShortPost {
+                            if isShortPost == false {
+                                viewModel.isLoadingPopupPresented = true
                                 
-                                viewModel.title = prePost?.title ?? NSLocalizedString("notFoundLabel", comment: "")
-                                viewModel.image = StorageManager.shared.getImage(id: viewModel.id)
-                                viewModel.isEditing = true
-                                
-                                if viewModel.image == nil {
+                                Task {
                                     do {
-                                        let videoRef = Storage.storage().reference().child("images/\(viewModel.id).mp4")
-                                        let url = try await videoRef.downloadURL()
-                                        viewModel.videoURL = url
+                                        try await viewModel.getPostToRead(id: viewModel.id)
+                                        
+                                        viewModel.title = prePost.title ?? NSLocalizedString("notFoundLabel", comment: "")
+                                        viewModel.image = StorageManager.shared.getImage(id: viewModel.id)
+                                        viewModel.isEditing = true
+                                        
+                                        if viewModel.image == nil {
+                                            do {
+                                                let videoRef = Storage.storage().reference().child("images/\(viewModel.id).mp4")
+                                                let url = try await videoRef.downloadURL()
+                                                viewModel.videoURL = url
 
-                                        let asset = AVAsset(url: url)
-                                        let _ = try await asset.loadTracks(withMediaType: .video)
+                                                let asset = AVAsset(url: url)
+                                                let _ = try await asset.loadTracks(withMediaType: .video)
 
-                                        let generator = AVAssetImageGenerator(asset: asset)
-                                        generator.appliesPreferredTrackTransform = true
-                                        let cgImage = try generator.copyCGImage(at: .zero, actualTime: nil)
-                                        let preview = UIImage(cgImage: cgImage)
+                                                let generator = AVAssetImageGenerator(asset: asset)
+                                                generator.appliesPreferredTrackTransform = true
+                                                let cgImage = try generator.copyCGImage(at: .zero, actualTime: nil)
+                                                let preview = UIImage(cgImage: cgImage)
 
-                                        await MainActor.run {
-                                            withAnimation {
-                                                viewModel.image = preview
-                                                viewModel.isVideoCover = true
+                                                await MainActor.run {
+                                                    withAnimation {
+                                                        viewModel.image = preview
+                                                        viewModel.isVideoCover = true
+                                                    }
+                                                }
+                                            } catch {
+                                                print("❌ Видео не найдено или ошибка при генерации превью: \(error)")
                                             }
                                         }
+                                        
+                                        viewModel.isCreateViewPresented = true
                                     } catch {
-                                        print("❌ Видео не найдено или ошибка при генерации превью: \(error)")
+                                        withAnimation {
+                                            viewModel.errorText = error.localizedDescription
+                                            viewModel.isErrorPopupPresented = true
+                                        }
                                     }
+                                    
+                                    viewModel.isLoadingPopupPresented = false
                                 }
-                                
-                                viewModel.isCreateViewPresented = true
-                            } catch {
-                                withAnimation {
-                                    viewModel.errorText = error.localizedDescription
-                                    viewModel.isErrorPopupPresented = true
+                            } else {
+                                if let title = prePost.title {
+                                    viewModel.postId = prePost.id
+                                    viewModel.title = title
+                                    
+                                    viewModel.isPostCreateViewPresented = true
                                 }
                             }
-                            
-                            viewModel.isLoadingPopupPresented = false
                         }
                         
                     case .publish:
@@ -609,10 +620,20 @@ extension View {
             }
             .onChange(of: viewModel.addingMode) {
                 if viewModel.addingMode == 1 {
+                    viewModel.postId = ""
+                    viewModel.title = ""
+                    
                     viewModel.isPostCreateViewPresented = true
                 } else if viewModel.addingMode == 2 {
-                    print("")
+                    viewModel.vibrationsService.softImpact()
+                    viewModel.title = NSLocalizedString("titlePlaceholder", comment: "")
+                    viewModel.image = nil
+                    viewModel.isEditing = false
+                    
+                    viewModel.isCreateViewPresented = true
                 }
+                
+                viewModel.addingMode = 0
             }
     }
     

@@ -30,7 +30,7 @@
 "nameLabel" = "Имя";
 "signOutLabel" = "Выйти";
 "deleteLabel" = "Удалить";
-"cancelButton" = "Отменить";
+"cancelButton" = "Отмена";
 "youSureToSingOut" = "Вы действительно хотите выйти?";
 "youSureToDeleteAcc" = "Вы действительно хотите удалить аккаунт?";
 "youWithUsLabel" = "Вы с нами уже";
@@ -120,3 +120,4 @@
 "uploadingLabel" = "Загружаем";
 "durationCoverErrorLabel" = "Видео-обложка не должна превышать 1 минуту";
 "welcomeLabel" = "Читай. Публикуй. Вдохновляй.";
+"whatsNewLabel" = "Что нового?";

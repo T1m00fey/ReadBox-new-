@@ -19,7 +19,7 @@ struct CustomSegmentedControl: View {
     var body: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 16)
-                .frame(width: (UIScreen.main.bounds.width - 32) / 2, height: 50)
+                .frame(width: (UIScreen.main.bounds.width - 32) / 2, height: 45)
                 .foregroundStyle(Color(.label))
                 .offset(x: selectedLanguage == "en" ? -UIScreen.main.bounds.width / 4 + 10 : UIScreen.main.bounds.width / 4 - 10)
             

@@ -97,7 +97,15 @@ struct CreatedPostsView: View {
                         ZoomableImageView(image: viewModel.avatarImage)
                     })
                     .fullScreenCover(isPresented: $viewModel.isPostCreateViewPresented, content: {
-                        PostCreateView()
+                        PostCreateView(
+                            postId: viewModel.postId,
+                            title: viewModel.title,
+                            authorId: viewModel.user?.userId ?? "",
+                            isArchived: viewModel.isArchivePresented,
+                            posts: $viewModel.posts,
+                            archivedPosts: $viewModel.archivePosts,
+                            postsCount: $viewModel.postsCount
+                        )
                     })
                     .makeToolbarForCreatedPostsView(with: viewModel)
                     .trackChangesOnCreatedPostsView(
@@ -369,12 +377,6 @@ struct CreatedPostsView: View {
                                 .padding(.bottom, 10)
                                 .popoverTip(AuthorMultiLanguageTip())
                                 .onTapGesture {
-//                                    viewModel.vibrationsService.lightImpact()
-//                                    
-//                                    viewModel.title = NSLocalizedString("titlePlaceholder", comment: "")
-//                                    viewModel.image = nil
-//                                    viewModel.isEditing = false
-//                                    viewModel.isCreateViewPresented = true
                                     viewModel.isConfirmationPopupPresented = true
                                 }
                         }

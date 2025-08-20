@@ -68,6 +68,7 @@ final class CreatedPostsViewModel: ObservableObject {
     var likesCount = 0
     var dateCreated = Date()
     var isEditing = false
+    var postId = ""
     
     var alertText = ""
     
