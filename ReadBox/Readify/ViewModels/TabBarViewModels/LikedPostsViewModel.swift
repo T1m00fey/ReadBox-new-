@@ -22,11 +22,9 @@ final class LikedPostsViewModel: ObservableObject {
     @Published var indexesNeedToLoad: [String] = []
     @Published var isLoading = true
     @Published var isChannelViewPresented = false
-    @Published var postToView: PrePost? = nil
     @Published var isNeedToReload = false
     @Published var isLoadingPopupPresented = false
     @Published var isLoadingShowed = true
-    @Published var postToRead: PostToRead? = nil
     @Published var isZoomableViewPresented = false
     @Published var zoomableImage: UIImage? = nil
     

@@ -25,13 +25,11 @@ final class FeedViewModel: ObservableObject {
     @Published var authorsNames: [String: String] = [:]
     @Published var authorsCheckmarks: [String: Bool] = [:]
     @Published var isChannelViewPresented = false
-    @Published var postToView: PrePost? = nil
     @Published var isLoading = true
     @Published var height: CGFloat = 0.0
     @Published var views: [String] = []
     @Published var isLoadingPopupPresented = false
     @Published var isLoadingShowing = true
-    @Published var postToRead: PostToRead? = nil
     @Published var relevantVersion: AppVersion? = nil
     @Published var isVersionPopupViewPresented = false
     @Published var isBlur = false

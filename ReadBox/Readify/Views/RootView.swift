@@ -19,7 +19,6 @@ struct RootView: View {
     @State private var likedPosts: [String] = []
     @State private var isChannelViewPresented = false
     @State private var isWelcomeViewPresented = false
-    @State private var postToView: PrePost? = nil
     @State private var authorId = ""
     @State private var isLoadingPopupPresented = false
     @State private var isDescriptionPopupPresented = false
@@ -186,19 +185,6 @@ struct RootView: View {
             }
             
         }
-        .onChange(of: postToView) {
-            isLoadingPopupPresented = true
-            
-            Task {
-                prePost = try? await ArticlesManager.shared.getPrePost(id: postToView?.id ?? "")
-                postToRead = try? await ArticlesManager.shared.getPostToRead(id: postToView?.id ?? "")
-                authorName = try? await UserManager.shared.getAuthorName(id: prePost?.authorId ?? "")
-                isCheckmark = try? await UserManager.shared.getIsCheckmarkStatus(id: prePost?.authorId ?? "")
-                
-                isLoadingPopupPresented = false
-                isReadViewPresented = true
-            }
-        }
         .fullScreenCover(isPresented: $isReadViewPresented, content: {
             ReadView(
                 id: prePost?.id ?? "",
@@ -220,9 +206,7 @@ struct RootView: View {
                 user: $user,
                 authorId: prePost?.authorId ?? "",
                 authorName: authorName ?? "",
-                isCheckmark: isCheckmark ?? false,
-                postToView: $postToView,
-                postToRead: $postToRead
+                isCheckmark: isCheckmark ?? false
             )
             .tint(Color(uiColor: .label))
         })

@@ -19,10 +19,7 @@ struct ChannelView: View {
     
     let authorId: String
     let authorName: String
-    let isCheckmark: Bool
-    
-    @Binding var postToView: PrePost?
-    @Binding var postToRead: PostToRead?
+    let isCheckmark: Bool        
     
     var body: some View {
         NavigationStack {
@@ -63,7 +60,6 @@ struct ChannelView: View {
                                     isCheckmark: true,
                                     isArchive: false,
                                     isShortPost: false,
-                                    isChannelView: true,
                                     user: .constant(nil),
                                     isZoomableViewPresented: .constant(false),
                                     zoomableImage: .constant(nil)
@@ -74,7 +70,6 @@ struct ChannelView: View {
                                 .shimmering()
                             }
                         } else if !viewModel.posts.isEmpty {
-                            
                             if viewModel.authorDescription != "" {
                                 Text(viewModel.authorDescription)
                                     .font(.title3)
@@ -102,7 +97,6 @@ struct ChannelView: View {
                                     isCheckmark: isCheckmark,
                                     isArchive: false,
                                     isShortPost: post.isShortPost ?? false,
-                                    isChannelView: true,
                                     user: $user,
                                     isZoomableViewPresented: $viewModel.isZoomableImageViewPresented,
                                     zoomableImage: $viewModel.zoomableImage
@@ -125,7 +119,7 @@ struct ChannelView: View {
                                             
                                             viewModel.isLoadingPopupPresented = false
                                             
-                                            postToView = PrePost(
+                                            viewModel.postToView = PrePost(
                                                 id: post.id,
                                                 title: post.title,
                                                 authorId: post.authorId,
@@ -135,13 +129,13 @@ struct ChannelView: View {
                                                 isShortPost: post.isShortPost
                                             )
                                             
-                                            postToRead = PostToRead(
+                                            viewModel.postToRead = PostToRead(
                                                 dateCreated: postToread.dateCreated,
                                                 text: postToread.text,
                                                 mediaURLs: postToread.mediaURLs
                                             )
 
-                                            dismiss()
+                                            viewModel.isReadViewPresented = true
 
                                         } catch {
                                             withAnimation {
@@ -168,44 +162,6 @@ struct ChannelView: View {
                                         }
                                     }
                                     
-                                }
-                                .onChange(of: viewModel.isReadViewPresented) {
-                                    if viewModel.isReadViewPresented {
-                                        viewModel.isLoadingPopupPresented = true
-                                        
-                                        Task {
-                                            do {
-                                                let postToread = try await ArticlesManager.shared.getPostToRead(id: post.id)
-                                                
-                                                viewModel.isLoadingPopupPresented = false
-                                                
-                                                postToView = PrePost(
-                                                    id: post.id,
-                                                    title: post.title,
-                                                    authorId: post.authorId,
-                                                    viewsCount: post.viewsCount,
-                                                    likesCount: post.likesCount,
-                                                    isArchive: post.isArchive,
-                                                    isShortPost: post.isShortPost
-                                                )
-                                                
-                                                postToRead = PostToRead(
-                                                    dateCreated: postToread.dateCreated,
-                                                    text: postToread.text,
-                                                    mediaURLs: postToread.mediaURLs
-                                                )
-
-                                                dismiss()
-                                            } catch {
-                                                withAnimation {
-                                                    viewModel.errorText = error.localizedDescription
-                                                    viewModel.isErrorPopupPresented = true
-                                                }
-                                            }
-                                        }
-                                        
-                                        viewModel.isLoadingPopupPresented = false
-                                    }
                                 }
                                 
                             }
@@ -313,6 +269,21 @@ struct ChannelView: View {
                         ZoomableImageView(image: image)
                     }
                 }
+                .navigationDestination(isPresented: $viewModel.isReadViewPresented, destination: {
+                    ReadView(
+                        id: viewModel.postToView?.id ?? "",
+                        title: viewModel.postToView?.title ?? "",
+                        text: viewModel.postToRead?.text ?? "",
+                        dateCreated: viewModel.postToRead?.dateCreated ?? Date(),
+                        likesCount: viewModel.postToView?.likesCount ?? 0,
+                        authorId: authorId,
+                        authorName: authorName,
+                        isCheckmark: isCheckmark,
+                        isArchive: false,
+                        user: $user,
+                        isChannelViewPresented: .constant(false)
+                    )
+                })
                 .onAppear(perform: {
                     viewModel.isLoading = false
                     viewModel.authorId = authorId
@@ -382,113 +353,8 @@ struct ChannelView: View {
                         
                     }
                 }
-                .fullScreenCover(isPresented: $viewModel.isZoomableImageViewPresented) {
-                    if let avatar = viewModel.avatarImage {
-                        ZoomableImageView(image: avatar)
-                    }
-                }
                 .toolbar {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 20)
-                            .frame(width: UIScreen.main.bounds.width, height: 170)
-                            .foregroundStyle(Color(uiColor: .secondarySystemBackground))
-                            .padding(.bottom, 40)
-                            .shadow(radius: 10)
-                        
-                        VStack(spacing: -30) {
-                            HStack {
-                                if let avatar = viewModel.avatarImage {
-                                    Image(uiImage: avatar)
-                                        .resizable()
-                                        .scaledToFill()
-                                        .frame(width: 50, height: 50)
-                                        .clipShape(Circle())
-                                        .overlay {
-                                            Circle()
-                                                .stroke(
-                                                    Color(.label),
-                                                    lineWidth: 0.1
-                                                )
-                                        }
-                                        .onTapGesture {
-                                            viewModel.isZoomableImageViewPresented = true
-                                        }
-                                }
-                                
-                                HStack(spacing: 0) {
-                                    Text(authorName)
-                                        .font(.system(size: 27))
-                                        .fontWeight(.light)
-                                        .lineLimit(1)
-                                    
-                                    if isCheckmark {
-                                        Image(systemName: "checkmark.seal.fill")
-                                            .foregroundStyle(Color.blue)
-                                            .font(.footnote)
-                                            .padding(.top, 1)
-                                    }
-                                }
-                                
-                                if viewModel.isLoading {
-                                    LoadingIndicator(animation: .circleRunner, color: Color(uiColor: .label), size: .small, speed: .fast)
-                                }
-                                
-                                Spacer()
-                                
-                                ShareLink(item: URL(string: "https://readbox-links.online/authors/?index=\(authorId)")!) {
-                                    Image(systemName: "arrowshape.turn.up.right")
-                                }
-                                
-                                Button {
-                                    dismiss()
-                                } label: {
-                                    Image(systemName: "xmark")
-                                }
-                            }
-                            
-                            if viewModel.isLoading {
-                                HStack {
-                                    Text("100 000 \(NSLocalizedString("subscribersCountLabel", comment: ""))")
-                                    .font(.callout)
-                                    .foregroundStyle(Color.gray)
-                                    .redacted(reason: .placeholder)
-                                    .shimmering()
-                                        
-                                    Text("•")
-                                        .font(.title)
-                                        .foregroundStyle(Color.gray)
-                                    
-                                    Text("100 \(NSLocalizedString("publicationsCountLabel", comment: ""))")
-                                    .font(.callout)
-                                    .foregroundStyle(Color.gray)
-                                    .redacted(reason: .placeholder)
-                                    .shimmering()
-                                    
-                                }
-                                .frame(width: UIScreen.main.bounds.width - 32, alignment: .leading)
-                                .offset(y: -50)
-                            } else {
-                                HStack {
-                                    Text("\(viewModel.subscribersCount) \(NSLocalizedString("subscribersCountLabel", comment: ""))")
-                                    .font(.callout)
-                                    .foregroundStyle(Color.gray)
-                                        
-                                    Text("•")
-                                        .font(.title)
-                                        .foregroundStyle(Color.gray)
-                                    
-                                    Text("\(viewModel.postsCount) \(NSLocalizedString("publicationsCountLabel", comment: ""))")
-                                    .font(.callout)
-                                    .foregroundStyle(Color.gray)
-                                    
-                                }
-                                .frame(width: UIScreen.main.bounds.width - 32, alignment: .leading)
-                                .offset(y: -50)
-                            }
-                            
-                        }
-                        .padding(.horizontal, 16)
-                    }
+                    
                 }
                 
                 if let isSubscribed = viewModel.isSubscribed {
@@ -550,8 +416,123 @@ struct ChannelView: View {
                         }
                     }
                 }
+                
+                VStack {
+                    headerView
+                    
+                    Spacer()
+                }.ignoresSafeArea()
 
             }
+        }
+    }
+}
+
+private extension ChannelView {
+    var headerView: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 20)
+                .frame(width: UIScreen.main.bounds.width, height: 135)
+                .foregroundStyle(Color(uiColor: .secondarySystemBackground))
+                .shadow(radius: 10)
+            
+            VStack(spacing: -5) {
+                HStack {
+                    if let avatar = viewModel.avatarImage {
+                        Image(uiImage: avatar)
+                            .resizable()
+                            .scaledToFill()
+                            .frame(width: 50, height: 50)
+                            .clipShape(Circle())
+                            .overlay {
+                                Circle()
+                                    .stroke(
+                                        Color(.label),
+                                        lineWidth: 0.1
+                                    )
+                            }
+                            .onTapGesture {
+                                viewModel.isZoomableImageViewPresented = true
+                                viewModel.zoomableImage = avatar
+                            }
+                    }
+                    
+                    HStack(spacing: 0) {
+                        Text(authorName)
+                            .font(.system(size: 27))
+                            .fontWeight(.light)
+                            .lineLimit(1)
+                        
+                        if isCheckmark {
+                            Image(systemName: "checkmark.seal.fill")
+                                .foregroundStyle(Color.blue)
+                                .font(.footnote)
+                                .padding(.top, 1)
+                        }
+                    }
+                    
+                    if viewModel.isLoading {
+                        LoadingIndicator(animation: .circleRunner, color: Color(uiColor: .label), size: .small, speed: .fast)
+                    }
+                    
+                    Spacer()
+                    
+                    ShareLink(item: URL(string: "https://readbox-links.online/authors/?index=\(authorId)")!) {
+                        Image(systemName: "arrowshape.turn.up.right")
+                            .font(.system(size: 22))
+                    }
+                    .padding(.trailing, )
+                    
+                    Button {
+                        dismiss()
+                    } label: {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 22))
+                    }
+                }
+                .frame(height: 50)
+                
+                if viewModel.isLoading {
+                    HStack {
+                        Text("100 000 \(NSLocalizedString("subscribersCountLabel", comment: ""))")
+                        .font(.callout)
+                        .foregroundStyle(Color.gray)
+                        .redacted(reason: .placeholder)
+                        .shimmering()
+                            
+                        Text("•")
+                            .font(.title)
+                            .foregroundStyle(Color.gray)
+                        
+                        Text("100 \(NSLocalizedString("publicationsCountLabel", comment: ""))")
+                        .font(.callout)
+                        .foregroundStyle(Color.gray)
+                        .redacted(reason: .placeholder)
+                        .shimmering()
+                        
+                    }
+                    .frame(width: UIScreen.main.bounds.width - 32, alignment: .leading)
+                } else {
+                    HStack {
+                        Text("\(viewModel.subscribersCount) \(NSLocalizedString("subscribersCountLabel", comment: ""))")
+                        .font(.callout)
+                        .foregroundStyle(Color.gray)
+                            
+                        Text("•")
+                            .font(.title)
+                            .foregroundStyle(Color.gray)
+                        
+                        Text("\(viewModel.postsCount) \(NSLocalizedString("publicationsCountLabel", comment: ""))")
+                        .font(.callout)
+                        .foregroundStyle(Color.gray)
+                        
+                    }
+                    .frame(width: UIScreen.main.bounds.width - 32, alignment: .leading)
+                }
+                
+            }
+            .padding(.top, 45)
+            .padding(.horizontal, 16)
         }
     }
 }

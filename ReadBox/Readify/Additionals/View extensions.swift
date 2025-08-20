@@ -122,24 +122,6 @@ extension View {
                     }
                 }
             }
-            .onChange(of: viewModel.isReadViewPresented) {
-                if !viewModel.isReadViewPresented {
-                    viewModel.postToView = nil
-                }
-            }
-            .onChange(of: viewModel.postToView) {
-                if viewModel.postToView != nil {
-                    viewModel.id = viewModel.postToView?.id ?? ""
-                    viewModel.title = viewModel.postToView?.title ?? ""
-                    viewModel.text = viewModel.postToRead?.text ?? ""
-                    viewModel.dateCreated = viewModel.postToRead?.dateCreated ?? Date()
-                    viewModel.likesCount = viewModel.postToView?.likesCount ?? 0
-                    viewModel.authorId = viewModel.postToView?.authorId ?? ""
-
-                    viewModel.isReadViewPresented = true
-                }
-            }
-            
     }
 }
 
@@ -205,24 +187,7 @@ extension View {
                     }
                     
                 }
-            }
-            .onChange(of: viewModel.postToView) {
-                if viewModel.postToView != nil {
-                    viewModel.id = viewModel.postToView?.id ?? ""
-                    viewModel.title = viewModel.postToView?.title ?? ""
-                    viewModel.text = viewModel.postToRead?.text ?? ""
-                    viewModel.dateCreated = viewModel.postToRead?.dateCreated ?? Date()
-                    viewModel.likesCount = viewModel.postToView?.likesCount ?? 0
-                    viewModel.authorId = viewModel.postToView?.authorId ?? ""
-
-                    viewModel.isReadViewPresented = true
-                }
-            }
-            .onChange(of: viewModel.isReadViewPresented) {
-                if !viewModel.isReadViewPresented {
-                    viewModel.postToView = nil
-                }
-            }
+            }            
             .onChange(of: isWelcomeViewPresented) {
                 if !isWelcomeViewPresented {
                     viewModel.isNeedToReload = true

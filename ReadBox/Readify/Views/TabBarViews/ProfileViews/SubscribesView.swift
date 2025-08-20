@@ -122,34 +122,7 @@ struct SubscribesView: View {
                         .animation(.bouncy)
                         .dragToDismiss(true)
                         .autohideIn(5)
-                }
-                .onChange(of: viewModel.postToView) {
-                    if let _ = viewModel.postToRead,
-                       let _ = viewModel.postToView {
-                        viewModel.isReadViewPresented = true
-                    }
-                }
-                .fullScreenCover(isPresented: $viewModel.isReadViewPresented) {
-                    let postToView = viewModel.postToView
-                    let postToRead = viewModel.postToRead
-                    
-                    let authorName = viewModel.channels.first { $0.authorId == postToView?.authorId }?.authorName
-                    let isCheckmark = viewModel.channels.first { $0.authorId == postToView?.authorId }?.isCheckmark
-                    
-                    ReadView(
-                        id: postToView?.id ?? "",
-                        title: postToView?.title ?? "",
-                        text: postToRead?.text ?? "",
-                        dateCreated: postToRead?.dateCreated ?? Date(),
-                        likesCount: postToView?.likesCount ?? 0,
-                        authorId: postToView?.authorId ?? "",
-                        authorName: authorName ?? NSLocalizedString("notFoundLabel", comment: ""),
-                        isCheckmark: isCheckmark ?? false,
-                        isArchive: postToView?.isArchive ?? false,
-                        user: $user,
-                        isChannelViewPresented: $viewModel.isChannelViewPresented
-                    )
-                }
+                }               
                 .fullScreenCover(isPresented: $viewModel.isChannelViewPresented) {
                     let channel = viewModel.selectedChannel
                     
@@ -157,9 +130,7 @@ struct SubscribesView: View {
                         user: $user,
                         authorId: channel?.authorId ?? "",
                         authorName: channel?.authorName ?? NSLocalizedString("notFoundLabel", comment: ""),
-                        isCheckmark: channel?.isCheckmark ?? false,
-                        postToView: $viewModel.postToView,
-                        postToRead: $viewModel.postToRead
+                        isCheckmark: channel?.isCheckmark ?? false
                     )
                 }
             }

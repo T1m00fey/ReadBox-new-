@@ -250,9 +250,7 @@ struct FeedView: View {
                         user: $viewModel.user,
                         authorId: viewModel.authorId,
                         authorName: viewModel.authorsNames[viewModel.authorId] ?? NSLocalizedString("notFoundLabel", comment: ""),
-                        isCheckmark: viewModel.authorsCheckmarks[viewModel.authorId] ?? false,
-                        postToView: $viewModel.postToView,
-                        postToRead: $viewModel.postToRead
+                        isCheckmark: viewModel.authorsCheckmarks[viewModel.authorId] ?? false                        
                     )
                 })
                 .fullScreenCover(isPresented: $viewModel.isZoomableImageViewPresented, content: {

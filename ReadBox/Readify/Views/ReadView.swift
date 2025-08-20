@@ -52,8 +52,6 @@ struct ReadView: View {
     
     @Environment(\.dismiss) var dismiss
     
-    @State private var pos: String?
-    
     var body: some View {
         NavigationStack {
             ZStack {
@@ -279,7 +277,7 @@ struct ReadView: View {
                         if text.isEmpty {
                             Text(title)
                                 .fontDesign(.rounded)
-                                .font(.system(size: 24))
+                                .font(.system(size: 20))
                                 .frame(width: UIScreen.main.bounds.width - 32, alignment: .leading)
                                 .padding(.bottom, 50)
                         } else {
@@ -435,7 +433,6 @@ struct ReadView: View {
                 
             }
         }
-        .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden()
     }
 }

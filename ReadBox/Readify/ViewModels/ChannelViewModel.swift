@@ -32,6 +32,8 @@ final class ChannelViewModel: ObservableObject {
     @Published var authorId = ""
     @Published var isZoomableImageViewPresented = false
     @Published var zoomableImage: UIImage? = nil
+    @Published var postToView: PrePost? = nil
+    @Published var postToRead: PostToRead? = nil
     
     func getAvatar() {
         DispatchQueue.main.async {

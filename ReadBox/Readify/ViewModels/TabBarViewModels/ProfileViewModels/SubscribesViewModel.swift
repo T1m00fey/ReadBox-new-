@@ -25,9 +25,6 @@ final class SubscribesViewModel: ObservableObject {
     @Published var errorText = ""
     @Published var isErrorPopupPresented = false
     
-    @Published var postToView: PrePost? = nil
-    @Published var postToRead: PostToRead? = nil
-    
     @Published var selectedChannel: Channel? = nil
     
     func getChannels(_ authorIds: [String]) async throws {

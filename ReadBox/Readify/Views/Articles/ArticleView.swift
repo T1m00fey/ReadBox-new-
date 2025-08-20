@@ -16,7 +16,6 @@ struct ArticleView: View {
     let isCheckmark: Bool
     let isArchive: Bool
     let isShortPost: Bool
-    let isChannelView: Bool
     
     @Binding var user: DBUser?
     @Binding var isZoomableViewPresented: Bool
@@ -38,7 +37,6 @@ struct ArticleView: View {
         isCheckmark: Bool,
         isArchive: Bool,
         isShortPost: Bool,
-        isChannelView: Bool = false,
         user: Binding<DBUser?>,
         isZoomableViewPresented: Binding<Bool>,
         zoomableImage: Binding<UIImage?>
@@ -50,7 +48,6 @@ struct ArticleView: View {
         self.isCheckmark = isCheckmark
         self.isArchive = isArchive
         self.isShortPost = isShortPost
-        self.isChannelView = isChannelView
         self._user = user
         self._isZoomableViewPresented = isZoomableViewPresented
         self._zoomableImage = zoomableImage
@@ -139,29 +136,29 @@ struct ArticleView: View {
     var body: some View {
         
         VStack {
-            if !isChannelView {
-                HStack {
-                    if let avatarImage {
-                        Image(uiImage: avatarImage)
-                            .resizable()
-                            .scaledToFill()
-                            .frame(width: 40, height: 40)
-                            .clipShape(Circle())
-                            .overlay(
-                                Circle()
-                                    .stroke(
-                                        Color(.label),
-                                        lineWidth: 0.1
-                                    )
-                            )
-                            .onTapGesture {
-                                withAnimation {
-                                    zoomableImage = avatarImage
-                                    isZoomableViewPresented = true
-                                }
+            HStack {
+                if let avatarImage {
+                    Image(uiImage: avatarImage)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: 40, height: 40)
+                        .clipShape(Circle())
+                        .overlay(
+                            Circle()
+                                .stroke(
+                                    Color(.label),
+                                    lineWidth: 0.1
+                                )
+                        )
+                        .onTapGesture {
+                            withAnimation {
+                                zoomableImage = avatarImage
+                                isZoomableViewPresented = true
                             }
-                    }
-                    
+                        }
+                }
+                
+                HStack(spacing: 5) {
                     HStack(spacing: 0) {
                         Text(authorName)
                             .font(.system(size: 21))
@@ -174,14 +171,23 @@ struct ArticleView: View {
                                 .font(.footnote)
                                 .padding(.top, 1)
                         }
-                        
-                        Spacer()
+                    }
+                    
+                    Spacer()
+                    
+                    if !isShortPost {
+                        Text(NSLocalizedString("articleLabel", comment: ""))
+                            .font(.system(size: 12))
+                            .foregroundStyle(Color(.systemGray5))
+                            .padding(.all, 5)
+                            .background(Color(.systemGray3))
+                            .clipShape(RoundedRectangle(cornerRadius: 5))
                     }
                 }
-                .frame(width: UIScreen.main.bounds.width - 42, height: 40, alignment: .leading)
-                .padding(.top, 7)
-                .padding(.vertical, 5)
             }
+            .frame(width: UIScreen.main.bounds.width - 42, height: 40, alignment: .leading)
+            .padding(.top, 7)
+            .padding(.vertical, 5)
             
             if let image = image {
                 Image(uiImage: image)
@@ -190,7 +196,6 @@ struct ArticleView: View {
                     .frame(width: UIScreen.main.bounds.width - 25)
                     .clipShape(RoundedRectangle(cornerRadius: 20))
                     .padding(.bottom, 10)
-                    .padding(.top, isChannelView ? 20 : 0)
                     .onTapGesture {
                         withAnimation {
                             zoomableImage = image
@@ -201,7 +206,6 @@ struct ArticleView: View {
                 TappableVideoPreview(url: videoURL, cornerRadius: 20, width: UIScreen.main.bounds.width - 10)
                     .frame(width: UIScreen.main.bounds.width - 30)
                     .padding(.bottom, 10)
-                    .padding(.top, isChannelView ? 20 : 0)
             }
             
             ZStack {
