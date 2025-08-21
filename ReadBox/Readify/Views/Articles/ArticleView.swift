@@ -203,8 +203,8 @@ struct ArticleView: View {
                         }
                     }
             } else if let videoURL {
-                TappableVideoPreview(url: videoURL, cornerRadius: 20, width: UIScreen.main.bounds.width - 10)
-                    .frame(width: UIScreen.main.bounds.width - 30)
+                TappableVideoPreview(url: videoURL, cornerRadius: 20, width: UIScreen.main.bounds.width - 25)
+                    .frame(width: UIScreen.main.bounds.width - 25)
                     .padding(.bottom, 10)
             }
             

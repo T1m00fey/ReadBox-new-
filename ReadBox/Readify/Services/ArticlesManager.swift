@@ -71,12 +71,19 @@ final class ArticlesManager {
         try await articleDocument(id: id).getDocument(as: AuthorId.self).authorId ?? ""
     }
     
-    func updatePost(id: String, title: String, text: String, isArchive: Bool) async throws {
+    func updatePost(
+        id: String,
+        title: String,
+        text: String,
+        isArchive: Bool,
+        uploadingLanguage: String
+    ) async throws {
         let data: [String: Any] = [
             "title": title,
             "text": text,
             "is_archive": isArchive,
-            "is_short_post": text.isEmpty
+            "is_short_post": text.isEmpty,
+            "original_language": uploadingLanguage
         ]
         
         try await articlesCollection.document(id).updateData(data)

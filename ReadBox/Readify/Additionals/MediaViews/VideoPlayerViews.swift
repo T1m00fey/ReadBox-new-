@@ -271,6 +271,8 @@ struct TappableVideoPreview: View {
     @State private var resumeAfterFullscreenTime: CMTime? = nil
     @State private var hasInitialized = false
     @State private var videoSize: CGSize? = nil
+    
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         let calculatedHeight: CGFloat? = {
@@ -316,6 +318,18 @@ struct TappableVideoPreview: View {
             }
             .onDisappear {
                 playerHolder.player.pause()
+            }
+            .onScreenVisibility(threshold: 0.25) { isVisible in
+                if !isVisible {
+                    playerHolder.player.pause()
+                } else {
+                    playerHolder.player.play()
+                }
+            }
+            .onChange(of: scenePhase) {
+                if scenePhase != .active {
+                    playerHolder.player.pause()
+                }
             }
 
             Rectangle()

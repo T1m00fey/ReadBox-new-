@@ -139,7 +139,7 @@ struct ReadView: View {
                                     viewModel.isImageFullscreenPresented = true
                                 }
                         } else if let videoURL = viewModel.videoURL {
-                            TappableVideoPreview(url: videoURL, cornerRadius: 10, width: UIScreen.main.bounds.width - 20)
+                            TappableVideoPreview(url: videoURL, cornerRadius: 20, width: UIScreen.main.bounds.width - 20)
                                 .frame(width: UIScreen.main.bounds.width - 20)
                         }
                     

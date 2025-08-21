@@ -300,7 +300,8 @@ struct TextCreateView: View {
                                     isArchive: isArchive,
                                     mediaURLs: mediaURLs,
                                     isVideoCover: isVideoCover,
-                                    videoURL: videoURL
+                                    videoURL: videoURL,
+                                    uploadingLanguage: uploadingLanguage
                                 )
                                 
                                 if isArchived != isArchive {

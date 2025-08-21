@@ -102,6 +102,8 @@ struct CreatedPostsView: View {
                             title: viewModel.title,
                             authorId: viewModel.user?.userId ?? "",
                             isArchived: viewModel.isArchivePresented,
+                            cover: viewModel.image,
+                            isVideoCover: viewModel.isVideoCover,
                             posts: $viewModel.posts,
                             archivedPosts: $viewModel.archivePosts,
                             postsCount: $viewModel.postsCount

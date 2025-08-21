@@ -436,7 +436,8 @@ final class TextCreateViewModel: ObservableObject {
         isArchive: Bool,
         mediaURLs: [URL],
         isVideoCover: Bool,
-        videoURL: URL?
+        videoURL: URL?,
+        uploadingLanguage: String
     ) async throws {
         let text = text
             .replacingOccurrences(of: "readbox-links.online", with: "firebasestorage.googleapis.com")
@@ -446,7 +447,8 @@ final class TextCreateViewModel: ObservableObject {
             id: id,
             title: title,
             text: text,
-            isArchive: isArchive
+            isArchive: isArchive,
+            uploadingLanguage: uploadingLanguage
         )
 
         if image == UIImage(), videoURL == nil {

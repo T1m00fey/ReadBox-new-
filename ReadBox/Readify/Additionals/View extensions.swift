@@ -266,27 +266,6 @@ extension View {
                     }
                 }
             }
-//            .onChange(of: viewModel.articlesIndexes) {
-//                if viewModel.articlesIndexes != [] {
-//                    withAnimation {
-//                        viewModel.isLoadingShowing = true
-//                    }
-//                    
-//                    Task {
-//                        viewModel.isLoading = true
-//                        
-//                        do {
-//                            viewModel.postsNeedToLoad = viewModel.articlesIndexes
-//                            try await viewModel.getPosts()
-//                        } catch {
-//                            withAnimation {
-//                                viewModel.errorText = error.localizedDescription
-//                                viewModel.isErrorPopupPresented = true
-//                            }
-//                        }
-//                    }
-//                }
-//            }
             .onChange(of: isWelcomeViewPresented) {
                 if !isWelcomeViewPresented {
                     viewModel.reload()
@@ -302,6 +281,16 @@ extension View {
             }
             .onChange(of: viewModel.isCreateViewPresented) {
                 if !viewModel.isCreateViewPresented {
+                    viewModel.postOption = .nothing
+                    viewModel.id = ""
+                    viewModel.text = ""
+                    viewModel.mediaURLs = []
+                    viewModel.videoURL = nil
+                    viewModel.isVideoCover = false
+                }
+            }
+            .onChange(of: viewModel.isPostCreateViewPresented) {
+                if !viewModel.isPostCreateViewPresented {
                     viewModel.postOption = .nothing
                     viewModel.id = ""
                     viewModel.text = ""
@@ -370,11 +359,50 @@ extension View {
                                     viewModel.isLoadingPopupPresented = false
                                 }
                             } else {
+                                viewModel.isLoadingPopupPresented = true
+                                
                                 if let title = prePost.title {
                                     viewModel.postId = prePost.id
                                     viewModel.title = title
                                     
-                                    viewModel.isPostCreateViewPresented = true
+                                    viewModel.image = StorageManager.shared.getImage(id: viewModel.id)
+                                    
+                                    if viewModel.image == nil {
+                                        Task {
+                                            do {
+                                                let videoRef = Storage.storage().reference().child("images/\(viewModel.id).mp4")
+                                                let url = try await videoRef.downloadURL()
+                                                viewModel.videoURL = url
+
+                                                let asset = AVAsset(url: url)
+                                                let _ = try await asset.loadTracks(withMediaType: .video)
+
+                                                let generator = AVAssetImageGenerator(asset: asset)
+                                                generator.appliesPreferredTrackTransform = true
+                                                let cgImage = try generator.copyCGImage(at: .zero, actualTime: nil)
+                                                let preview = UIImage(cgImage: cgImage)
+
+                                                await MainActor.run {
+                                                    withAnimation {
+                                                        viewModel.image = preview
+                                                        viewModel.isVideoCover = true
+                                                    }
+                                                }
+                                                
+                                                viewModel.isLoadingPopupPresented = false
+                                                viewModel.isPostCreateViewPresented = true
+                                            } catch {
+                                                viewModel.isLoadingPopupPresented = false
+                                                viewModel.isPostCreateViewPresented = true
+                                                print("❌ Видео не найдено или ошибка при генерации превью: \(error)")
+                                            }
+                                        }
+                                    } else {
+                                        viewModel.isLoadingPopupPresented = false
+                                        viewModel.isPostCreateViewPresented = true
+                                    }
+                                } else {
+                                    viewModel.isLoadingPopupPresented = false
                                 }
                             }
                         }

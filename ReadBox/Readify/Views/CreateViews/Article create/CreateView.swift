@@ -103,7 +103,7 @@ struct CreateView: View {
                                             
                                             HStack {
                                                 Text(NSLocalizedString("addPhotoLabel", comment: ""))
-                                                    .font(.title2)
+                                                    .font(.system(size: 24))
                                                     .fontDesign(.rounded)
                                                 
                                                 Image(systemName: "photo")
@@ -145,14 +145,17 @@ struct CreateView: View {
                                                 RoundedRectangle(cornerRadius: 15)
                                                     .frame(width: UIScreen.main.bounds.width - 32, height: 50)
                                                     .foregroundStyle(Color(uiColor: .secondarySystemBackground))
-                                                    .shadow(radius: 2)
+                                                    .shadow(radius: 1)
                                                 
                                                 HStack {
                                                     Text(NSLocalizedString("removePhotoLabel", comment: ""))
-                                                        .font(.title2)
+                                                        .font(.system(size: 24))
                                                         .fontDesign(.rounded)
                                                     
                                                     Image(systemName: "minus.circle")
+                                                        .resizable()
+                                                        .scaledToFit()
+                                                        .frame(width: 20)
                                                 }
                                             }
                                             .onTapGesture(perform: {

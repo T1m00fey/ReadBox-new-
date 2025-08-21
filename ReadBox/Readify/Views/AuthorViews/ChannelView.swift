@@ -369,7 +369,7 @@ struct ChannelView: View {
                             RoundedRectangle(cornerRadius: 20)
                                 .frame(width: UIScreen.main.bounds.width, height: 120)
                                 .foregroundStyle(Color(uiColor: .secondarySystemBackground))
-                                .shadow(radius: 3)
+                                .shadow(radius: 2)
                                 .offset(y: 40)
                             
                             if !viewModel.isLoading {
@@ -390,12 +390,20 @@ struct ChannelView: View {
                                         ? Color(.label)
                                         : Color(uiColor: .systemBackground)
                                     )
-                                    .clipShape(RoundedRectangle(cornerRadius: 15))
-                                    .shadow(radius: 3)
                                     .offset(y: 20)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 15)
+                                            .shadow(radius: 1)
+                                    )
                                     .onTapGesture {
                                         Task {
                                             do {
+                                                if isSubscribed {
+                                                    VibrationsService.shared.lightImpact()
+                                                } else {
+                                                    VibrationsService.shared.successFeedback()
+                                                }
+                                                
                                                 try await viewModel.un_subscribeUser(on: authorId, isNeedToSubscribe: isSubscribed ? false : true)
                                                 
                                                 withAnimation {
