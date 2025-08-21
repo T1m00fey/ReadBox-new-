@@ -78,7 +78,7 @@ struct CreatedPostsView: View {
                             archivePosts: $viewModel.archivePosts
                         )
                     })
-                    .fullScreenCover(isPresented: $viewModel.isReadViewPresented) {
+                    .navigationDestination(isPresented: $viewModel.isReadViewPresented) {
                         ReadView(
                             id: viewModel.id,
                             title: viewModel.title,
@@ -107,7 +107,6 @@ struct CreatedPostsView: View {
                             postsCount: $viewModel.postsCount
                         )
                     })
-                    .makeToolbarForCreatedPostsView(with: viewModel)
                     .trackChangesOnCreatedPostsView(
                         viewModel: viewModel,
                         isWelcomeViewPresented: isWelcomeViewPresented
@@ -354,7 +353,7 @@ struct CreatedPostsView: View {
                         }
                     }
                     .frame(width: UIScreen.main.bounds.width)
-                    .padding(.top, 20)
+                    .padding(.top, 50)
                     .refreshable {
                         viewModel.reload()
                     }
@@ -522,9 +521,193 @@ struct CreatedPostsView: View {
                     }
                     .padding(.horizontal)
                 }
+                
+                VStack {
+                    headerView
+                    
+                    Spacer()
+                }.ignoresSafeArea()
+                
             }
         }
         .navigationBarBackButtonHidden()
+    }
+}
+
+private extension CreatedPostsView {
+    var headerView: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 15)
+                .frame(width: UIScreen.main.bounds.width, height: viewModel.isSettingViewPresented ? 120 : 140)
+                .foregroundStyle(Color(uiColor: .secondarySystemBackground))
+                .shadow(radius: 10)
+            
+            if viewModel.isSettingViewPresented {
+                Text(NSLocalizedString("editingLabel", comment: ""))
+                    .font(.largeTitle)
+                    .fontWeight(.light)
+                    .frame(width: UIScreen.main.bounds.width - 32, alignment: .leading)
+                    .padding(.top, 20)
+            } else {
+                if viewModel.isLoadingShowing {
+                    VStack(spacing: -3) {
+                        HStack {
+                            Circle()
+                                .stroke(
+                                    Color(.label),
+                                    lineWidth: 0.1
+                                )
+                                .frame(width: 50, height: 50)
+                                .shimmering()
+                            
+                            HStack(spacing: 0) {
+                                Text("Hello, World!")
+                                    .font(.system(size: 27))
+                                    .fontWeight(.light)
+                                    .redacted(reason: .placeholder)
+                                    .shimmering()
+                                
+                                Image(systemName: "checkmark.seal.fill")
+                                    .foregroundStyle(Color.blue)
+                                    .font(.footnote)
+                                    .padding(.top, 1)
+                                    .redacted(reason: .placeholder)
+                                
+                                Spacer()
+                                
+                                LoadingIndicator(
+                                    animation: .circleRunner,
+                                    color: Color(uiColor: .label),
+                                    size: .small,
+                                    speed: .fast
+                                )
+                                
+                            }
+                            
+                        }
+                        .frame(width: UIScreen.main.bounds.width - 32, alignment: .leading)
+                        
+                        HStack {
+                            Text("100 000 \(NSLocalizedString("subscribersCountLabel", comment: ""))")
+                            .font(.callout)
+                            .foregroundStyle(Color.gray)
+                            .redacted(reason: .placeholder)
+                            .shimmering()
+                                
+                            Text("•")
+                                .font(.title)
+                                .foregroundStyle(Color.gray)
+                            
+                            Text("100 \(NSLocalizedString("publicationsCountLabel", comment: ""))")
+                            .font(.callout)
+                            .foregroundStyle(Color.gray)
+                            .redacted(reason: .placeholder)
+                            .shimmering()
+                        }
+                        .frame(width: UIScreen.main.bounds.width - 32, alignment: .leading)
+                    }
+                    .padding(.top, 50)
+                } else {
+                    VStack(spacing: -3) {
+                        HStack {
+                            if let avatar = viewModel.avatarImage {
+                                Image(uiImage: avatar)
+                                    .resizable()
+                                    .scaledToFill()
+                                    .frame(width: 50, height: 50)
+                                    .clipShape(Circle())
+                                    .overlay {
+                                        Circle()
+                                            .stroke(
+                                                Color(.label),
+                                                lineWidth: 0.1
+                                            )
+                                    }
+                                    .onTapGesture {
+                                        viewModel.isZoomableImageViewPresented = true
+                                    }
+                            }
+                            
+                            HStack(spacing: 0) {
+                                Text(viewModel.user?.name ?? "")
+                                    .font(.system(size: 27))
+                                    .fontWeight(.light)
+                                    .lineLimit(1)
+                                
+                                if viewModel.user?.isCheckmark ?? false {
+                                    Image(systemName: "checkmark.seal.fill")
+                                        .foregroundStyle(Color.blue)
+                                        .font(.footnote)
+                                        .padding(.top, 1)
+                                }
+                            }
+                            
+                            
+                            Spacer()
+                            
+                            if viewModel.isLoading {
+                                LoadingIndicator(
+                                    animation: .circleRunner,
+                                    color: Color(uiColor: .label),
+                                    size: .small,
+                                    speed: .fast
+                                )
+                            } else {
+                                Button {
+                                    withAnimation {
+                                        viewModel.isSettingViewPresented.toggle()
+                                    }
+                                } label: {
+                                    Image(systemName: "gearshape.fill")
+                                        .foregroundStyle(Color.gray)
+                                        .font(.system(size: 22))
+                                        .fontWeight(.bold)
+                                }
+                                .padding(.trailing, 2)
+                                
+                                if viewModel.archivePosts.count > 0 {
+                                    Button {
+                                        withAnimation {
+                                            viewModel.isArchivePresented.toggle()
+                                        }
+                                    } label: {
+                                        if viewModel.isArchivePresented {
+                                            Image(systemName: "rectangle.on.rectangle")
+                                                .font(.system(size: 22))
+                                                .fontWeight(.bold)
+                                                .foregroundStyle(Color.gray)
+                                        } else {
+                                            Image(systemName: "archivebox")
+                                                .font(.system(size: 22))
+                                                .fontWeight(.bold)
+                                                .foregroundStyle(Color.gray)
+                                        }
+                                    }
+                                }
+                            }
+                            
+                        }
+                        .frame(width: UIScreen.main.bounds.width - 32, alignment: .leading)
+                        
+                        HStack {
+                            Text("\(viewModel.user?.subscribersCount ?? 0) \(NSLocalizedString("subscribersCountLabel", comment: ""))")
+                            .font(.callout)
+                            .foregroundStyle(Color.gray)
+                                
+                            Text("•")
+                                .font(.title)
+                                .foregroundStyle(Color.gray)
+                            
+                            Text("\(viewModel.postsCount) \(NSLocalizedString("publicationsCountLabel", comment: ""))")
+                            .font(.callout)
+                            .foregroundStyle(Color.gray)
+                        }
+                        .frame(width: UIScreen.main.bounds.width - 32, alignment: .leading)
+                    }
+                    .padding(.top, 50)
+                }
+            }
+        }
     }
 }
 

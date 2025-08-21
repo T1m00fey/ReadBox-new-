@@ -435,8 +435,8 @@ struct ChannelView: View {
 private extension ChannelView {
     var headerView: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 20)
-                .frame(width: UIScreen.main.bounds.width, height: 135)
+            RoundedRectangle(cornerRadius: 15)
+                .frame(width: UIScreen.main.bounds.width, height: 140)
                 .foregroundStyle(Color(uiColor: .secondarySystemBackground))
                 .shadow(radius: 10)
             
@@ -494,7 +494,6 @@ private extension ChannelView {
                             .font(.system(size: 22))
                     }
                 }
-                .frame(height: 50)
                 
                 if viewModel.isLoading {
                     HStack {
@@ -535,7 +534,7 @@ private extension ChannelView {
                 }
                 
             }
-            .padding(.top, 45)
+            .padding(.top, 50)
             .padding(.horizontal, 16)
         }
     }

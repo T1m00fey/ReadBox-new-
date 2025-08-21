@@ -209,7 +209,7 @@ struct LikedPostsView: View {
 private extension LikedPostsView {
     var headerView: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 20)
+            RoundedRectangle(cornerRadius: 15)
                 .frame(width: UIScreen.main.bounds.width, height: 120)
                 .foregroundStyle(Color(uiColor: .secondarySystemBackground))
                 .shadow(radius: 10)

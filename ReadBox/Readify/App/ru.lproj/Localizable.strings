@@ -77,7 +77,7 @@
 "publishLabel" = "Опубликовать";
 "previewLabel" = "Предпросмотр";
 "editingLabel" = "Редактирование";
-"articleErrorLabel" = "Статья не найдена. Возможно, она удалена";
+"articleErrorLabel" = "Публикация не найдена. Возможно, она удалена";
 "archiveArticleLabel" = "Автор ограничил доступ к этой публикации";
 "deletePostError" = "Не удалось удалить пост";
 "becomeAuthorLabel" = "Стать автором";

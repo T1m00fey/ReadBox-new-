@@ -286,7 +286,7 @@ struct ProfileView: View {
 //                                .fontDesign(.rounded)
                             
                             ZStack {
-                                RoundedRectangle(cornerRadius: 20)
+                                RoundedRectangle(cornerRadius: 15)
                                     .frame(width: UIScreen.main.bounds.width, height: 130)
                                     .foregroundStyle(Color(uiColor: .secondarySystemBackground))
                                     .padding(.bottom, 40)

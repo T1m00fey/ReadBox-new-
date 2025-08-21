@@ -77,13 +77,12 @@
 "publishLabel" = "Publish";
 "previewLabel" = "Preview";
 "editingLabel" = "Editing";
-"articleErrorLabel" = "The article was not found. It may have been deleted";
+"articleErrorLabel" = "The publication was not found. It may have been deleted";
 "archiveArticleLabel" = "The author has restricted access to this publication";
 "deletePostError" = "Couldn't delete the post";
 "becomeAuthorLabel" = "Become author";
 "addPostToFavoritesLabel" = "It is not possible to add a publication to favorites";
 "addPhotoLabel" = "Add a cover";
-"addDescriptionLabel" = "Add description +";
 "removePhotoLabel" = "Delete the cover";
 "loadingLabel" = "Loading";
 "subscribeLabel" = "Subscribe +";
