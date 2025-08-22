@@ -67,8 +67,10 @@ final class PostCreateViewModel: ObservableObject {
         )
         
         try await uploadCover(for: id)
-        if let image {
-            StorageManager.shared.saveImage(id: id, image: image)
+        if !isVideoCover {
+            if let image {
+                StorageManager.shared.saveImage(id: id, image: image)
+            }
         }
         return id
     }
@@ -89,8 +91,10 @@ final class PostCreateViewModel: ObservableObject {
         
         if didChangeCover {
             try await uploadCover(for: postId)
-            if let image {
-                StorageManager.shared.saveImage(id: postId, image: image)
+            if !isVideoCover {
+                if let image {
+                    StorageManager.shared.saveImage(id: postId, image: image)
+                }
             }
         }
     }

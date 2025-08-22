@@ -271,10 +271,10 @@ struct ArticleView: View {
                                     isExpanded = true
                                 }
                             }
-                            .offset(y: 25)
+                            .offset(y: 20)
                     }
                 }
-                .offset(y: 15)
+                .offset(y: 10)
             }
             
         }

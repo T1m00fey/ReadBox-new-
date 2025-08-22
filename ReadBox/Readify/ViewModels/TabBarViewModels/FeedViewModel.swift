@@ -36,6 +36,7 @@ final class FeedViewModel: ObservableObject {
     @Published var lastDocument: DocumentSnapshot? = nil
     @Published var isZoomableImageViewPresented = false
     @Published var zoomableImage: UIImage? = nil
+    @Published var isUpdatePopupDidPresneted = false
     
     @Published var user: DBUser? = nil
     
@@ -73,8 +74,9 @@ final class FeedViewModel: ObservableObject {
                 
                 if let currentVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String, let relevantVersion {
                     
-                    if relevantVersion.appVersion != currentVersion {
+                    if relevantVersion.appVersion != currentVersion && !isUpdatePopupDidPresneted {
                         isVersionPopupViewPresented = true
+                        isUpdatePopupDidPresneted = true
                         
                         if let isCritical = relevantVersion.isCritical {
                             withAnimation {

@@ -211,9 +211,9 @@ struct PostCreateView: View {
                                 .fontDesign(.rounded)
                                 .frame(
                                     width: UIScreen.main.bounds.width - 32,
-                                    height: 200,
                                     alignment: .topLeading
                                 )
+                                .frame(minHeight: 200)
                                 .padding(.bottom, 15)
                             
                             Text(NSLocalizedString("whatsNewLabel", comment: ""))
