@@ -173,6 +173,13 @@ struct FeedView: View {
                     
                     Task {
                         try? await viewModel.loadUser()
+                        
+                        if let appVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String {
+                            try? await UserManager.shared.set(
+                                appVersion: appVersion,
+                                to: viewModel.user?.userId ?? ""
+                            )
+                        }
                     }
                     
                     viewModel.getViews()

@@ -79,14 +79,7 @@ struct RootView: View {
                     try? await UserManager.shared.set(
                         fcmToken: StorageManager.shared.getFcmToken(),
                         to: user?.userId ?? ""
-                    )
-                    
-                    if let appVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String {                        
-                        try? await UserManager.shared.set(
-                            appVersion: appVersion,
-                            to: user?.userId ?? ""
-                        )
-                    }
+                    )                                    
                     
                     if StorageManager.shared.getLanguage() == "en" && !(user?.subscribes?.contains (
                         "qDWmcGOLPGVAzJth2I8G2cwcp9x1"
