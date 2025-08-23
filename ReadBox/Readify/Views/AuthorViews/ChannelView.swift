@@ -378,12 +378,16 @@ struct ChannelView: View {
                                     ? NSLocalizedString("youSubscribedLabel", comment: "")
                                     : NSLocalizedString("subscribeLabel", comment: "")
                                 )
-                                    .font(.title3)
+                                    .font(.system(size: 20))
                                     .frame(width: UIScreen.main.bounds.width - 10, height: 50, alignment: .center)
                                     .background(
-                                        isSubscribed
-                                        ? Color(.systemBackground)
-                                        : Color(uiColor: .label)
+                                        RoundedRectangle(cornerRadius: 15)
+                                            .foregroundStyle(
+                                                isSubscribed
+                                                ? Color(.systemBackground)
+                                                : Color(uiColor: .label)
+                                            )
+                                            .shadow(radius: 1)
                                     )
                                     .foregroundColor(
                                         isSubscribed
@@ -391,20 +395,16 @@ struct ChannelView: View {
                                         : Color(uiColor: .systemBackground)
                                     )
                                     .offset(y: 20)
-                                    .background(
-                                        RoundedRectangle(cornerRadius: 15)
-                                            .shadow(radius: 1)
-                                    )
                                     .onTapGesture {
                                         Task {
                                             do {
+                                                try await viewModel.un_subscribeUser(on: authorId, isNeedToSubscribe: isSubscribed ? false : true)
+                                                
                                                 if isSubscribed {
                                                     VibrationsService.shared.lightImpact()
                                                 } else {
                                                     VibrationsService.shared.successFeedback()
                                                 }
-                                                
-                                                try await viewModel.un_subscribeUser(on: authorId, isNeedToSubscribe: isSubscribed ? false : true)
                                                 
                                                 withAnimation {
                                                     if isSubscribed {
