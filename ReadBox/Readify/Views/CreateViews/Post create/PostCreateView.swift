@@ -211,38 +211,22 @@ struct PostCreateView: View {
                                 .fontDesign(.rounded)
                                 .frame(
                                     width: UIScreen.main.bounds.width - 32,
+                                    height: 300,
                                     alignment: .topLeading
                                 )
-                                .frame(minHeight: 200)
                                 .padding(.bottom, 15)
                             
                             Text(NSLocalizedString("whatsNewLabel", comment: ""))
                                 .font(.system(size: 20))
                                 .foregroundStyle(Color.gray)
                                 .fontDesign(.rounded)
-                                .frame(width: UIScreen.main.bounds.width - 32, height: 200, alignment: .topLeading)
+                                .frame(width: UIScreen.main.bounds.width - 32, height: 300, alignment: .topLeading)
                                 .padding(.leading, 10)
                                 .opacity(viewModel.text.isEmpty ? 1 : 0)
                         }
                         
                         if let image = viewModel.image {
                             VStack {
-                                ZStack {
-                                    Image(uiImage: image)
-                                        .resizable()
-                                        .scaledToFit()
-                                        .frame(width: UIScreen.main.bounds.width - 32)
-                                        .clipShape(RoundedRectangle(cornerRadius: 20))
-                                    
-                                    if viewModel.isVideoCover {
-                                        Image(systemName: "play.fill")
-                                            .resizable()
-                                            .scaledToFit()
-                                            .frame(width: 50)
-                                            .foregroundStyle(Color(.secondarySystemBackground))
-                                    }
-                                }
-                                
                                 HStack {
                                     Text(NSLocalizedString("removePhotoLabel", comment: ""))
                                         .font(.system(size: 24))
@@ -262,7 +246,6 @@ struct PostCreateView: View {
                                         .shadow(radius: 1)
                                         
                                 )
-                                .padding(.bottom, 30)
                                 .onTapGesture {
                                     withAnimation {
                                         viewModel.image = nil
@@ -270,6 +253,23 @@ struct PostCreateView: View {
                                         viewModel.imageItem = nil
                                     }
                                 }
+                                
+                                ZStack {
+                                    Image(uiImage: image)
+                                        .resizable()
+                                        .scaledToFit()
+                                        .frame(width: UIScreen.main.bounds.width - 32)
+                                        .clipShape(RoundedRectangle(cornerRadius: 20))
+                                    
+                                    if viewModel.isVideoCover {
+                                        Image(systemName: "play.fill")
+                                            .resizable()
+                                            .scaledToFit()
+                                            .frame(width: 50)
+                                            .foregroundStyle(Color(.secondarySystemBackground))
+                                    }
+                                }
+                                .padding(.bottom, 30)
                             }
                         }
                     }
@@ -358,6 +358,8 @@ struct PostCreateView: View {
                     Spacer()
                     
                     HStack {
+                        Spacer()
+                        
                         PhotosPicker(selection: $viewModel.imageItem, matching: .any(of: [.images, .videos])) {
                             Image(systemName: "photo.badge.plus.fill")
                                 .foregroundStyle(Color(.label))
@@ -420,8 +422,6 @@ struct PostCreateView: View {
                                 }
                             }
                         }
-                        
-                        Spacer()
                     }
                     .frame(width: UIScreen.main.bounds.width - 32)
                 }
