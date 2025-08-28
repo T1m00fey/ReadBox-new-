@@ -69,6 +69,18 @@ final class UserManager {
         )
     }
     
+    func setOriginalLanguage(to userId: String) async throws {
+        let local = Locale.preferredLanguages.first?.components(separatedBy: "-").first == "ru"
+        ? "ru"
+        : "en"
+        
+        let data: [String: Any] = [
+            "original_language": local
+        ]
+        
+        try await userDocument(userId: userId)?.updateData(data)
+    }
+    
     func getAuthorName(id: String) async throws -> String? {
         if id != "" {
             return try await userDocument(userId: id)?.getDocument(as: AuthorName.self).name

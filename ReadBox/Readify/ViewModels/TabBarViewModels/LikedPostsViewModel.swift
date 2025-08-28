@@ -125,7 +125,8 @@ final class LikedPostsViewModel: ObservableObject {
                                 viewsCount: 0,
                                 likesCount: likesCount,
                                 isArchive: isArchive,
-                                isShortPost: false
+                                isShortPost: false,
+                                mediaCount: 0
                             )
                         )
                     }
@@ -147,7 +148,8 @@ final class LikedPostsViewModel: ObservableObject {
                             authorId: nil,
                             viewsCount: nil,
                             likesCount: nil,
-                            isShortPost: false
+                            isShortPost: false,
+                            mediaCount: 0
                         )
                     )
                 }

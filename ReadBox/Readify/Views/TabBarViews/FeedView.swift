@@ -69,6 +69,7 @@ struct FeedView: View {
                                     isCheckmark: true,
                                     isArchive: false,
                                     isShortPost: false,
+                                    mediaCount: 0,
                                     user: .constant(nil),
                                     isZoomableViewPresented: .constant(false),
                                     zoomableImage: .constant(nil)
@@ -87,6 +88,7 @@ struct FeedView: View {
                                     isCheckmark: viewModel.authorsCheckmarks[post.authorId ?? ""] ?? false,
                                     isArchive: post.isArchive ?? true,
                                     isShortPost: post.isShortPost ?? false,
+                                    mediaCount: post.mediaCount ?? 1,
                                     user: $viewModel.user,
                                     isZoomableViewPresented: $viewModel.isZoomableImageViewPresented,
                                     zoomableImage: $viewModel.zoomableImage

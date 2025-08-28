@@ -8,6 +8,22 @@
 import SwiftUI
 import Firebase
 
+struct MediaKind {
+    let videoURL: URL?
+    let image: UIImage?
+    let videoPreview: UIImage?
+    
+    init(
+        videoURL: URL? = nil,
+        image: UIImage? = nil,
+        videoPreview: UIImage? = nil
+    ) {
+        self.videoURL = videoURL
+        self.image = image
+        self.videoPreview = videoPreview
+    }
+}
+
 struct AuthorName: Codable {
     let name: String?
     
@@ -61,6 +77,7 @@ struct DBUser: Codable, Equatable {
     let postsCount: Int?
     let fcmToken: String?
     let appVersion: String?
+    let originalLanguage: String?
     
     init(auth: AuthDataResultModel) {
         self.userId = auth.uid
@@ -75,6 +92,7 @@ struct DBUser: Codable, Equatable {
         self.postsCount = 0
         self.fcmToken = ""
         self.appVersion = ""
+        self.originalLanguage = ""
     }
     
     init(
@@ -90,7 +108,8 @@ struct DBUser: Codable, Equatable {
         authorDescription: String? = nil,
         postsCount: Int? = nil,
         fcmToken: String? = nil,
-        appVersion: String? = nil
+        appVersion: String? = nil,
+        originalLanguage: String? = nil
     ) {
         self.userId = userId
         self.name = name
@@ -104,6 +123,7 @@ struct DBUser: Codable, Equatable {
         self.postsCount = postsCount
         self.fcmToken = fcmToken
         self.appVersion = appVersion
+        self.originalLanguage = originalLanguage
     }
     
     enum CodingKeys: String, CodingKey {
@@ -119,6 +139,7 @@ struct DBUser: Codable, Equatable {
         case postsCount = "posts_count"
         case fcmToken = "fcm_token"
         case appVersion = "app_version"
+        case originalLanguage = "original_language"
     }
 }
 
@@ -136,6 +157,7 @@ struct PrePost: Identifiable, Codable, Equatable, Hashable {
     let likesCount: Int?
     var isArchive: Bool?
     var isShortPost: Bool?
+    let mediaCount: Int?
     
     init?(document: DocumentSnapshot) {
         let data = document.data()
@@ -158,6 +180,7 @@ struct PrePost: Identifiable, Codable, Equatable, Hashable {
         self.likesCount = likesCount
         self.isArchive = isArchive
         self.isShortPost = data?["is_short_post"] as? Bool
+        self.mediaCount = data?["media_count"] as? Int
     }
     
     init(
@@ -167,7 +190,8 @@ struct PrePost: Identifiable, Codable, Equatable, Hashable {
         viewsCount: Int?,
         likesCount: Int?,
         isArchive: Bool? = nil,
-        isShortPost: Bool?
+        isShortPost: Bool?,
+        mediaCount: Int?
     ) {
         self.id = id
         self.title = title
@@ -176,6 +200,7 @@ struct PrePost: Identifiable, Codable, Equatable, Hashable {
         self.likesCount = likesCount
         self.isArchive = isArchive
         self.isShortPost = isShortPost
+        self.mediaCount = mediaCount
     }
     
     enum CodingKeys: String, CodingKey {
@@ -186,6 +211,7 @@ struct PrePost: Identifiable, Codable, Equatable, Hashable {
         case viewsCount = "views_count"
         case isArchive = "is_archive"
         case isShortPost = "is_short_post"
+        case mediaCount = "media_count"
     }
 }
 

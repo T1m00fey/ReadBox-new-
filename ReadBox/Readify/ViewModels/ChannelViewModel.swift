@@ -40,14 +40,20 @@ final class ChannelViewModel: ObservableObject {
         DispatchQueue.main.async {
             let storage = Storage.storage()
             let storageRef = storage.reference()
-            let islandRef = storageRef.child("avatars/\(self.authorId).jpg")
             
-            islandRef.getData(maxSize: 1 * 5012 * 5012) { data, error in
-                if let error = error {
-                    print(error.localizedDescription)
-                } else {
-                    withAnimation {
-                        self.avatarImage = UIImage(data: data!)
+            if let image = StorageManager.shared.getImage(id: self.authorId) {
+                withAnimation {
+                    self.avatarImage = image
+                }
+            } else {
+                let islandRef = storageRef.child("avatars/\(self.authorId).jpg")
+                
+                islandRef.getData(maxSize: 1 * 5012 * 5012) { data, error in
+                    if let data, let image = UIImage(data: data) {
+                        withAnimation {
+                            self.avatarImage = image
+                        }
+                        StorageManager.shared.saveImage(id: self.authorId, image: image)
                     }
                 }
             }

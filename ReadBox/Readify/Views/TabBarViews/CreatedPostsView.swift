@@ -71,8 +71,7 @@ struct CreatedPostsView: View {
                             text: viewModel.text,
                             isEditing: viewModel.isEditing,
                             mediaURLs: viewModel.mediaURLs,
-                            isVideo: viewModel.isVideoCover,
-                            videoURL: viewModel.videoURL,
+                            media: viewModel.mediaKind,
                             postsCount: $viewModel.postsCount,
                             posts: $viewModel.posts,
                             archivePosts: $viewModel.archivePosts
@@ -102,8 +101,7 @@ struct CreatedPostsView: View {
                             title: viewModel.title,
                             authorId: viewModel.user?.userId ?? "",
                             isArchived: viewModel.isArchivePresented,
-                            cover: viewModel.image,
-                            isVideoCover: viewModel.isVideoCover,
+                            media: viewModel.mediaKind,
                             posts: $viewModel.posts,
                             archivedPosts: $viewModel.archivePosts,
                             postsCount: $viewModel.postsCount

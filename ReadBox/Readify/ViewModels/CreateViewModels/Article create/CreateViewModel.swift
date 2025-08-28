@@ -14,11 +14,10 @@ final class CreateViewModel: ObservableObject {
     @Published var titleText = NSLocalizedString("titlePlaceholder", comment: "")
     @Published var isTitleTESelected = false
     
-    @Published var image: UIImage? = nil
     @Published var imageItem: PhotosPickerItem? = nil
     
-    @Published var videoURL: URL? = nil
-    @Published var isVideoCover = false
+    @Published var media: [MediaKind] = []
+    @Published var oldMediaCount = 0
     
     @Published var isErrorPopupPresented = false
     

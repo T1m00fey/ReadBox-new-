@@ -32,8 +32,9 @@ struct LikedPostsView: View {
                                     authorId: "",
                                     authorName: "ReadBox Author",
                                     isCheckmark: true,
-                                    isArchive: false,
+                                    isArchive: true,
                                     isShortPost: false,
+                                    mediaCount: 0,
                                     user: .constant(nil),
                                     isZoomableViewPresented: .constant(false),
                                     zoomableImage: .constant(nil)
@@ -74,6 +75,7 @@ struct LikedPostsView: View {
                                     isCheckmark: viewModel.authorsCheckmarks[article.authorId ?? ""] ?? false,
                                     isArchive: article.isArchive ?? false,
                                     isShortPost: article.isShortPost ?? false,
+                                    mediaCount: article.mediaCount ?? 1,
                                     user: $viewModel.user,
                                     isZoomableViewPresented: $viewModel.isZoomableViewPresented,
                                     zoomableImage: $viewModel.zoomableImage

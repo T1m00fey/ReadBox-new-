@@ -12,7 +12,7 @@ import Shimmer
 import FirebaseStorage
 import AVFoundation
 
-// MARK: for FeedView
+//// MARK: for FeedView
 extension View {
     @MainActor func makePopupsForFeedView(
         viewModel: FeedViewModel,
@@ -81,6 +81,7 @@ extension View {
                 if viewModel.topArticles.count == 5 {
                     withAnimation {
                         viewModel.articles = []
+                        viewModel.lastDocument = nil
                         viewModel.isLoadingShowing = true
                     }
                     
@@ -92,12 +93,12 @@ extension View {
                             
                             return
                         } catch {
-                            //                                withAnimation {
-                            //                                    viewModel.errorText = error.localizedDescription
-                            //                                }
+//                                                            withAnimation {
+//                                                                viewModel.errorText = error.localizedDescription
+//                                                            }
                         }
                         
-                        //                            viewModel.isErrorPopupPresented = true
+//                                                    viewModel.isErrorPopupPresented = true
                     }
                 }
             }
@@ -281,22 +282,12 @@ extension View {
             }
             .onChange(of: viewModel.isCreateViewPresented) {
                 if !viewModel.isCreateViewPresented {
-                    viewModel.postOption = .nothing
-                    viewModel.id = ""
-                    viewModel.text = ""
-                    viewModel.mediaURLs = []
-                    viewModel.videoURL = nil
-                    viewModel.isVideoCover = false
+                    viewModel.clearData()
                 }
             }
             .onChange(of: viewModel.isPostCreateViewPresented) {
                 if !viewModel.isPostCreateViewPresented {
-                    viewModel.postOption = .nothing
-                    viewModel.id = ""
-                    viewModel.text = ""
-                    viewModel.mediaURLs = []
-                    viewModel.videoURL = nil
-                    viewModel.isVideoCover = false
+                    viewModel.clearData()
                 }
             }
             .onChange(of: viewModel.id) {
@@ -315,48 +306,29 @@ extension View {
                             if isShortPost == false {
                                 viewModel.isLoadingPopupPresented = true
                                 
-                                Task {
-                                    do {
-                                        try await viewModel.getPostToRead(id: viewModel.id)
-                                        
-                                        viewModel.title = prePost.title ?? NSLocalizedString("notFoundLabel", comment: "")
-                                        viewModel.image = StorageManager.shared.getImage(id: viewModel.id)
-                                        viewModel.isEditing = true
-                                        
-                                        if viewModel.image == nil {
-                                            do {
-                                                let videoRef = Storage.storage().reference().child("images/\(viewModel.id).mp4")
-                                                let url = try await videoRef.downloadURL()
-                                                viewModel.videoURL = url
-
-                                                let asset = AVAsset(url: url)
-                                                let _ = try await asset.loadTracks(withMediaType: .video)
-
-                                                let generator = AVAssetImageGenerator(asset: asset)
-                                                generator.appliesPreferredTrackTransform = true
-                                                let cgImage = try generator.copyCGImage(at: .zero, actualTime: nil)
-                                                let preview = UIImage(cgImage: cgImage)
-
-                                                await MainActor.run {
-                                                    withAnimation {
-                                                        viewModel.image = preview
-                                                        viewModel.isVideoCover = true
-                                                    }
-                                                }
-                                            } catch {
-                                                print("❌ Видео не найдено или ошибка при генерации превью: \(error)")
-                                            }
-                                        }
-                                        
-                                        viewModel.isCreateViewPresented = true
-                                    } catch {
-                                        withAnimation {
-                                            viewModel.errorText = error.localizedDescription
-                                            viewModel.isErrorPopupPresented = true
+                                if let title = prePost.title {
+                                    viewModel.title = title
+                                    viewModel.isEditing = true
+                                    
+                                    Task {
+                                        do {
+                                            try await viewModel.getPostToRead(id: viewModel.id)
+                                            try await viewModel.getMedia(
+                                                mediaCount: prePost.mediaCount ?? 1,
+                                                postId: prePost.id
+                                            )
+                                            
+                                            viewModel.isLoadingPopupPresented = false
+                                            viewModel.isCreateViewPresented = true
+                                        } catch {
+                                            viewModel.isCreateViewPresented = false
+                                            viewModel.isLoadingPopupPresented = false
+                                            viewModel.clearData()
                                         }
                                     }
-                                    
+                                } else {
                                     viewModel.isLoadingPopupPresented = false
+                                    viewModel.clearData()
                                 }
                             } else {
                                 viewModel.isLoadingPopupPresented = true
@@ -365,44 +337,23 @@ extension View {
                                     viewModel.postId = prePost.id
                                     viewModel.title = title
                                     
-                                    viewModel.image = StorageManager.shared.getImage(id: viewModel.id)
-                                    
-                                    if viewModel.image == nil {
-                                        Task {
-                                            do {
-                                                let videoRef = Storage.storage().reference().child("images/\(viewModel.id).mp4")
-                                                let url = try await videoRef.downloadURL()
-                                                viewModel.videoURL = url
-
-                                                let asset = AVAsset(url: url)
-                                                let _ = try await asset.loadTracks(withMediaType: .video)
-
-                                                let generator = AVAssetImageGenerator(asset: asset)
-                                                generator.appliesPreferredTrackTransform = true
-                                                let cgImage = try generator.copyCGImage(at: .zero, actualTime: nil)
-                                                let preview = UIImage(cgImage: cgImage)
-
-                                                await MainActor.run {
-                                                    withAnimation {
-                                                        viewModel.image = preview
-                                                        viewModel.isVideoCover = true
-                                                    }
-                                                }
-                                                
-                                                viewModel.isLoadingPopupPresented = false
-                                                viewModel.isPostCreateViewPresented = true
-                                            } catch {
-                                                viewModel.isLoadingPopupPresented = false
-                                                viewModel.isPostCreateViewPresented = true
-                                                print("❌ Видео не найдено или ошибка при генерации превью: \(error)")
-                                            }
+                                    Task {
+                                        do {
+                                            try await viewModel.getMedia(
+                                                mediaCount: prePost.mediaCount ?? 1,
+                                                postId: prePost.id
+                                            )
+                                            
+                                            viewModel.isLoadingPopupPresented = false
+                                            viewModel.isPostCreateViewPresented = true
+                                        } catch {
+                                            viewModel.isLoadingPopupPresented = false
+                                            viewModel.clearData()
                                         }
-                                    } else {
-                                        viewModel.isLoadingPopupPresented = false
-                                        viewModel.isPostCreateViewPresented = true
                                     }
                                 } else {
                                     viewModel.isLoadingPopupPresented = false
+                                    viewModel.clearData()
                                 }
                             }
                         }
@@ -475,9 +426,17 @@ extension View {
                     .frame(width: UIScreen.main.bounds.width - 72, alignment: .leading)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 16)
-                    .foregroundStyle(Color.white)
-                    .background(Color(.secondarySystemBackground))
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                    .foregroundStyle(Color(.label))
+                    .background(
+                        RoundedRectangle(cornerRadius: 10)
+                            .foregroundStyle(Color(.systemBackground))
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10)
+                            .stroke(
+                                Color.green, lineWidth: 1
+                            )
+                    )
                     .padding(.top, 20)
             } customize: {
                 $0

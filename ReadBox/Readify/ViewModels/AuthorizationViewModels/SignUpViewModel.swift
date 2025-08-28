@@ -47,7 +47,8 @@ final class SignUpViewModel: ObservableObject {
             isCheckmark: false,
             createdPosts: [],
             subscribersCount: 0,
-            subscribes: []
+            subscribes: [],
+            authorDescription: ""            
         )
         
         try await UserManager.shared.createNewUser(user: user)

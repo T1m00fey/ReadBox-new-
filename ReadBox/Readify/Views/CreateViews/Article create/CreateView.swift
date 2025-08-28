@@ -18,8 +18,7 @@ struct CreateView: View {
     let text: String
     let isEditing: Bool
     let mediaURLs: [URL]
-    let isVideo: Bool
-    let videoURL: URL?
+    let media: [MediaKind]
     
     @Binding var postsCount: Int
     @Binding var posts: [PrePost]
@@ -81,147 +80,137 @@ struct CreateView: View {
                         }
                             
                         if !viewModel.isTitleTESelected {
-                            PhotosPicker(selection: $viewModel.imageItem, matching: .any(of: [.videos, .images])) {
-                                    if viewModel.image == nil {
-//                                        Image(systemName: "plus.circle")
-//                                            .scaleEffect(3)
-//                                            .foregroundStyle(Color.gray)
-//                                            .frame(width: UIScreen.main.bounds.width - 32, height: 200)
-//                                            .clipShape(RoundedRectangle(cornerRadius: 10))
-//                                            .overlay (
-//                                                RoundedRectangle(cornerRadius: 10)
-//                                                    .stroke(style: StrokeStyle(lineWidth: 4, dash: [15, 10]))
-//                                                    .foregroundStyle(Color.gray)
-//                                            )
-//                                            .padding(.horizontal)
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: 20) {
+                                    ForEach(0..<viewModel.media.count, id: \.self) { i in
+                                        let media = viewModel.media[i]
                                         
-                                        ZStack {
-                                            RoundedRectangle(cornerRadius: 20)
-                                                .frame(width: UIScreen.main.bounds.width - 32, height: 50)
-                                                .foregroundStyle(Color(uiColor: .secondarySystemBackground))
-                                                .shadow(radius: 1)
-                                            
-                                            HStack {
-                                                Text(NSLocalizedString("addPhotoLabel", comment: ""))
-                                                    .font(.system(size: 24))
-                                                    .fontDesign(.rounded)
+                                        if let image = media.image {
+                                            ZStack(alignment: .topTrailing) {
+                                                Image(uiImage: image)
+                                                    .resizable()
+                                                    .scaledToFit()
+                                                    .frame(width: 100)
+                                                    .clipShape(RoundedRectangle(cornerRadius: 20))
                                                 
-                                                Image(systemName: "photo")
+                                                Image(systemName: "xmark")
+                                                    .resizable()
+                                                    .scaledToFit()
+                                                    .frame(width: 12)
+                                                    .padding(.all, 8)
+                                                    .foregroundStyle(Color(.label))
+                                                    .background(Color(.secondarySystemBackground))
+                                                    .clipShape(Circle())
+                                                    .offset(x: 10, y: -10)
+                                                    .onTapGesture {
+                                                        viewModel.media.remove(at: i)
+                                                    }
                                             }
-                                        }
-                                        .padding(.top, 30)
-                                        
-                                        
-                                    } else {
-                                            
-                                        VStack {
-                                            if viewModel.isVideoCover {
+                                        } else if let _ = media.videoURL, let videoPreview = media.videoPreview {
+                                            ZStack(alignment: .topTrailing) {
                                                 ZStack {
-                                                    Image(uiImage: viewModel.image ?? UIImage())
+                                                    Image(uiImage: videoPreview)
                                                         .resizable()
                                                         .scaledToFit()
-                                                        .frame(width: UIScreen.main.bounds.width - 32)
+                                                        .frame(width: 100)
                                                         .clipShape(RoundedRectangle(cornerRadius: 20))
-                                                        .padding(.horizontal)
-                                                        .padding(.top, 20)
                                                     
                                                     Image(systemName: "play.fill")
                                                         .resizable()
                                                         .scaledToFit()
-                                                        .frame(width: 50)
+                                                        .frame(width: 30)
                                                         .foregroundStyle(Color(.secondarySystemBackground))
                                                 }
-                                            } else {
-                                                Image(uiImage: viewModel.image ?? UIImage())
+                                                
+                                                Image(systemName: "xmark")
                                                     .resizable()
                                                     .scaledToFit()
-                                                    .frame(width: UIScreen.main.bounds.width - 32)
-                                                    .clipShape(RoundedRectangle(cornerRadius: 20))
-                                                    .padding(.horizontal)
-                                                    .padding(.top, 20)
+                                                    .frame(width: 12)
+                                                    .padding(.all, 8)
+                                                    .foregroundStyle(Color(.label))
+                                                    .background(Color(.secondarySystemBackground))
+                                                    .clipShape(Circle())
+                                                    .offset(x: 10, y: -10)
+                                                    .onTapGesture {
+                                                        viewModel.media.remove(at: i)
+                                                    }
                                             }
-                                            
-                                            ZStack {
-                                                RoundedRectangle(cornerRadius: 15)
-                                                    .frame(width: UIScreen.main.bounds.width - 32, height: 50)
-                                                    .foregroundStyle(Color(uiColor: .secondarySystemBackground))
-                                                    .shadow(radius: 1)
-                                                
-                                                HStack {
-                                                    Text(NSLocalizedString("removePhotoLabel", comment: ""))
-                                                        .font(.system(size: 24))
-                                                        .fontDesign(.rounded)
-                                                    
-                                                    Image(systemName: "minus.circle")
-                                                        .resizable()
-                                                        .scaledToFit()
-                                                        .frame(width: 20)
-                                                }
-                                            }
-                                            .onTapGesture(perform: {
-                                                withAnimation {
-                                                    viewModel.image = nil
-                                                }
-                                            })
-                                            .padding(.top, 10)
-                                            
                                         }
-                                        
                                     }
                                 }
-//                                .padding(.top, 30)
-                            .onChange(of: viewModel.imageItem) {
-                                Task {
-                                    guard let item = viewModel.imageItem else { return }
-
-                                    // Загружаем Data
-                                    guard let data = try? await item.loadTransferable(type: Data.self) else {
-                                        print("⚠️ Невозможно загрузить данные из файла")
-                                        return
-                                    }
-
-                                    // Пробуем как изображение
-                                    if let image = UIImage(data: data) {
-                                        print("🖼 Обложка — изображение")
-                                        withAnimation {
-                                            viewModel.image = image
-                                            viewModel.videoURL = nil
-                                            viewModel.isVideoCover = false
-                                        }
-                                        return
-                                    }
-
-                                    // Иначе — это видео
-                                    print("🎞 Обложка — видео (по Data)")
-                                    let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".mp4")
-                                    try? data.write(to: tempURL)
-
-                                    // Генерируем превью
-                                    let asset = AVAsset(url: tempURL)
-                                    let duration = try await asset.load(.duration)
-                                    let secondsDuration = CMTimeGetSeconds(duration)
+                            }
+                            .frame(width: UIScreen.main.bounds.width - 32)
+                            .scrollClipDisabled()
+                            
+                            PhotosPicker(selection: $viewModel.imageItem, matching: .any(of: [.videos, .images])) {
+                                ZStack {
+                                    RoundedRectangle(cornerRadius: 20)
+                                        .frame(width: UIScreen.main.bounds.width - 32, height: 50)
+                                        .foregroundStyle(Color(uiColor: .secondarySystemBackground))
+                                        .shadow(radius: 1)
                                     
-                                    guard secondsDuration <= 60 else {
-                                        withAnimation {
-                                            viewModel.errorText = NSLocalizedString("durationCoverErrorLabel", comment: "")
-                                            viewModel.isErrorPopupPresented = true
-                                            viewModel.image = nil
-                                            viewModel.videoURL = nil
-                                            viewModel.isVideoCover = false
+                                    HStack {
+                                        Text(NSLocalizedString("addPhotoLabel", comment: ""))
+                                            .font(.system(size: 24))
+                                            .fontDesign(.rounded)
+                                        
+                                        Image(systemName: "photo")
+                                    }
+                                }
+                                .padding(.top, 30)
+                            }
+                            .onChange(of: viewModel.imageItem) {
+                                if viewModel.media.count < 10 {
+                                    Task {
+                                        guard let item = viewModel.imageItem else { return }
+
+                                        // Загружаем Data
+                                        guard let data = try? await item.loadTransferable(type: Data.self) else {
+                                            print("⚠️ Невозможно загрузить данные из файла")
+                                            return
+                                        }
+
+                                        // Пробуем как изображение
+                                        if let image = UIImage(data: data) {
+                                            print("🖼 Обложка — изображение")
+                                            withAnimation {
+                                                viewModel.media.append(MediaKind(image: image))
+                                            }
+                                            return
+                                        }
+
+                                        // Иначе — это видео
+                                        print("🎞 Обложка — видео (по Data)")
+                                        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".mp4")
+                                        try? data.write(to: tempURL)
+
+                                        // Генерируем превью
+                                        let asset = AVAsset(url: tempURL)
+                                        let duration = try await asset.load(.duration)
+                                        let secondsDuration = CMTimeGetSeconds(duration)
+                                        
+                                        guard secondsDuration <= 120 else {
+                                            withAnimation {
+                                                viewModel.errorText = NSLocalizedString("durationCoverErrorLabel", comment: "")
+                                                viewModel.isErrorPopupPresented = true
+                                            }
+                                            
+                                            return
                                         }
                                         
-                                        return
-                                    }
-                                    
-                                    let generator = AVAssetImageGenerator(asset: asset)
-                                    generator.appliesPreferredTrackTransform = true
-                                    let cgImage = try? generator.copyCGImage(at: .zero, actualTime: nil)
-                                    let thumbnail = cgImage.map { UIImage(cgImage: $0) }
+                                        let generator = AVAssetImageGenerator(asset: asset)
+                                        generator.appliesPreferredTrackTransform = true
+                                        let cgImage = try? generator.copyCGImage(at: .zero, actualTime: nil)
+                                        let thumbnail = cgImage.map { UIImage(cgImage: $0) }
 
+                                        withAnimation {
+                                            viewModel.media.append(MediaKind(videoURL: tempURL, videoPreview: thumbnail))
+                                        }
+                                    }
+                                } else {
                                     withAnimation {
-                                        viewModel.image = thumbnail
-                                        viewModel.videoURL = tempURL
-                                        viewModel.isVideoCover = true
+                                        viewModel.errorText = NSLocalizedString("maxAttachFilesCountLabel", comment: "")
+                                        viewModel.isErrorPopupPresented = true
                                     }
                                 }
                             }
@@ -254,17 +243,16 @@ struct CreateView: View {
                     TextCreateView(
                         id: id,
                         title: $viewModel.titleText,
-                        image: viewModel.image ?? UIImage(),
                         text: text,
                         isEditing: isEditing,
                         uploadingLanguage: viewModel.languageSelection,
+                        media: viewModel.media,
+                        oldMediaCount: viewModel.oldMediaCount,
                         mediaURLs: $viewModel.mediaURLs,
                         postsCount: $postsCount,
                         posts: $posts,
                         archivePosts: $archivePosts,
-                        isCreateViewPresented: $isCreateViewPresented,
-                        isVideoCover: viewModel.isVideoCover,
-                        videoURL: viewModel.videoURL
+                        isCreateViewPresented: $isCreateViewPresented
                     )
                 }
                 
@@ -302,16 +290,10 @@ struct CreateView: View {
                 
                 if viewModel.isFirstAppear {
                     viewModel.titleText = title
-                    viewModel.image = image
-                }
-                
-                if viewModel.isFirstAppear {
+                    viewModel.media = media
+                    viewModel.oldMediaCount = media.count
                     viewModel.mediaURLs = mediaURLs
-                }
-                
-                viewModel.isVideoCover = isVideo
-                viewModel.videoURL = videoURL
-                
+                }                                                
             }
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {

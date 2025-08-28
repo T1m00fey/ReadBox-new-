@@ -98,6 +98,15 @@ struct YourApp: App {
                             db.clearPersistence()
                             
                             StorageManager.shared.deleteText()
+                            
+                            let userDefaults = UserDefaults.standard
+                            let storageDictionary = userDefaults.dictionaryRepresentation()
+                            
+                            for key in storageDictionary.keys {
+                                if key != "language" || key != "views" {
+                                    userDefaults.removeObject(forKey: key)
+                                }
+                            }
                         }
                     }
             }

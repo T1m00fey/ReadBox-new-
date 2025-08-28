@@ -17,19 +17,17 @@ import TipKit
 struct TextCreateView: View {
     let id: String
     @Binding var title: String
-    let image: UIImage
     let text: String
     let isEditing: Bool
     let uploadingLanguage: String
+    let media: [MediaKind]
+    let oldMediaCount: Int
     @Binding var mediaURLs: [URL]
     @Binding var postsCount: Int
     @Binding var posts: [PrePost]
     @Binding var archivePosts: [PrePost]
     
     @Binding var isCreateViewPresented: Bool
-    
-    let isVideoCover: Bool
-    let videoURL: URL?
     
     @StateObject private var viewModel = TextCreateViewModel()
     @FocusState var isTEFocused: Bool
@@ -45,44 +43,7 @@ struct TextCreateView: View {
                 ScrollView(showsIndicators: false) {
                     
                     VStack {
-                        
-//                        ZStack {
-//
-//                            MarkdownTextView(text: $viewModel.text, selectedRange: $viewModel.selectedRange)
-//                                .padding(.vertical, 16)
-//                                .padding(.horizontal, 16)
-//                                .frame(width: UIScreen.main.bounds.width - 32, height: viewModel.heightOfTE, alignment: .topLeading)
-//                                .clipShape(RoundedRectangle(cornerRadius: 20))
-//                                .overlay(
-//                                    RoundedRectangle(cornerRadius: 20)
-//                                        .stroke(Color(uiColor: .label), lineWidth: 1)
-//                                )
-//                                .focused($isTEFocused)
-//
-//                            Markdown(
-//                                viewModel.text
-//                                    .replacingOccurrences(of: "\n", with: "  \n").normalizeEmptyLines()
-//                                    .replacingOccurrences(of: "readbox-links.online", with: "firebasestorage.googleapis.com")
-//                                    .replacingOccurrences(of: "cont", with: "contentImages")
-//                            )
-//                            .markdownImageProvider(
-//                                WebImageProvider(onImageTap: { url in
-//                                    viewModel.selectedImageURL = url
-//                                    viewModel.isImageFullScreenPresented = true
-//                                })
-//                            )
-//                            .padding(.vertical, 18)
-//                            .padding(.horizontal, 16)
-//                            .frame(width: UIScreen.main.bounds.width - 32, height: viewModel.heightOfTE, alignment: .topLeading)
-//                            .clipShape(RoundedRectangle(cornerRadius: 20))
-//                            .overlay(
-//                                RoundedRectangle(cornerRadius: 20)
-//                                    .stroke(Color(uiColor: .label), lineWidth: 1)
-//                            )
-//                        }
-                        
                         if viewModel.isPreviewShowed {
-                            
                             Markdown(
                                 viewModel.text
                                     .replacingOccurrences(of: "\n", with: "  \n").normalizeEmptyLines()
@@ -295,13 +256,12 @@ struct TextCreateView: View {
                                 try await viewModel.updatePost(
                                     id: id,
                                     title: title,
-                                    image: image,
                                     text: viewModel.text,
                                     isArchive: isArchive,
-                                    mediaURLs: mediaURLs,
-                                    isVideoCover: isVideoCover,
-                                    videoURL: videoURL,
-                                    uploadingLanguage: uploadingLanguage
+                                    mediaURLs: mediaURLs,                                  
+                                    uploadingLanguage: uploadingLanguage,
+                                    media: media,
+                                    oldMediaCount: oldMediaCount
                                 )
                                 
                                 if isArchived != isArchive {
@@ -323,7 +283,8 @@ struct TextCreateView: View {
                                                 viewsCount: viewsCount,
                                                 likesCount: likesCount,
                                                 isArchive: false,
-                                                isShortPost: viewModel.text.isEmpty
+                                                isShortPost: viewModel.text.isEmpty,
+                                                mediaCount: media.count
                                             ),
                                             at: 0
                                         )
@@ -341,7 +302,8 @@ struct TextCreateView: View {
                                                 viewsCount: viewsCount,
                                                 likesCount: likesCount,
                                                 isArchive: false,
-                                                isShortPost: viewModel.text.isEmpty
+                                                isShortPost: viewModel.text.isEmpty,
+                                                mediaCount: media.count
                                             ),
                                             at: 0
                                         )
@@ -359,7 +321,8 @@ struct TextCreateView: View {
                                                 viewsCount: viewsCount,
                                                 likesCount: likesCount,
                                                 isArchive: true,
-                                                isShortPost: viewModel.text.isEmpty
+                                                isShortPost: viewModel.text.isEmpty,
+                                                mediaCount: media.count
                                             )
                                         }
                                     } else {
@@ -374,7 +337,8 @@ struct TextCreateView: View {
                                                 viewsCount: viewsCount,
                                                 likesCount: likesCount,
                                                 isArchive: false,
-                                                isShortPost: viewModel.text.isEmpty
+                                                isShortPost: viewModel.text.isEmpty,
+                                                mediaCount: media.count
                                             )
                                         }
                                     }
@@ -404,12 +368,10 @@ struct TextCreateView: View {
                                 let newId = try await viewModel.addNewPost(
                                     title: title,
                                     text: viewModel.text,
-                                    image: image,
                                     isArchive: isArchive,
                                     uploadingLanguage: uploadingLanguage,
                                     mediaURLs: mediaURLs,
-                                    isVideoCover: isVideoCover,
-                                    videoURL: videoURL
+                                    media: media
                                 )
                                 
                                 if !isArchive {
@@ -425,7 +387,8 @@ struct TextCreateView: View {
                                             viewsCount: 0,
                                             likesCount: 0,
                                             isArchive: false,
-                                            isShortPost: viewModel.text.isEmpty
+                                            isShortPost: viewModel.text.isEmpty,
+                                            mediaCount: media.count
                                         ),
                                         at: 0
                                     )
@@ -438,13 +401,13 @@ struct TextCreateView: View {
                                             viewsCount: 0,
                                             likesCount: 0,
                                             isArchive: true,
-                                            isShortPost: viewModel.text.isEmpty
+                                            isShortPost: viewModel.text.isEmpty,
+                                            mediaCount: media.count
                                         ),
                                         at: 0
                                     )
                                 }
-                                                                
-                                StorageManager.shared.saveImage(id: id, image: image)
+                                
                                 StorageManager.shared.deleteText()
                             } catch {
                                 withAnimation {

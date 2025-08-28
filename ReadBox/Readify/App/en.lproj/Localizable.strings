@@ -117,7 +117,8 @@
 "attachingFilesTitleTip" = "Attaching files";
 "attachingFilesMessageTip" = "You can add a photo or video to markdown";
 "uploadingLabel" = "Uploading";
-"durationCoverErrorLabel" = "The video cover should not exceed 1 minute";
+"durationCoverErrorLabel" = "The video cover should not exceed 2 minutes";
 "welcomeLabel" = "Read. Publish. Inspire.";
 "whatsNewLabel" = "What's new?";
 "articleLabel" = "Article";
+"maxAttachFilesCountLabel" = "You can attach a maximum of 10 files to a publication";

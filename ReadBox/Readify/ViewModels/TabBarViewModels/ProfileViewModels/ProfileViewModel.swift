@@ -60,7 +60,7 @@ final class ProfileViewModel: ObservableObject {
         let dictionary = userDefaults.dictionaryRepresentation()
         
         for key in dictionary.keys {
-            if key != "language" && key != "views" {
+            if key != "language" {
                 userDefaults.removeObject(forKey: key)
             }
         }

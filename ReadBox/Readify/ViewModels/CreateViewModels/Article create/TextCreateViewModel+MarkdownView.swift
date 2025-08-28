@@ -395,12 +395,10 @@ final class TextCreateViewModel: ObservableObject {
     func addNewPost(
         title: String,
         text: String,
-        image: UIImage,
         isArchive: Bool,
         uploadingLanguage: String,
         mediaURLs: [URL],
-        isVideoCover: Bool,
-        videoURL: URL?
+        media: [MediaKind]
     ) async throws -> String {
         let text = text
             .replacingOccurrences(of: "readbox-links.online", with: "firebasestorage.googleapis.com")
@@ -410,16 +408,16 @@ final class TextCreateViewModel: ObservableObject {
             title: title,
             text: text,
             isArchive: isArchive,
-            uploadingLanguage: uploadingLanguage
+            uploadingLanguage: uploadingLanguage,
+            mediaCount: media.count
         )
         
-        if isVideoCover, let videoURL {
-            let ref = Storage.storage().reference(withPath: "images/\(id).mp4")
-            let videoData = try Data(contentsOf: videoURL)
-            _ = try await ref.putDataAsync(videoData)
-        } else if image != UIImage() {
-            let ref = Storage.storage().reference(withPath: "images/\(id).jpg")
-            _ = try await ref.putDataAsync(image.jpegData(compressionQuality: 0.9)!)
+        for i in 0..<media.count {
+            try await uploadCover(
+                media: media[i],
+                postId: id,
+                index: i
+            )
         }
         
         let urls = mediaURLs.map { $0.absoluteString }
@@ -431,14 +429,15 @@ final class TextCreateViewModel: ObservableObject {
     func updatePost(
         id: String,
         title: String,
-        image: UIImage,
         text: String,
         isArchive: Bool,
         mediaURLs: [URL],
-        isVideoCover: Bool,
-        videoURL: URL?,
-        uploadingLanguage: String
+        uploadingLanguage: String,
+        media: [MediaKind],
+        oldMediaCount: Int
     ) async throws {
+        await deleteAllCovers(postId: id, mediaCount: oldMediaCount)
+        
         let text = text
             .replacingOccurrences(of: "readbox-links.online", with: "firebasestorage.googleapis.com")
             .replacingOccurrences(of: "cont", with: "contentImages")
@@ -448,27 +447,17 @@ final class TextCreateViewModel: ObservableObject {
             title: title,
             text: text,
             isArchive: isArchive,
-            uploadingLanguage: uploadingLanguage
+            uploadingLanguage: uploadingLanguage,
+            mediaCount: media.count
         )
-
-        if image == UIImage(), videoURL == nil {
-            await deleteCover(for: id, isVideo: true)
-            await deleteCover(for: id, isVideo: false)
-        } else if isVideoCover, let videoURL {
-            let ref = Storage.storage().reference(withPath: "images/\(id).mp4")
-            let data = try Data(contentsOf: videoURL)
-            _ = try await ref.putDataAsync(data)
-            
-            await deleteCover(for: id, isVideo: false)
-        } else if image != UIImage() {
-            let ref = Storage.storage().reference(withPath: "images/\(id).jpg")
-            let data = image.jpegData(compressionQuality: 0.9)!
-            _ = try await ref.putDataAsync(data)
-            
-            await deleteCover(for: id, isVideo: true)
-        }
         
-        StorageManager.shared.deleteImage(id: id)
+        for i in 0..<media.count {
+            try await uploadCover(
+                media: media[i],
+                postId: id,
+                index: i
+            )
+        }
 
         let urls = mediaURLs.map { $0.absoluteString }
         try await ArticlesManager.shared.uploadMedia(URLs: urls, to: id)
@@ -478,15 +467,28 @@ final class TextCreateViewModel: ObservableObject {
         isEditing ? NSLocalizedString("editingLabel", comment: "") : NSLocalizedString("creationLabel", comment: "")
     }
     
-    func deleteCover(for id: String, isVideo: Bool) async {
-        let path = isVideo ? "images/\(id).mp4" : "images/\(id).jpg"
-        let ref = Storage.storage().reference(withPath: path)
-        
-        do {
-            try await ref.delete()
-            print("✅ Удалена обложка: \(path)")
-        } catch {
-            print("❌ Не удалось удалить обложку: \(error.localizedDescription)")
+    private func deleteAllCovers(postId: String, mediaCount: Int) async {
+        for i in 0..<mediaCount {
+            let imageRef = Storage.storage().reference(withPath: "images/\(postId)_\(i).jpg")
+            let videoRef = Storage.storage().reference(withPath: "images/\(postId)_\(i).mp4")
+            
+            try? await imageRef.delete()
+            try? await videoRef.delete()
+            
+            StorageManager.shared.deleteImage(id: "\(postId)_\(i)")
+        }
+    }
+    
+    private func uploadCover(media: MediaKind, postId: String, index: Int) async throws {
+        if let image = media.image {
+            let ref = Storage.storage().reference(withPath: "images/\(postId)_\(index).jpg")
+            _ = try await ref.putDataAsync(image.jpegData(compressionQuality: 0.9)!)
+            
+            StorageManager.shared.saveImage(id: "\(postId)_\(index)", image: image)
+        } else if let videoURL = media.videoURL {
+            let data = try Data(contentsOf: videoURL)
+            let ref = Storage.storage().reference(withPath: "images/\(postId)_\(index).mp4")
+            _ = try await ref.putDataAsync(data)
         }
     }
 }

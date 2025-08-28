@@ -118,7 +118,8 @@
 "attachingFilesTitleTip" = "Прикрепление файлов";
 "attachingFilesMessageTip" = "Вы можете добавить фото или видео в markdown";
 "uploadingLabel" = "Загружаем";
-"durationCoverErrorLabel" = "Видео-обложка не должна превышать 1 минуту";
+"durationCoverErrorLabel" = "Видео-обложка не должна превышать 2 минуты";
 "welcomeLabel" = "Читай. Публикуй. Вдохновляй.";
 "whatsNewLabel" = "Что нового?";
 "articleLabel" = "Статья";
+"maxAttachFilesCountLabel" = "К публикации можно прикерпить максимум 10 файлов";

@@ -16,8 +16,7 @@ struct PostCreateView: View {
     let title: String
     let authorId: String
     let isArchived: Bool
-    let cover: UIImage?
-    let isVideoCover: Bool
+    let media: [MediaKind]
     
     @Binding var posts: [PrePost]
     @Binding var archivedPosts: [PrePost]
@@ -34,8 +33,7 @@ struct PostCreateView: View {
         title: String = "",
         authorId: String,
         isArchived: Bool,
-        cover: UIImage? = nil,
-        isVideoCover: Bool = false,
+        media: [MediaKind],
         posts: Binding<[PrePost]>,
         archivedPosts: Binding<[PrePost]>,
         postsCount: Binding<Int>
@@ -44,8 +42,7 @@ struct PostCreateView: View {
         self.title = title
         self.authorId = authorId
         self.isArchived = isArchived
-        self.cover = cover
-        self.isVideoCover = isVideoCover
+        self.media = media
         self._posts = posts
         self._archivedPosts = archivedPosts
         self._postsCount = postsCount
@@ -64,7 +61,8 @@ struct PostCreateView: View {
                     let id = try await viewModel.uploadPost(
                         title: viewModel.text,
                         isArchive: viewModel.isArchive,
-                        uploadingLanguage: viewModel.selectedLanguage
+                        uploadingLanguage: viewModel.selectedLanguage,
+                        mediaCount: viewModel.media.count
                     )
                     
                     let post = PrePost(
@@ -74,7 +72,8 @@ struct PostCreateView: View {
                         viewsCount: 0,
                         likesCount: 0,
                         isArchive: viewModel.isArchive,
-                        isShortPost: true
+                        isShortPost: true,
+                        mediaCount: viewModel.media.count
                     )
                     
                     withAnimation {
@@ -121,7 +120,8 @@ struct PostCreateView: View {
                         postId: postId,
                         title: viewModel.text,
                         isArchive: viewModel.isArchive,
-                        uploadingLanguage: viewModel.selectedLanguage
+                        uploadingLanguage: viewModel.selectedLanguage,
+                        mediaCount: viewModel.media.count
                     )
                     
                     let viewsCount = try await ArticlesManager.shared.getViews(at: postId)
@@ -134,7 +134,8 @@ struct PostCreateView: View {
                         viewsCount: viewsCount,
                         likesCount: likesCount,
                         isArchive: viewModel.isArchive,
-                        isShortPost: true
+                        isShortPost: true,
+                        mediaCount: viewModel.media.count
                     )
                     
                     var index = 0
@@ -204,6 +205,68 @@ struct PostCreateView: View {
                         }
                         .padding(.top, 25)
                         
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 20) {
+                                ForEach(0..<viewModel.media.count, id: \.self) { i in
+                                    let media = viewModel.media[i]
+                                    
+                                    if let image = media.image {
+                                        ZStack(alignment: .topTrailing) {
+                                            Image(uiImage: image)
+                                                .resizable()
+                                                .scaledToFit()
+                                                .frame(width: 100)
+                                                .clipShape(RoundedRectangle(cornerRadius: 20))
+                                            
+                                            Image(systemName: "xmark")
+                                                .resizable()
+                                                .scaledToFit()
+                                                .frame(width: 12)
+                                                .padding(.all, 8)
+                                                .foregroundStyle(Color(.label))
+                                                .background(Color(.secondarySystemBackground))
+                                                .clipShape(Circle())
+                                                .offset(x: 10, y: -10)
+                                                .onTapGesture {
+                                                    viewModel.media.remove(at: i)
+                                                }
+                                        }
+                                    } else if let _ = media.videoURL, let videoPreview = media.videoPreview {
+                                        ZStack(alignment: .topTrailing) {
+                                            ZStack {
+                                                Image(uiImage: videoPreview)
+                                                    .resizable()
+                                                    .scaledToFit()
+                                                    .frame(width: 100)
+                                                    .clipShape(RoundedRectangle(cornerRadius: 20))
+                                                
+                                                Image(systemName: "play.fill")
+                                                    .resizable()
+                                                    .scaledToFit()
+                                                    .frame(width: 30)
+                                                    .foregroundStyle(Color(.secondarySystemBackground))
+                                            }
+                                            
+                                            Image(systemName: "xmark")
+                                                .resizable()
+                                                .scaledToFit()
+                                                .frame(width: 12)
+                                                .padding(.all, 8)
+                                                .foregroundStyle(Color(.label))
+                                                .background(Color(.secondarySystemBackground))
+                                                .clipShape(Circle())
+                                                .offset(x: 10, y: -10)
+                                                .onTapGesture {
+                                                    viewModel.media.remove(at: i)
+                                                }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        .frame(width: UIScreen.main.bounds.width - 32)
+                        .scrollClipDisabled()
+                        
                         ZStack {
                             TextEditor(text: $viewModel.text)
                                 .focused($isTEFocused)
@@ -211,66 +274,17 @@ struct PostCreateView: View {
                                 .fontDesign(.rounded)
                                 .frame(
                                     width: UIScreen.main.bounds.width - 32,
-                                    height: 300,
                                     alignment: .topLeading
                                 )
-                                .padding(.bottom, 15)
+                                .padding(.bottom, 5)
                             
                             Text(NSLocalizedString("whatsNewLabel", comment: ""))
                                 .font(.system(size: 20))
                                 .foregroundStyle(Color.gray)
                                 .fontDesign(.rounded)
-                                .frame(width: UIScreen.main.bounds.width - 32, height: 300, alignment: .topLeading)
+                                .frame(width: UIScreen.main.bounds.width - 32, alignment: .topLeading)
                                 .padding(.leading, 10)
                                 .opacity(viewModel.text.isEmpty ? 1 : 0)
-                        }
-                        
-                        if let image = viewModel.image {
-                            VStack {
-                                HStack {
-                                    Text(NSLocalizedString("removePhotoLabel", comment: ""))
-                                        .font(.system(size: 24))
-                                        .fontDesign(.rounded)
-                                    
-                                    Image(systemName: "minus.circle")
-                                        .resizable()
-                                        .scaledToFit()
-                                        .frame(width: 20)
-                                }
-                                .padding(.horizontal)
-                                .padding(.vertical, 10)
-                                .frame(width: UIScreen.main.bounds.width - 32)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 15)
-                                        .foregroundStyle(Color(.secondarySystemBackground))
-                                        .shadow(radius: 1)
-                                        
-                                )
-                                .onTapGesture {
-                                    withAnimation {
-                                        viewModel.image = nil
-                                        viewModel.isVideoCover = false
-                                        viewModel.imageItem = nil
-                                    }
-                                }
-                                
-                                ZStack {
-                                    Image(uiImage: image)
-                                        .resizable()
-                                        .scaledToFit()
-                                        .frame(width: UIScreen.main.bounds.width - 32)
-                                        .clipShape(RoundedRectangle(cornerRadius: 20))
-                                    
-                                    if viewModel.isVideoCover {
-                                        Image(systemName: "play.fill")
-                                            .resizable()
-                                            .scaledToFit()
-                                            .frame(width: 50)
-                                            .foregroundStyle(Color(.secondarySystemBackground))
-                                    }
-                                }
-                                .padding(.bottom, 30)
-                            }
                         }
                     }
                     .onAppear {
@@ -280,11 +294,8 @@ struct PostCreateView: View {
                 }
                 .onAppear {
                     viewModel.text = title
-                    if !postId.isEmpty {
-                        withAnimation {
-                            viewModel.setCover(image: cover, isVideo: isVideoCover)
-                        }
-                    }
+                    viewModel.media = media
+                    viewModel.oldMediaCount = media.count
                 }
                 .popup(isPresented: $viewModel.isConfirmationPopupPresented) {
                     ConfirmationView(
@@ -374,51 +385,53 @@ struct PostCreateView: View {
                                 .padding(.bottom, 10)
                         }
                         .onChange(of: viewModel.imageItem) {
-                            Task {
-                                viewModel.didChangeCover = true
-                                guard let item = viewModel.imageItem else { return }
+                            if viewModel.media.count < 10 {
+                                Task {
+                                    viewModel.didChangeCover = true
+                                    guard let item = viewModel.imageItem else { return }
 
-                                guard let data = try? await item.loadTransferable(type: Data.self) else {
-                                    print("⚠️ Невозможно загрузить данные из файла")
-                                    return
-                                }
-
-                                if let image = UIImage(data: data) {
-                                    print("🖼 Обложка — изображение")
-                                    withAnimation {
-                                        viewModel.image = image
-                                        viewModel.isVideoCover = false
+                                    guard let data = try? await item.loadTransferable(type: Data.self) else {
+                                        print("⚠️ Невозможно загрузить данные из файла")
+                                        return
                                     }
-                                    return
-                                }
 
-                                let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".mp4")
-                                try? data.write(to: tempURL)
-                                viewModel.videoURL = tempURL
+                                    if let image = UIImage(data: data) {
+                                        print("🖼 Обложка — изображение")
+                                        withAnimation {
+                                            viewModel.media.append(MediaKind(image: image))
+                                        }
+                                        return
+                                    }
 
-                                let asset = AVAsset(url: tempURL)
-                                let duration = try await asset.load(.duration)
-                                let secondsDuration = CMTimeGetSeconds(duration)
-                                
-                                guard secondsDuration <= 60 else {
-                                    withAnimation {
-                                        viewModel.errorText = NSLocalizedString("durationCoverErrorLabel", comment: "")
-                                        viewModel.isErrorPopupPresented = true
-                                        viewModel.image = nil
-                                        viewModel.isVideoCover = false
+                                    let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".mp4")
+                                    try? data.write(to: tempURL)
+
+                                    let asset = AVAsset(url: tempURL)
+                                    let duration = try await asset.load(.duration)
+                                    let secondsDuration = CMTimeGetSeconds(duration)
+                                    
+                                    guard secondsDuration <= 120 else {
+                                        withAnimation {
+                                            viewModel.errorText = NSLocalizedString("durationCoverErrorLabel", comment: "")
+                                            viewModel.isErrorPopupPresented = true
+                                        }
+                                        
+                                        return
                                     }
                                     
-                                    return
-                                }
-                                
-                                let generator = AVAssetImageGenerator(asset: asset)
-                                generator.appliesPreferredTrackTransform = true
-                                let cgImage = try? generator.copyCGImage(at: .zero, actualTime: nil)
-                                let thumbnail = cgImage.map { UIImage(cgImage: $0) }
+                                    let generator = AVAssetImageGenerator(asset: asset)
+                                    generator.appliesPreferredTrackTransform = true
+                                    let cgImage = try? generator.copyCGImage(at: .zero, actualTime: nil)
+                                    let thumbnail = cgImage.map { UIImage(cgImage: $0) }
 
+                                    withAnimation {
+                                        viewModel.media.append(MediaKind(videoURL: tempURL, videoPreview: thumbnail))
+                                    }
+                                }
+                            } else {
                                 withAnimation {
-                                    viewModel.image = thumbnail
-                                    viewModel.isVideoCover = true
+                                    viewModel.errorText = NSLocalizedString("maxAttachFilesCountLabel", comment: "")
+                                    viewModel.isErrorPopupPresented = true
                                 }
                             }
                         }

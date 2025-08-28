@@ -58,8 +58,9 @@ struct ChannelView: View {
                                     authorId: "",
                                     authorName: "",
                                     isCheckmark: true,
-                                    isArchive: false,
+                                    isArchive: true,
                                     isShortPost: false,
+                                    mediaCount: 0,
                                     user: .constant(nil),
                                     isZoomableViewPresented: .constant(false),
                                     zoomableImage: .constant(nil)
@@ -97,6 +98,7 @@ struct ChannelView: View {
                                     isCheckmark: isCheckmark,
                                     isArchive: false,
                                     isShortPost: post.isShortPost ?? false,
+                                    mediaCount: post.mediaCount ?? 1,
                                     user: $user,
                                     isZoomableViewPresented: $viewModel.isZoomableImageViewPresented,
                                     zoomableImage: $viewModel.zoomableImage
@@ -126,7 +128,8 @@ struct ChannelView: View {
                                                 viewsCount: post.viewsCount,
                                                 likesCount: post.likesCount,
                                                 isArchive: post.isArchive,
-                                                isShortPost: post.isShortPost
+                                                isShortPost: post.isShortPost,
+                                                mediaCount: post.mediaCount
                                             )
                                             
                                             viewModel.postToRead = PostToRead(

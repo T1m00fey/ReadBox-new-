@@ -8,6 +8,7 @@
 import SwiftUI
 import FirebaseStorage
 import Firebase
+import AVFoundation
 
 enum PostOptions {
     case nothing
@@ -69,6 +70,7 @@ final class CreatedPostsViewModel: ObservableObject {
     var dateCreated = Date()
     var isEditing = false
     var postId = ""
+    var mediaKind: [MediaKind] = []
     
     var alertText = ""
     
@@ -76,14 +78,102 @@ final class CreatedPostsViewModel: ObservableObject {
         DispatchQueue.main.async {
             let storage = Storage.storage()
             let storageRef = storage.reference()
-            let islandRef = storageRef.child("avatars/\(self.user?.userId ?? "").jpg")
             
-            islandRef.getData(maxSize: 1 * 5012 * 5012) { data, error in
-                if let error = error {
-                    print(error.localizedDescription)
-                } else {
+            if let userId = self.user?.userId {
+                if let image = StorageManager.shared.getImage(id: userId) {
                     withAnimation {
-                        self.avatarImage = UIImage(data: data!)
+                        self.avatarImage = image
+                    }
+                } else {
+                    let islandRef = storageRef.child("avatars/\(userId).jpg")
+                    
+                    islandRef.getData(maxSize: 1 * 5012 * 5012) { data, error in
+                        if let data, let image = UIImage(data: data) {
+                            withAnimation {
+                                self.avatarImage = image
+                            }
+                            StorageManager.shared.saveImage(id: userId, image: image)
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    func clearData() {
+        postOption = .nothing
+        id = ""
+        text = ""
+        mediaURLs = []
+        mediaKind = []
+    }
+    
+    func getMedia(mediaCount: Int, postId: String) async throws {
+        let storageRef = Storage.storage().reference()
+        
+        for i in 0..<mediaCount {
+            if let image = StorageManager.shared.getImage(id: "\(postId)_\(i)") {
+                mediaKind.append(MediaKind(image: image))
+            } else {
+                let islandRef = storageRef.child("images/\(postId)_\(i).jpg")
+                
+                islandRef.getData(maxSize: 1 * 5012 * 5012) { data, error in
+                    if let data, let image = UIImage(data: data) {
+                        self.mediaKind.append(MediaKind(image: image))
+                        return
+                    }
+                }
+                
+                let videoRef = storageRef.child("images/\(postId)_\(i).mp4")
+                let url = try await videoRef.downloadURL()
+                
+                let asset = AVAsset(url: url)
+                let _ = try? await asset.loadTracks(withMediaType: .video)
+                
+                let generator = AVAssetImageGenerator(asset: asset)
+                generator.appliesPreferredTrackTransform = true
+                let cgImage = try? generator.copyCGImage(at: .zero, actualTime: nil)
+                let thumbnail = cgImage.map { UIImage(cgImage: $0) }
+                
+                self.mediaKind.append(
+                    MediaKind(
+                        videoURL: url,
+                        videoPreview: thumbnail
+                    )
+                )
+            }
+        }
+        
+        if mediaKind.count == 0 {
+            let islandRef = storageRef.child("images/\(postId).jpg")
+            
+            islandRef.getData(maxSize: 1 * 5012 * 5012) { data, eror in
+                if let data, let image = UIImage(data: data) {
+                    self.mediaKind.append(MediaKind(image: image))
+                    return
+                }
+            }
+            
+            Task {
+                do {
+                    let videoRef = storageRef.child("images/\(postId).mp4")
+                    let url = try? await videoRef.downloadURL()
+                    
+                    if let url {
+                        let asset = AVAsset(url: url)
+                        let _ = try? await asset.loadTracks(withMediaType: .video)
+                        
+                        let generator = AVAssetImageGenerator(asset: asset)
+                        generator.appliesPreferredTrackTransform = true
+                        let cgImage = try? generator.copyCGImage(at: .zero, actualTime: nil)
+                        let thumbnail = cgImage.map { UIImage(cgImage: $0) }
+                        
+                        self.mediaKind.append(
+                            MediaKind(
+                                videoURL: url,
+                                videoPreview: thumbnail
+                            )
+                        )
                     }
                 }
             }
@@ -170,10 +260,26 @@ final class CreatedPostsViewModel: ObservableObject {
         }
     }
     
+    private func deleteAllCovers(postId: String, mediaCount: Int) async {
+        for i in 0..<mediaCount {
+            let imageRef = Storage.storage().reference(withPath: "images/\(postId)_\(i).jpg")
+            let videoRef = Storage.storage().reference(withPath: "images/\(postId)_\(i).mp4")
+            
+            try? await imageRef.delete()
+            try? await videoRef.delete()
+            
+            StorageManager.shared.deleteImage(id: "\(postId)_\(i)")
+        }
+    }
+    
     func deletePost(id: String) {
         Task {
             do {
-                if let _ = posts.first(where: { $0.id == id})?.isArchive  {
+                guard let post = isArchivePresented
+                        ? archivePosts.first(where: { $0.id == id })
+                        : posts.first(where: { $0.id == id }) else { return }
+                
+                if let isArchive = post.isArchive, isArchive == false {
                     withAnimation {
                         postsCount -= 1
                     }
@@ -188,13 +294,10 @@ final class CreatedPostsViewModel: ObservableObject {
                 
                 try await ArticlesManager.shared.deletePost(id: id)
                 try await UserManager.shared.deleteCreatedPost(id: id)
-            
-                let storage = Storage.storage()
                 
-                let imageRef = storage.reference().child("images/\(id).jpg")
-                let videoRef = storage.reference().child("images/\(id).mp4")
-                try? await imageRef.delete()
-                try? await videoRef.delete()
+                await deleteAllCovers(postId: id, mediaCount: post.mediaCount ?? 10)
+                
+                let storage = Storage.storage()
                 
                 for url in mediaURLs {
                         if let path = URLComponents(string: url.absoluteString)?

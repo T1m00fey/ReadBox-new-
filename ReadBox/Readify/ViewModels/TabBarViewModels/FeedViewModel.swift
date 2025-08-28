@@ -170,7 +170,8 @@ final class FeedViewModel: ObservableObject {
                                     authorId: "",
                                     viewsCount: 0,
                                     likesCount: 0,
-                                    isShortPost: false
+                                    isShortPost: false,
+                                    mediaCount: 0
                                 )
                             )
                         }
@@ -192,7 +193,8 @@ final class FeedViewModel: ObservableObject {
                                 authorId: "",
                                 viewsCount: 0,
                                 likesCount: 0,
-                                isShortPost: false
+                                isShortPost: false,
+                                mediaCount: 0
                             )
                         )
                         
@@ -207,7 +209,8 @@ final class FeedViewModel: ObservableObject {
                             authorId: "",
                             viewsCount: 0,
                             likesCount: 0,
-                            isShortPost: false
+                            isShortPost: false,
+                            mediaCount: 0
                         )
                     )
                 }

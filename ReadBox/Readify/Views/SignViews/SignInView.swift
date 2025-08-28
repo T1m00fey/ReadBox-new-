@@ -215,9 +215,17 @@ struct SignInView: View {
                     .frame(width: UIScreen.main.bounds.width - 72, alignment: .leading)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 16)
-                    .foregroundStyle(Color.white)
-                    .background(Color(.secondarySystemBackground))
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                    .foregroundStyle(Color(.label))
+                    .background(
+                        RoundedRectangle(cornerRadius: 10)
+                            .foregroundStyle(Color(.systemBackground))
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10)
+                            .stroke(
+                                Color.green, lineWidth: 1
+                            )
+                    )
             } customize: {
                 $0
                     .type(.floater())

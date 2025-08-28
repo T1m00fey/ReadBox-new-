@@ -67,6 +67,28 @@ struct RootView: View {
                         fcmToken: StorageManager.shared.getFcmToken(),
                         to: user?.userId ?? ""
                     )
+                    
+                    try? await UserManager.shared.setOriginalLanguage(to: user?.userId ?? "")
+                    
+                    if StorageManager.shared.getLanguage() == "en" && !(user?.subscribes?.contains (
+                        "qDWmcGOLPGVAzJth2I8G2cwcp9x1"
+                    ) ?? true) {
+                        
+                        try? await UserManager.shared.un_subscribeUser(
+                            on: "qDWmcGOLPGVAzJth2I8G2cwcp9x1",
+                            isNeedToSubscribe: true
+                        )
+                        
+                    } else if StorageManager.shared.getLanguage() == "ru" && !(user?.subscribes?.contains(
+                        "se8Any2drmcQg1sFoLXYXo4ttYt2"
+                    ) ?? true) {
+                        
+                        try? await UserManager.shared.un_subscribeUser(
+                            on: "se8Any2drmcQg1sFoLXYXo4ttYt2",
+                            isNeedToSubscribe: true
+                        )
+                        
+                    }
                 }
             }
         }
@@ -79,31 +101,9 @@ struct RootView: View {
                     try? await UserManager.shared.set(
                         fcmToken: StorageManager.shared.getFcmToken(),
                         to: user?.userId ?? ""
-                    )                                    
+                    )
                     
-                    if StorageManager.shared.getLanguage() == "en" && !(user?.subscribes?.contains (
-                        "qDWmcGOLPGVAzJth2I8G2cwcp9x1"
-                    ) ?? true) {
-                        
-                        try? await UserManager.shared.un_subscribeUser(
-                            on: "qDWmcGOLPGVAzJth2I8G2cwcp9x1",
-                            isNeedToSubscribe: true
-                        )
-                        
-                        user?.subscribes?.append("qDWmcGOLPGVAzJth2I8G2cwcp9x1")
-                        
-                    } else if StorageManager.shared.getLanguage() == "ru" && !(user?.subscribes?.contains(
-                        "se8Any2drmcQg1sFoLXYXo4ttYt2"
-                    ) ?? true) {
-                        
-                        try? await UserManager.shared.un_subscribeUser(
-                            on: "se8Any2drmcQg1sFoLXYXo4ttYt2",
-                            isNeedToSubscribe: true
-                        )
-                        
-                        user?.subscribes?.append("se8Any2drmcQg1sFoLXYXo4ttYt2")
-                        
-                    }
+                    try? await UserManager.shared.setOriginalLanguage(to: user?.userId ?? "")
                 } else {
                     isWelcomeViewPresented = true
                 }
