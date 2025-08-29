@@ -264,18 +264,15 @@ private extension FeedView {
                         .offset(y: -7)
                 }
                 .onTapGesture {
-                    let currentLanguage = StorageManager.shared.getLanguage()
-                    
                     withAnimation {
                         if !viewModel.isLoading {
-                            viewModel.refresh()
-                            
                             StorageManager.shared.setLanguage(
-                                to: currentLanguage == "en"
+                                to: viewModel.primaryLanguage == "en"
                                     ? "ru"
                                     : "en"
                             )
-                            viewModel.primaryLanguage = StorageManager.shared.getLanguage()
+                            
+                            viewModel.refresh()
                         }
                     }
                 }
