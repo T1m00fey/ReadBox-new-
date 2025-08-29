@@ -202,9 +202,7 @@ final class CreatedPostsViewModel: ObservableObject {
         let authDataResult = try AuthenticationManager.shared.getAuthenticatedUser()
         let user = try await UserManager.shared.getUser(userId: authDataResult.uid)
         
-        if postsCount == 0 {
-            postsCount = user?.postsCount ?? 0
-        }
+        postsCount = user?.postsCount ?? 0
         
         self.user = user
     }

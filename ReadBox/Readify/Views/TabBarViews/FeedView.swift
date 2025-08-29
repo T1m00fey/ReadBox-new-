@@ -173,19 +173,15 @@ struct FeedView: View {
                         }
                     }
                     
-                    Task {
-                        try? await viewModel.loadUser()
-                        
-                        if let appVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String {
-                            try? await UserManager.shared.set(
-                                appVersion: appVersion,
-                                to: viewModel.user?.userId ?? ""
-                            )
+                    viewModel.primaryLanguage = StorageManager.shared.getLanguage()
+                    
+                    if viewModel.user == nil {
+                        Task {
+                            try? await viewModel.loadUser()
                         }
                     }
                     
-                    viewModel.getViews()
-                    
+                    viewModel.getViews()                    
                     viewModel.getRelevantVersion()
                 }
                 .navigationDestination(isPresented: $viewModel.isReadViewPresented, destination: {
@@ -261,7 +257,7 @@ private extension FeedView {
                         .fontWeight(.light)
                         .popoverTip(LanguageSwitchTip())
                     
-                    Text(StorageManager.shared.getLanguage() == "ru" ? "RU" : "EN")
+                    Text(viewModel.primaryLanguage.uppercased())
                         .foregroundStyle(Color.gray)
                         .font(.system(size: 14))
                         .fontDesign(.rounded)
@@ -279,6 +275,7 @@ private extension FeedView {
                                     ? "ru"
                                     : "en"
                             )
+                            viewModel.primaryLanguage = StorageManager.shared.getLanguage()
                         }
                     }
                 }

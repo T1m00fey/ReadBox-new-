@@ -79,7 +79,6 @@ struct YourApp: App {
             NavigationView {
                 RootView()
                     .onAppear {
-                        // Пример: установка языка в зависимости от системы
                         DispatchQueue.main.async {
                             StorageManager.shared.setLanguage(
                                 to: Locale.preferredLanguages.first?.components(separatedBy: "-").first == "ru"

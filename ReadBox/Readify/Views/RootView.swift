@@ -68,6 +68,13 @@ struct RootView: View {
                         to: user?.userId ?? ""
                     )
                     
+                    if let appVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String {
+                        try? await UserManager.shared.set(
+                            appVersion: appVersion,
+                            to: user?.userId ?? ""
+                        )
+                    }
+                    
                     try? await UserManager.shared.setOriginalLanguage(to: user?.userId ?? "")
                     
                     if StorageManager.shared.getLanguage() == "en" && !(user?.subscribes?.contains (
@@ -104,6 +111,13 @@ struct RootView: View {
                     )
                     
                     try? await UserManager.shared.setOriginalLanguage(to: user?.userId ?? "")
+                    
+                    if let appVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String {
+                        try? await UserManager.shared.set(
+                            appVersion: appVersion,
+                            to: user?.userId ?? ""
+                        )
+                    }
                 } else {
                     isWelcomeViewPresented = true
                 }

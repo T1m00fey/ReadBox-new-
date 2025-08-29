@@ -40,7 +40,7 @@ final class StorageManager {
     }
     
     func getLanguage() -> String {
-        userDefaults.string(forKey: "language") ?? ""
+        userDefaults.string(forKey: "language") ?? "en"
     }
     
     func getFontSize() -> Int {

@@ -104,8 +104,6 @@ extension View {
             }
             .onChange(of: viewModel.user) {
                 if viewModel.user != nil {
-                    viewModel.primaryLanguage = StorageManager.shared.getLanguage()
-                    
                     Task {
                         do {
                             if viewModel.topArticlesIndexes == [] {
@@ -233,7 +231,7 @@ extension View {
                 }
             }
             .onChange(of: viewModel.user) {
-                if viewModel.user != nil {
+                if viewModel.user != nil {                    
                     withAnimation {
                         viewModel.posts = []
                         viewModel.archivePosts = []
@@ -269,7 +267,7 @@ extension View {
             }
             .onChange(of: isWelcomeViewPresented) {
                 if !isWelcomeViewPresented {
-                    viewModel.reload()
+                    viewModel.isNeedToReload = true
                 }
             }
             .onChange(of: viewModel.isReadViewPresented) {

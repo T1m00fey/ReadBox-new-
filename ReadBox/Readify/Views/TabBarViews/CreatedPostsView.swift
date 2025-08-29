@@ -45,19 +45,21 @@ struct CreatedPostsView: View {
                             return
                         }
                         
-                        Task {
-                            do {
-                                try await viewModel.loadUser()
-                                
-                                withAnimation {
-                                    viewModel.authorNameText = viewModel.user?.name ?? ""
-                                    viewModel.descriptionText = viewModel.user?.authorDescription ?? ""
+                        if viewModel.user == nil {
+                            Task {
+                                do {
+                                    try await viewModel.loadUser()
                                     
-                                    viewModel.getAvatar()
+                                    withAnimation {
+                                        viewModel.authorNameText = viewModel.user?.name ?? ""
+                                        viewModel.descriptionText = viewModel.user?.authorDescription ?? ""
+                                        
+                                        viewModel.getAvatar()
+                                    }
+                                } catch {
+                                    viewModel.isErrorPopupPresented = true
+                                    viewModel.errorText = error.localizedDescription
                                 }
-                            } catch {
-                                viewModel.isErrorPopupPresented = true
-                                viewModel.errorText = error.localizedDescription
                             }
                         }
                     }

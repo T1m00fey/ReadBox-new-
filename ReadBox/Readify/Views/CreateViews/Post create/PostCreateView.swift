@@ -144,6 +144,7 @@ struct PostCreateView: View {
                         if viewModel.isArchive != isArchived {
                             posts.removeAll { $0.id == postId }
                             postsCount -= 1
+                            
                             try await UserManager.shared.updatePostsCount(userId: authorId, postsCount: postsCount)
                             
                             index = posts.firstIndex { $0.id == postId } ?? 0

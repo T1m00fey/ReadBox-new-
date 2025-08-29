@@ -112,21 +112,7 @@ final class FeedViewModel: ObservableObject {
             authorsCheckmarks = [:]
             lastDocument = nil
             user = nil
-        }
-        
-        Task {
-            do {
-                try await getTopIndexes()
-                
-                return
-            } catch {
-                withAnimation {
-                    errorText = error.localizedDescription
-                }
-            }
-            
-            isErrorPopupPresented = true
-        }
+        }                
         
         Task {
             try? await loadUser()
@@ -235,7 +221,7 @@ final class FeedViewModel: ObservableObject {
             var query = db.collection("articles")
                 .whereField("id", notIn: topArticlesIndexes)
                 .whereField("is_archive", isEqualTo: false)
-                .whereField("original_language", isEqualTo: StorageManager.shared.getLanguage())
+                .whereField("original_language", isEqualTo: primaryLanguage)
                 .order(by: "date_created", descending: true)
                 .limit(to: 20)
             
