@@ -61,7 +61,8 @@ final class PostCreateViewModel: ObservableObject {
             text: "",
             isArchive: isArchive,
             uploadingLanguage: uploadingLanguage,
-            mediaCount: mediaCount
+            mediaCount: mediaCount,
+            isShortPost: true
         )
         
         for i in 0..<media.count {

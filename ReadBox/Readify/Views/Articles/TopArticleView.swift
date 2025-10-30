@@ -18,30 +18,38 @@ struct TopArticleView: View {
     
     private func fetchImage() {
         let articleImage = StorageManager.shared.getImage(id: id)
-        let storage = Storage.storage()
-        let storageRef = storage.reference()
         
         if articleImage != nil {
             withAnimation {
                 image = articleImage
             }
         } else {
-            let islandRef = storageRef.child("images/\(id).jpg")
-            
-            islandRef.getData(maxSize: 1 * 5012 * 5012) { data, error in
-                if let data  {
-                    withAnimation {
-                        self.image = UIImage(data: data)
-                        StorageManager.shared.saveImage(id: id, image: image ?? UIImage())
-                    }
-                } else {
-                    let videoRef = storageRef.child("images/\(id).mp4")
-                    videoRef.downloadURL { url, error in
-                        if let url {
-                            DispatchQueue.main.async {
-                                withAnimation {
-                                    self.videoURL = url
-                                }
+            getMedia(byPath: "images/\(id)")
+        }
+        
+        if image == nil && videoURL == nil {
+            getMedia(byPath: "images/\(id)_0")
+        }
+    }
+    
+    private func getMedia(byPath path: String) {
+        let storage = Storage.storage()
+        let storageRef = storage.reference()
+        let islandRef = storageRef.child("\(path).jpg")
+        
+        islandRef.getData(maxSize: 1 * 5012 * 5012) { data, error in
+            if let data  {
+                withAnimation {
+                    self.image = UIImage(data: data)
+                    StorageManager.shared.saveImage(id: id, image: image ?? UIImage())
+                }
+            } else {
+                let videoRef = storageRef.child("\(path).mp4")
+                videoRef.downloadURL { url, error in
+                    if let url {
+                        DispatchQueue.main.async {
+                            withAnimation {
+                                self.videoURL = url
                             }
                         }
                     }
@@ -56,15 +64,20 @@ struct TopArticleView: View {
                 Image(uiImage: image)
                     .resizable()
                     .scaledToFit()
-                    .clipShape(RoundedRectangle(cornerRadius: 30))
+                    .clipShape(RoundedRectangle(cornerRadius: 20))
                     .frame(width: UIScreen.main.bounds.width - 10)
                     .shadow(radius: 2)
             } else if let videoURL {
-                TappableVideoPreview(url: videoURL, cornerRadius: 30, width: UIScreen.main.bounds.width - 10, height: 260)
+                TappableVideoPreview(
+                    url: videoURL,
+                    cornerRadius: 20,
+                    width: UIScreen.main.bounds.width - 10,
+                    height: 260
+                )
                     .frame(width: UIScreen.main.bounds.width - 10)
                     .shadow(radius: 2)
             } else {
-                RoundedRectangle(cornerRadius: 30)
+                RoundedRectangle(cornerRadius: 20)
                     .frame(width: UIScreen.main.bounds.width - 10, height: 250)
                     .foregroundStyle(Color(uiColor: .secondarySystemBackground))
             }

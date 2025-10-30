@@ -15,13 +15,14 @@ final class ReadViewModel: ObservableObject {
     @Published var likesCount = 0
     @Published var fontSize = 0
     @Published var isFontSettingPopupPresented = false
-    @Published var image = UIImage()
+    @Published var images: [MediaKind] = []
     @Published var avatarImage: UIImage? = nil
     @Published var videoURL: URL? = nil
     @Published var isAuthorBlockVisible = false
-    
+    @Published var currentIndex = 0
+    @Published var zoomableImage: UIImage? = nil
+    @Published var isZoomableViewPresented = false    
     @Published var selectedImageURL: URL? = nil
-    @Published var isImageFullscreenPresented = false
     
     let vibrationsService = VibrationsService.shared
     
@@ -59,21 +60,62 @@ final class ReadViewModel: ObservableObject {
         try await ArticlesManager.shared.updateLikes(at: article, likesCount: likesCount)
     }
     
-    func fetchImage(byId id: String) {
+    func fetchImages(_ id: String, _ mediaCount: Int) {
+        let storageRef = Storage.storage().reference()
+        
+        for i in 0..<mediaCount {
+            let cachedImage = StorageManager.shared.getImage(id: "\(id)_\(i)")
+            
+            if let cachedImage {
+                withAnimation {
+                    images.append(MediaKind(image: cachedImage))
+                }
+            } else {
+                let islandRef = storageRef.child("images/\(id)_\(i).jpg")
+                
+                islandRef.getData(maxSize: 1 * 5012 * 5012) { data, error in
+                    if let data, let image = UIImage(data: data) {
+                        withAnimation {
+                            self.images.append(MediaKind(image: image))
+                            StorageManager.shared.saveImage(id: "\(id)_\(i)", image: image)
+                        }
+                    } else {
+                        let videoRef = storageRef.child("images/\(id)_\(i).mp4")
+                        
+                        videoRef.downloadURL { url, error in
+                            if let url {
+                                DispatchQueue.main.async {
+                                    withAnimation {
+                                        self.images.append(MediaKind(videoURL: url))
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        if images.isEmpty {
+            fetchImage(byId: id)
+        }
+    }
+    
+    private func fetchImage(byId id: String) {
         let image = StorageManager.shared.getImage(id: id)
         
         if let image {
             withAnimation {
-                self.image = image
+                images.append(MediaKind(image: image))
             }
         } else {
             let imageRef = Storage.storage().reference().child("images/\(id).jpg")
             
             imageRef.getData(maxSize: 1 * 5012 * 5012) { data, error in
-                if let data {
+                if let data, let image = UIImage(data: data) {
                     withAnimation {
-                        self.image = UIImage(data: data) ?? UIImage()
-                        StorageManager.shared.saveImage(id: id, image: self.image)
+                        self.images.append(MediaKind(image: image))
+                        StorageManager.shared.saveImage(id: id, image: image)
                     }
                 } else {
                     let videoRef = Storage.storage().reference().child("images/\(id).mp4")
@@ -81,7 +123,7 @@ final class ReadViewModel: ObservableObject {
                         if let url {
                             DispatchQueue.main.async {
                                 withAnimation {
-                                    self.videoURL = url
+                                    self.images.append(MediaKind(videoURL: url))
                                 }
                             }
                         } else {

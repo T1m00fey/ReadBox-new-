@@ -90,6 +90,7 @@ struct CreatedPostsView: View {
                             authorName: viewModel.user?.name ??  NSLocalizedString("notFoundLabel", comment: ""),
                             isCheckmark: viewModel.user?.isCheckmark ?? false,
                             isArchive: false,
+                            mediaCount: viewModel.mediaCount,
                             user: $viewModel.user,
                             isChannelViewPresented: .constant(false)
                         )
@@ -155,7 +156,7 @@ struct CreatedPostsView: View {
                                         likesCount: 10,
                                         viewsCount: 10,
                                         isArchive: false,
-                                        isAuthorView: true,
+                                        mediaCount: 0,
                                         postOption: $viewModel.postOption,
                                         selectedId: $viewModel.id
                                     )
@@ -203,7 +204,7 @@ struct CreatedPostsView: View {
                                             likesCount: post.likesCount ?? 0,
                                             viewsCount: post.viewsCount ?? 0,
                                             isArchive: post.isArchive ?? false,
-                                            isAuthorView: true,
+                                            mediaCount: post.mediaCount ?? 0,
                                             postOption: $viewModel.postOption,
                                             selectedId: $viewModel.id
                                         )

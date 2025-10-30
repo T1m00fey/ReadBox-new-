@@ -12,7 +12,7 @@ import Shimmer
 import FirebaseStorage
 import AVFoundation
 
-//// MARK: for FeedView
+// MARK: for FeedView
 extension View {
     @MainActor func makePopupsForFeedView(
         viewModel: FeedViewModel,
@@ -276,6 +276,7 @@ extension View {
                     viewModel.id = ""
                     viewModel.text = ""
                     viewModel.mediaURLs = []
+                    viewModel.mediaCount = 0
                 }
             }
             .onChange(of: viewModel.isCreateViewPresented) {

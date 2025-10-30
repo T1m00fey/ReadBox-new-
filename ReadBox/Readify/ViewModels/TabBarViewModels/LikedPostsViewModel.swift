@@ -27,6 +27,7 @@ final class LikedPostsViewModel: ObservableObject {
     @Published var isLoadingShowed = true
     @Published var isZoomableViewPresented = false
     @Published var zoomableImage: UIImage? = nil
+    @Published var authorId = ""
     
     var title = ""
     var image = UIImage()
@@ -35,8 +36,8 @@ final class LikedPostsViewModel: ObservableObject {
     var likesCount = 0
     var id = ""
     var userId = ""
-    var authorId = ""
     var isArchive = false
+    var mediaCount = 0
     
     func getPostToRead(id: String) {
         Task {
@@ -198,6 +199,7 @@ final class LikedPostsViewModel: ObservableObject {
         id = post.id
         authorId = post.authorId ?? ""
         isArchive = post.isArchive ?? true
+        mediaCount = post.mediaCount ?? 1
         
         if user != nil {
             if likedPosts == [] {

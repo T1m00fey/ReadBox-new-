@@ -409,7 +409,8 @@ final class TextCreateViewModel: ObservableObject {
             text: text,
             isArchive: isArchive,
             uploadingLanguage: uploadingLanguage,
-            mediaCount: media.count
+            mediaCount: media.count,
+            isShortPost: false
         )
         
         for i in 0..<media.count {

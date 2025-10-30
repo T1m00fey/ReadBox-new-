@@ -301,3 +301,9 @@ struct AppVersion: Codable {
     }
 }
 
+enum NotificationPushRoute: Codable {
+    case requestSystemPrompt
+    case goToSettings
+    case ok
+}
+

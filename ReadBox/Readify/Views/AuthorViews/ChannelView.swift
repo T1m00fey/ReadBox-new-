@@ -16,6 +16,7 @@ struct ChannelView: View {
     @Environment(\.dismiss) var dismiss
     
     @Binding var user: DBUser?
+    @Binding var isNotificationPopupPrenseted: Bool
     
     let authorId: String
     let authorName: String
@@ -63,7 +64,9 @@ struct ChannelView: View {
                                     mediaCount: 0,
                                     user: .constant(nil),
                                     isZoomableViewPresented: .constant(false),
-                                    zoomableImage: .constant(nil)
+                                    zoomableImage: .constant(nil),
+                                    selectedAuthorId: .constant(""),
+                                    isChannelViewPresented: .constant(false)
                                 )
                                 .redacted(reason: .placeholder)
                                 .padding(.top, num == 0 ? 10 : 0)
@@ -101,7 +104,9 @@ struct ChannelView: View {
                                     mediaCount: post.mediaCount ?? 1,
                                     user: $user,
                                     isZoomableViewPresented: $viewModel.isZoomableImageViewPresented,
-                                    zoomableImage: $viewModel.zoomableImage
+                                    zoomableImage: $viewModel.zoomableImage,
+                                    selectedAuthorId: .constant(""),
+                                    isChannelViewPresented: .constant(false)
                                 )
                                 .padding(.top, post.id == viewModel.posts[0].id ? 10 : 0)
                                 .padding(.bottom, post.id == viewModel.posts[viewModel.posts.count - 1].id ? 100 : 0)
@@ -201,41 +206,41 @@ struct ChannelView: View {
                             .padding(.top, -150)
                         }
                         
-                        if !viewModel.isLoading && !viewModel.isAllLoading && viewModel.posts.count >= 20 {
-                            Button {
-                                Task {
-                                    do {
-                                        try await viewModel.loadPosts(by: authorId)
-                                        return
-                                    } catch {
-                                        withAnimation {
-                                            viewModel.errorText = error.localizedDescription
-                                        }
-                                    }
-                                    
-                                    viewModel.isErrorPopupPresented = true
-                                }
-                            } label: {
-                                HStack {
-                                    Image(systemName: "arrow.down")
-                                        .foregroundStyle(Color(uiColor: .label))
-                                        .font(.title3)
-                                        .fontWeight(.light)
-                                    
-                                    Text(LocalizedStringKey("loadMore"))
-                                        .font(.title3)
-                                        .fontDesign(.rounded)
-                                        .fontWeight(.light)
-                                }
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 10)
-                                .background(Color(uiColor: .secondarySystemBackground))
-                                .clipShape(RoundedRectangle(cornerRadius: 10))
-                                .shadow(radius: 2)
-                                .padding(.top, 20)
-                            }
-                            .padding(.bottom, 10)
-                        }
+//                        if !viewModel.isLoading && !viewModel.isAllLoading && viewModel.posts.count >= 20 {
+//                            Button {
+//                                Task {
+//                                    do {
+//                                        try await viewModel.loadPosts(by: authorId)
+//                                        return
+//                                    } catch {
+//                                        withAnimation {
+//                                            viewModel.errorText = error.localizedDescription
+//                                        }
+//                                    }
+//                                    
+//                                    viewModel.isErrorPopupPresented = true
+//                                }
+//                            } label: {
+//                                HStack {
+//                                    Image(systemName: "arrow.down")
+//                                        .foregroundStyle(Color(uiColor: .label))
+//                                        .font(.title3)
+//                                        .fontWeight(.light)
+//                                    
+//                                    Text(LocalizedStringKey("loadMore"))
+//                                        .font(.title3)
+//                                        .fontDesign(.rounded)
+//                                        .fontWeight(.light)
+//                                }
+//                                .padding(.horizontal, 16)
+//                                .padding(.vertical, 10)
+//                                .background(Color(uiColor: .secondarySystemBackground))
+//                                .clipShape(RoundedRectangle(cornerRadius: 10))
+//                                .shadow(radius: 2)
+//                                .padding(.top, 20)
+//                            }
+//                            .padding(.bottom, 10)
+//                        }
                         
                     }
                     .padding(.horizontal)
@@ -283,6 +288,7 @@ struct ChannelView: View {
                         authorName: authorName,
                         isCheckmark: isCheckmark,
                         isArchive: false,
+                        mediaCount: viewModel.postToView?.mediaCount ?? 1,
                         user: $user,
                         isChannelViewPresented: .constant(false)
                     )
@@ -418,6 +424,11 @@ struct ChannelView: View {
                                                     
                                                     viewModel.isSubscribed?.toggle()
                                                     viewModel.subscribersCount += isSubscribed ? -1 : 1
+                                                }
+                                                
+                                                let isNotificationsApproved = StorageManager.shared.getIsApprovedNotificaitons()
+                                                if !isSubscribed && !isNotificationsApproved {
+                                                    isNotificationPopupPrenseted = true
                                                 }
                                             } catch {
                                                 withAnimation {

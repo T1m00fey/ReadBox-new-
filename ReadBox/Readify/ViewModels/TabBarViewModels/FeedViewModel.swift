@@ -37,6 +37,7 @@ final class FeedViewModel: ObservableObject {
     @Published var isZoomableImageViewPresented = false
     @Published var zoomableImage: UIImage? = nil
     @Published var isUpdatePopupDidPresneted = false
+    @Published var authorId = ""
     
     @Published var user: DBUser? = nil
     
@@ -47,8 +48,8 @@ final class FeedViewModel: ObservableObject {
     var likesCount = 0
     var id = ""
     var userId = ""
-    var authorId = ""
     var isArchive = false
+    var mediaCount = 0
     
     private var db = Firestore.firestore()
     
@@ -303,6 +304,7 @@ final class FeedViewModel: ObservableObject {
         id = post.id
         authorId = post.authorId ?? ""
         isArchive = post.isArchive ?? true
+        mediaCount = post.mediaCount ?? 1
         
         if post.isArchive ?? true {
             image = UIImage()

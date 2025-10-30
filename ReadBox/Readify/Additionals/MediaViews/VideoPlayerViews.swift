@@ -28,6 +28,7 @@ struct CustomVideoPlayerView: UIViewRepresentable {
     class PlayerUIView: UIView {
         private var playerLayer = AVPlayerLayer()
         private var playbackEndedObserver: Any?
+        private var storedCornerRadius: CGFloat = 0
 
         override init(frame: CGRect) {
             super.init(frame: frame)
@@ -39,38 +40,60 @@ struct CustomVideoPlayerView: UIViewRepresentable {
         }
 
         func setup(player: AVPlayer, cornerRadius: CGFloat, isLooping: Bool) {
+            // Сначала чистим
             self.layer.sublayers?.forEach { $0.removeFromSuperlayer() }
 
-            playerLayer.player = player
-            playerLayer.videoGravity = .resizeAspectFill
-            playerLayer.masksToBounds = true
-            playerLayer.cornerRadius = cornerRadius
+            // Настраиваем контейнер-вью (а не сам playerLayer)
+            self.backgroundColor = .clear
+            self.layer.cornerRadius = cornerRadius
+            self.layer.cornerCurve = .continuous
+            self.layer.masksToBounds = true
+            self.clipsToBounds = true
+            
+            storedCornerRadius = cornerRadius
 
+            // Настраиваем слой плеера
+            playerLayer = AVPlayerLayer()
+            playerLayer.player = player
+            playerLayer.videoGravity = .resizeAspect
+            playerLayer.needsDisplayOnBoundsChange = true
+
+            // ВАЖНО: добавляем один раз
             self.layer.addSublayer(playerLayer)
 
+            // петля
             if isLooping {
                 if let observer = playbackEndedObserver {
                     NotificationCenter.default.removeObserver(observer)
                 }
-
                 playbackEndedObserver = NotificationCenter.default.addObserver(
                     forName: .AVPlayerItemDidPlayToEndTime,
                     object: nil,
                     queue: .main
-                ) { [weak self] notification in
-                    guard let _ = self else { return }
-                    guard let item = notification.object as? AVPlayerItem,
-                          item == player.currentItem else { return }
-
+                ) { [weak player] note in
+                    guard let item = note.object as? AVPlayerItem,
+                          let player, item == player.currentItem else { return }
                     player.seek(to: .zero)
                     player.play()
                 }
-            }            
+            }
         }
 
         override func layoutSubviews() {
             super.layoutSubviews()
             playerLayer.frame = bounds
+            
+            let rect = playerLayer.videoRect
+            if rect.isEmpty == false, rect.isNull == false {
+                let mask = CAShapeLayer()
+                mask.path = UIBezierPath(
+                    roundedRect: rect,
+                    cornerRadius: storedCornerRadius
+                ).cgPath
+                playerLayer.mask = mask
+            } else {
+                playerLayer.mask = nil
+            }
         }
 
         deinit {

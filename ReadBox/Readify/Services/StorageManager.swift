@@ -92,4 +92,20 @@ final class StorageManager {
     func getFcmToken() -> String {
         userDefaults.string(forKey: "fcmToken") ?? ""
     }
+    
+    func isNotificationsPopupShowed() -> Bool {
+        userDefaults.bool(forKey: "isNotificationsPopupPresented")
+    }
+    
+    func setNotificationsPopupShowed(_ isShowed: Bool) {
+        userDefaults.set(isShowed, forKey: "isNotificationsPopupPresented")
+    }
+    
+    func setApprovedNotificaitons(_ isApproved: Bool) {
+        userDefaults.set(isApproved, forKey: "isNotificationsApproved")
+    }
+    
+    func getIsApprovedNotificaitons() -> Bool {
+        userDefaults.bool(forKey: "isNotificationsApproved")
+    }
 }

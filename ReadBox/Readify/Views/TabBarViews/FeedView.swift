@@ -10,9 +10,11 @@ import FirebaseStorage
 import SwiftfulLoadingIndicators
 import Shimmer
 import TipKit
+import PopupView
 
 struct FeedView: View {
     @Binding var isWelcomeViewPresented: Bool
+    @Binding var isNotificationPopupPresented: Bool
     
     @StateObject var viewModel = FeedViewModel()
     
@@ -72,7 +74,9 @@ struct FeedView: View {
                                     mediaCount: 0,
                                     user: .constant(nil),
                                     isZoomableViewPresented: .constant(false),
-                                    zoomableImage: .constant(nil)
+                                    zoomableImage: .constant(nil),
+                                    selectedAuthorId: $viewModel.authorId,
+                                    isChannelViewPresented: .constant(false)
                                 )
                                 .redacted(reason: .placeholder)
                                 .padding(.top, 20)
@@ -91,7 +95,9 @@ struct FeedView: View {
                                     mediaCount: post.mediaCount ?? 1,
                                     user: $viewModel.user,
                                     isZoomableViewPresented: $viewModel.isZoomableImageViewPresented,
-                                    zoomableImage: $viewModel.zoomableImage
+                                    zoomableImage: $viewModel.zoomableImage,
+                                    selectedAuthorId: $viewModel.authorId,
+                                    isChannelViewPresented: $viewModel.isChannelViewPresented
                                 )
                                 .onAppear {
                                     print("👀 VIEW \(post.id)")
@@ -195,6 +201,7 @@ struct FeedView: View {
                         authorName: viewModel.authorsNames[viewModel.authorId] ?? "",
                         isCheckmark: viewModel.authorsCheckmarks[viewModel.authorId] ?? false,
                         isArchive: viewModel.isArchive,
+                        mediaCount: viewModel.mediaCount,
                         user: $viewModel.user,
                         isChannelViewPresented: $viewModel.isChannelViewPresented
                     )
@@ -202,7 +209,8 @@ struct FeedView: View {
                 .fullScreenCover(isPresented: $viewModel.isChannelViewPresented, content: {
                     ChannelView(
                         user: $viewModel.user,
-                        authorId: viewModel.authorId,
+                        isNotificationPopupPrenseted: $isNotificationPopupPresented,
+                        authorId: viewModel.authorId as String,
                         authorName: viewModel.authorsNames[viewModel.authorId] ?? NSLocalizedString("notFoundLabel", comment: ""),
                         isCheckmark: viewModel.authorsCheckmarks[viewModel.authorId] ?? false                        
                     )

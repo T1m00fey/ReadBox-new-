@@ -42,6 +42,7 @@ struct ReadView: View {
     let authorName: String
     let isCheckmark: Bool
     let isArchive: Bool
+    let mediaCount: Int
     
     @Binding var user: DBUser?
     @Binding var isChannelViewPresented: Bool
@@ -124,23 +125,101 @@ struct ReadView: View {
                                 }
                             }
                             .frame(width: UIScreen.main.bounds.width - 32, alignment: .leading)
-                            .padding(.vertical, viewModel.image != UIImage() ? 20 : 0)
-                            .padding(.top, viewModel.image == UIImage() ? 10 : 0)
+                            .padding(.vertical, viewModel.images.count > 0 ? 20 : 0)
+                            .padding(.top, viewModel.images.count == 0 ? 10 : 0)
                         }
+                       
+//                        if viewModel.image != UIImage() {
+//                            Image(uiImage: viewModel.image)
+//                                .resizable()
+//                                .scaledToFit()
+//                                .frame(width: UIScreen.main.bounds.width - 20)
+//                                .clipShape(RoundedRectangle(cornerRadius: 20))
+//                                .padding(.horizontal)
+//                                .onTapGesture {
+//                                    viewModel.isImageFullscreenPresented = true
+//                                }
+//                        } else if let videoURL = viewModel.videoURL {
+//                            TappableVideoPreview(url: videoURL, cornerRadius: 20, width: UIScreen.main.bounds.width - 20)
+//                                .frame(width: UIScreen.main.bounds.width - 20)
+//                        }
                         
-                        if viewModel.image != UIImage() {
-                            Image(uiImage: viewModel.image)
-                                .resizable()
-                                .scaledToFit()
-                                .frame(width: UIScreen.main.bounds.width - 20)
-                                .clipShape(RoundedRectangle(cornerRadius: 20))
-                                .padding(.horizontal)
-                                .onTapGesture {
-                                    viewModel.isImageFullscreenPresented = true
+                        if viewModel.images.count > 0 && mediaCount > 0 {
+                            if mediaCount == 1, let image = viewModel.images[0].image {
+                                Image(uiImage: image)
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(width: UIScreen.main.bounds.width - 25)
+                                    .clipShape(RoundedRectangle(cornerRadius: 20))
+                                    .padding(.bottom, 10)
+                                    .onTapGesture {
+                                        withAnimation {
+                                            viewModel.zoomableImage = image
+                                            viewModel.isZoomableViewPresented = true
+                                        }
+                                    }
+                            } else if mediaCount == 1, let videoURL = viewModel.images[0].videoURL {
+                                TappableVideoPreview(url: videoURL, cornerRadius: 20, width: UIScreen.main.bounds.width - 25)
+                                    .frame(width: UIScreen.main.bounds.width - 25)
+                                    .padding(.bottom, 10)
+                            } else {
+                                VStack(spacing: 5) {
+                                    if mediaCount > 1 {
+                                        Text("\(viewModel.currentIndex + 1)/\(mediaCount)")
+                                            .font(.system(size: 18))
+                                            .fontDesign(.rounded)
+                                            .foregroundStyle(Color.gray)
+                                            .frame(width: UIScreen.main.bounds.width - 32, alignment: .trailing)
+                                            .padding(.top, -10)
+                                    }
+                                    
+                                    TabView(selection: $viewModel.currentIndex) {
+                                        ForEach(0..<mediaCount, id: \.self) { i in
+                                            ZStack {
+                                                if viewModel.images.count > i {
+                                                    if let image = viewModel.images[i].image {
+                                                        Image(uiImage: image)
+                                                            .resizable()
+                                                            .scaledToFit()
+                                                            .clipShape(RoundedRectangle(cornerRadius: 20))
+                                                            .frame(width: UIScreen.main.bounds.width - 25)
+                                                            .padding(.bottom, 10)
+                                                            .onTapGesture {
+                                                                withAnimation {
+                                                                    viewModel.zoomableImage = image
+                                                                    viewModel.isZoomableViewPresented = true
+                                                                }
+                                                            }
+                                                    } else if let videoURL = viewModel.images[i].videoURL {
+                                                        TappableVideoPreview(
+                                                            url: videoURL,
+                                                            cornerRadius: 20,
+                                                            width: UIScreen.main.bounds.width - 25,
+                                                            height: 350
+                                                        )
+                                                        .frame(width: UIScreen.main.bounds.width - 25)
+                                                        .padding(.bottom, 10)
+                                                    } else {
+                                                        LoadingIndicator(
+                                                            animation: .circleRunner,
+                                                            color: Color(.label),
+                                                            size: .small,
+                                                            speed: .fast
+                                                        )
+                                                        .frame(width: UIScreen.main.bounds.width - 25)
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    .tabViewStyle(.page(indexDisplayMode: .never))
+                                    .frame(
+                                        width: UIScreen.main.bounds.width - 25,
+                                        height: 350
+                                    )
+                                    .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
                                 }
-                        } else if let videoURL = viewModel.videoURL {
-                            TappableVideoPreview(url: videoURL, cornerRadius: 20, width: UIScreen.main.bounds.width - 20)
-                                .frame(width: UIScreen.main.bounds.width - 20)
+                            }
                         }
                     
                         HStack {
@@ -287,7 +366,7 @@ struct ReadView: View {
                             .markdownImageProvider(
                                 WebImageProvider(onImageTap: { url in
                                     viewModel.selectedImageURL = url
-                                    viewModel.isImageFullscreenPresented = true
+                                    viewModel.isZoomableViewPresented = true
                                 })
                             )
                             .markdownTextStyle(\.text) {
@@ -297,6 +376,14 @@ struct ReadView: View {
                             .frame(width: UIScreen.main.bounds.width - 32, alignment: .topLeading)
                             .padding(.bottom, 50)                            
                         }
+                    }
+                    
+                }
+                .fullScreenCover(isPresented: $viewModel.isZoomableViewPresented) {
+                    if let image = viewModel.zoomableImage {
+                        ZoomableImageView(image: image)
+                    } else if let url = viewModel.selectedImageURL {
+                        ZoomableImageView(imageURL: url)
                     }
                     
                 }
@@ -317,7 +404,7 @@ struct ReadView: View {
                         }
                 
                         viewModel.isPostLiked = (user?.likedPosts ?? []).contains(id)
-                        viewModel.fetchImage(byId: id)
+                        viewModel.fetchImages(id, mediaCount)
                     }
                     
                     viewModel.getAvatar(authorId)
@@ -326,15 +413,8 @@ struct ReadView: View {
                     
                     viewModel.fontSize = StorageManager.shared.getFontSize()
                 }
-                .fullScreenCover(isPresented: $viewModel.isImageFullscreenPresented) {
-                    if let url = viewModel.selectedImageURL {
-                        ZoomableImageView(imageURL: url)
-                    } else {
-                        ZoomableImageView(image: viewModel.image)
-                    }
-                }
-                .onChange(of: viewModel.isImageFullscreenPresented) {
-                    if !viewModel.isImageFullscreenPresented {
+                .onChange(of: viewModel.isZoomableViewPresented) {
+                    if !viewModel.isZoomableViewPresented {
                         viewModel.selectedImageURL = nil
                     }
                 }

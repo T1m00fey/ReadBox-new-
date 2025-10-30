@@ -8,6 +8,7 @@
 import SwiftUI
 import FirebaseStorage
 import AVFoundation
+import SwiftfulLoadingIndicators
 
 struct ArticleView: View {
     let id: String
@@ -22,6 +23,8 @@ struct ArticleView: View {
     @Binding var user: DBUser?
     @Binding var isZoomableViewPresented: Bool
     @Binding var zoomableImage: UIImage?
+    @Binding var selectedAuthorId: String
+    @Binding var isChannelViewPresented: Bool
     
     @State private var videoURL: URL? = nil
     @State private var avatarImage: UIImage? = nil
@@ -44,7 +47,9 @@ struct ArticleView: View {
         mediaCount: Int,
         user: Binding<DBUser?>,
         isZoomableViewPresented: Binding<Bool>,
-        zoomableImage: Binding<UIImage?>
+        zoomableImage: Binding<UIImage?>,
+        selectedAuthorId: Binding<String>,
+        isChannelViewPresented: Binding<Bool>
     ) {
         self.id = id
         self.title = title
@@ -57,6 +62,8 @@ struct ArticleView: View {
         self._user = user
         self._isZoomableViewPresented = isZoomableViewPresented
         self._zoomableImage = zoomableImage
+        self._selectedAuthorId = selectedAuthorId
+        self._isChannelViewPresented = isChannelViewPresented
     }
     
     private func fetchImages() {
@@ -216,6 +223,11 @@ struct ArticleView: View {
                             .font(.system(size: 21))
                             .fontDesign(.rounded)
                             .lineLimit(1)
+                            .underline()
+                            .onTapGesture {
+                                selectedAuthorId = authorId
+                                isChannelViewPresented = true
+                            }
                         
                         if isCheckmark {
                             Image(systemName: "checkmark.seal.fill")
@@ -288,9 +300,22 @@ struct ArticleView: View {
                                                     }
                                                 }
                                         } else if let videoURL = images[i].videoURL {
-                                            TappableVideoPreview(url: videoURL, cornerRadius: 20, width: UIScreen.main.bounds.width - 25)
-                                                .frame(width: UIScreen.main.bounds.width - 25)
-                                                .padding(.bottom, 10)
+                                            TappableVideoPreview(
+                                                url: videoURL,
+                                                cornerRadius: 20,
+                                                width: UIScreen.main.bounds.width - 25,
+                                                height: 350
+                                            )
+                                            .frame(width: UIScreen.main.bounds.width - 25)
+                                            .padding(.bottom, 10)
+                                        } else {
+                                            LoadingIndicator(
+                                                animation: .circleRunner,
+                                                color: Color(.label),
+                                                size: .small,
+                                                speed: .fast
+                                            )
+                                            .frame(width: UIScreen.main.bounds.width - 25)
                                         }
                                     }
                                 }
@@ -301,6 +326,7 @@ struct ArticleView: View {
                             width: UIScreen.main.bounds.width - 25,
                             height: 350
                         )
+                        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
                     }
                 }
             }
@@ -353,7 +379,7 @@ struct ArticleView: View {
                                     endPoint: .bottom
                                 )
                             )
-                            .frame(width: UIScreen.main.bounds.width - 42, height: 50)
+                            .frame(width: UIScreen.main.bounds.width - 40, height: 50)
                     }
                     
                     if !isExpanded && title.count >= maxTitleLen {

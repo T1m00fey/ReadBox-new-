@@ -21,7 +21,7 @@ struct SubscribesView: View {
         NavigationStack {
             VStack {
                 ZStack {
-                    ScrollView {
+                    ScrollView(showsIndicators: false) {
                         VStack(spacing: 20) {
                             if viewModel.isLoading && viewModel.channels.isEmpty {
                                 ForEach(0..<5) { _ in
@@ -128,6 +128,7 @@ struct SubscribesView: View {
                     
                     ChannelView(
                         user: $user,
+                        isNotificationPopupPrenseted: .constant(false),
                         authorId: channel?.authorId ?? "",
                         authorName: channel?.authorName ?? NSLocalizedString("notFoundLabel", comment: ""),
                         isCheckmark: channel?.isCheckmark ?? false

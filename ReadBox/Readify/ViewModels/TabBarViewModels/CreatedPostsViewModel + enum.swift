@@ -71,6 +71,7 @@ final class CreatedPostsViewModel: ObservableObject {
     var isEditing = false
     var postId = ""
     var mediaKind: [MediaKind] = []
+    var mediaCount = 0
     
     var alertText = ""
     
@@ -430,6 +431,7 @@ final class CreatedPostsViewModel: ObservableObject {
         image = StorageManager.shared.getImage(id: post.id) ?? UIImage()
         likesCount = post.likesCount ?? 0
         id = post.id
+        mediaCount = post.mediaCount ?? 1
         
         if post.isArchive ?? true {
             image = UIImage()

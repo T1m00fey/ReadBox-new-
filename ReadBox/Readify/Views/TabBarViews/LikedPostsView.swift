@@ -11,6 +11,7 @@ import Shimmer
 
 struct LikedPostsView: View {
     @Binding var isWelcomeViewPresented: Bool
+    @Binding var isNotificationPopupPresented: Bool
     
     @StateObject var viewModel = LikedPostsViewModel()
     
@@ -37,7 +38,9 @@ struct LikedPostsView: View {
                                     mediaCount: 0,
                                     user: .constant(nil),
                                     isZoomableViewPresented: .constant(false),
-                                    zoomableImage: .constant(nil)
+                                    zoomableImage: .constant(nil),
+                                    selectedAuthorId: .constant(""),
+                                    isChannelViewPresented: .constant(false)
                                 )
                                 .redacted(reason: .placeholder)
                                 .padding(.top, 20)
@@ -78,7 +81,9 @@ struct LikedPostsView: View {
                                     mediaCount: article.mediaCount ?? 1,
                                     user: $viewModel.user,
                                     isZoomableViewPresented: $viewModel.isZoomableViewPresented,
-                                    zoomableImage: $viewModel.zoomableImage
+                                    zoomableImage: $viewModel.zoomableImage,
+                                    selectedAuthorId: $viewModel.authorId,
+                                    isChannelViewPresented: $viewModel.isChannelViewPresented
                                 )
                                 .padding(.top, 20)
                                 .padding(.horizontal)
@@ -146,6 +151,7 @@ struct LikedPostsView: View {
                         authorName: viewModel.authorsNames[viewModel.authorId] ?? "",
                         isCheckmark: viewModel.authorsCheckmarks[viewModel.authorId] ?? false,
                         isArchive: viewModel.isArchive,
+                        mediaCount: viewModel.mediaCount,
                         user: $viewModel.user,
                         isChannelViewPresented: $viewModel.isChannelViewPresented
                     )
@@ -153,6 +159,7 @@ struct LikedPostsView: View {
                 .fullScreenCover(isPresented: $viewModel.isChannelViewPresented, content: {
                     ChannelView(
                         user: $viewModel.user,
+                        isNotificationPopupPrenseted: $isNotificationPopupPresented,
                         authorId: viewModel.authorId,
                         authorName: viewModel.authorsNames[viewModel.authorId] ?? NSLocalizedString("notFoundLabel", comment: ""),
                         isCheckmark: viewModel.authorsCheckmarks[viewModel.authorId] ?? false

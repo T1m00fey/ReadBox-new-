@@ -15,13 +15,57 @@ struct PostView: View {
     let likesCount: Int
     let viewsCount: Int
     let isArchive: Bool
-    let isAuthorView: Bool
+    let mediaCount: Int
     
     @Binding var postOption: PostOptions
     @Binding var selectedId: String
     
     @State private var image: UIImage? = nil
     @State private var isVideo = false
+    
+    private func fetchMultiImage() {
+        let imageRef = Storage.storage().reference().child("images/\(id)_0.jpg")
+        
+        imageRef.getData(maxSize: 1 * 5012 * 5012) { data, error in
+            if let data, let image = UIImage(data: data) {
+                withAnimation {
+                    self.image = image
+                    StorageManager.shared.saveImage(id: id, image: image)
+                }
+            } else {
+                let videoRef = Storage.storage().reference().child("images/\(id)_0.mp4")
+                
+                videoRef.downloadURL { url, error in
+                    guard let url else { return }
+                    
+                    Task.detached {
+                        let asset = AVAsset(url: url)
+                        
+                        do {
+                            let _ = try await asset.loadTracks(withMediaType: .video)
+                            
+                            let generator = AVAssetImageGenerator(asset: asset)
+                            generator.appliesPreferredTrackTransform = true
+                            
+                            let cgImage = try generator.copyCGImage(at: .zero, actualTime: nil)
+                            let preview = UIImage(cgImage: cgImage)
+                            
+                            await MainActor.run {
+                                withAnimation {
+                                    self.image = preview
+                                    self.isVideo = true
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        if image == nil {
+            fetchImage()
+        }
+    }
     
     private func fetchImage() {
         let articleImage = StorageManager.shared.getImage(id: id)
@@ -103,6 +147,19 @@ struct PostView: View {
                                 .foregroundStyle(Color(.secondarySystemBackground))
                         }
                     }
+                    .overlay(
+                        Text("\(mediaCount)")
+                            .fontDesign(.rounded)
+                            .fontWeight(.bold)
+                            .foregroundStyle(Color.gray)
+                            .padding(.all, 10)
+                            .background(Color(.systemBackground))
+                            .clipShape(Circle())
+                            .offset(x: 10)
+                            .opacity(mediaCount > 1 ? 1 : 0)
+                        ,
+                        alignment: .topTrailing
+                    )
                 }
                 
                 VStack {
@@ -138,64 +195,60 @@ struct PostView: View {
                 .padding(.vertical, 20)
                 .padding(.leading, 10)
                 
-                if isAuthorView {
-                    Menu {
-                        
-                        Button {
-                            postOption = .editing
-                            selectedId = id
-                        } label: {
-                            Label(NSLocalizedString("editingLabel", comment: ""), systemImage: "pencil")
-                        }
-                        
-                        Button {
-                            selectedId = id
-                            
-                            if isArchive {
-                                postOption = .publish
-                            } else {
-                                postOption = .toArchive
-                            }
-                            
-                        } label: {
-                            if isArchive {
-                                Label(NSLocalizedString("publishLabel", comment: ""), systemImage: "paperplane")
-                            } else {
-                                Label(NSLocalizedString("saveToArchiveLabel", comment: ""), systemImage: "archivebox")
-                            }
-                        }
+                Menu {
+                    Button {
+                        postOption = .editing
+                        selectedId = id
+                    } label: {
+                        Label(NSLocalizedString("editingLabel", comment: ""), systemImage: "pencil")
+                    }
                     
-                        Button {
-                            postOption = .delete
-                            selectedId = id
-                            
-                            print("HERE: \(id)")
-                            
-                            StorageManager.shared.deleteImage(id: id)
-                        } label: {
-                            Label(NSLocalizedString("deleteLabel", comment: ""), systemImage: "xmark.circle")
+                    Button {
+                        selectedId = id
+                        
+                        if isArchive {
+                            postOption = .publish
+                        } else {
+                            postOption = .toArchive
                         }
                         
                     } label: {
-                        Image(systemName: "ellipsis")
-                            .font(.title2)
-                            .foregroundStyle(Color.gray)
-                            .frame(width: 30, height: 30)
-                            .padding(.trailing, 10)
+                        if isArchive {
+                            Label(NSLocalizedString("publishLabel", comment: ""), systemImage: "paperplane")
+                        } else {
+                            Label(NSLocalizedString("saveToArchiveLabel", comment: ""), systemImage: "archivebox")
+                        }
                     }
-
+                
+                    Button {
+                        postOption = .delete
+                        selectedId = id
+                        
+                        print("HERE: \(id)")
+                        
+                        StorageManager.shared.deleteImage(id: id)
+                    } label: {
+                        Label(NSLocalizedString("deleteLabel", comment: ""), systemImage: "xmark.circle")
+                    }
+                    
+                } label: {
+                    Image(systemName: "ellipsis")
+                        .font(.title2)
+                        .foregroundStyle(Color.gray)
+                        .frame(width: 30, height: 30)
+                        .padding(.trailing, 10)
                 }
             }
             .frame(width: UIScreen.main.bounds.width - 30)
         }
         .onAppear {
             if image == nil {
-                fetchImage()
+                fetchMultiImage()
             }
         }
     }
 }
 
-#Preview {
-    PostView(id: "", title: "", likesCount: 0, viewsCount: 0, isArchive: false, isAuthorView: true, postOption: .constant(PostOptions.nothing), selectedId: .constant("7"))
-}
+//#Preview {
+//    PostView(id: "", title: "", likesCount: 0, viewsCount: 0, isArchive: false, isAuthorView: true, postOption: .constant(PostOptions.nothing), selectedId: .constant("7"))
+//}

@@ -83,7 +83,6 @@ final class ArticlesManager {
             "title": title,
             "text": text,
             "is_archive": isArchive,
-            "is_short_post": text.isEmpty,
             "original_language": uploadingLanguage,
             "media_count": mediaCount
         ]
@@ -108,7 +107,8 @@ final class ArticlesManager {
         text: String,
         isArchive: Bool,
         uploadingLanguage: String,
-        mediaCount: Int
+        mediaCount: Int,
+        isShortPost: Bool
     ) async throws -> String {
 //        guard let maxIndex = try await getMaxIndex() else { return }
 //        let newMaxIndex = String((Int(maxIndex) ?? -2) + 1)
@@ -126,7 +126,7 @@ final class ArticlesManager {
             "author_id": try AuthenticationManager.shared.getAuthenticatedUser().uid,
             "is_archive": isArchive,
             "date_created": Date(),
-            "is_short_post": text.isEmpty,
+            "is_short_post": isShortPost,
             "media_count": mediaCount
         ]
         

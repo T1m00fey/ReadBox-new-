@@ -8,6 +8,7 @@
 import SwiftUI
 import FirebaseStorage
 import PopupView
+import UserNotifications
 
 struct RootView: View {
     @State private var isReadViewPresented = false
@@ -22,22 +23,49 @@ struct RootView: View {
     @State private var authorId = ""
     @State private var isLoadingPopupPresented = false
     @State private var isDescriptionPopupPresented = false
+    @State private var isNotificationPopupPresented = false
+    @State private var isNotificationsPopupShowed = false
+    @State private var route = NotificationPushRoute.requestSystemPrompt
+    
+    @StateObject var hudService = HUDService()
     
     @Environment(\.dismiss) var dismiss
+    
+    func decidePushRoute() {
+        UNUserNotificationCenter.current().getNotificationSettings { s in
+            switch s.authorizationStatus {
+            case .notDetermined:
+                route = .requestSystemPrompt
+            case .denied:
+                route = .goToSettings
+            case .authorized, .provisional, .ephemeral:
+                route = .ok
+                StorageManager.shared.setApprovedNotificaitons(true)
+            @unknown default:
+                route = .goToSettings
+            }
+        }
+    }
     
     var body: some View {
         ZStack {
             if let _ = try? AuthenticationManager.shared.getAuthenticatedUser() {
                 TabView {
-                    FeedView(isWelcomeViewPresented: $isWelcomeViewPresented)
-                        .tabItem {
-                            Label("", systemImage: "house.fill")
-                        }
+                    FeedView(
+                        isWelcomeViewPresented: $isWelcomeViewPresented,
+                        isNotificationPopupPresented: $isNotificationPopupPresented
+                    )
+                    .tabItem {
+                        Label("", systemImage: "house.fill")
+                    }
                     
-                    LikedPostsView(isWelcomeViewPresented: $isWelcomeViewPresented)
-                        .tabItem {
-                            Label("", systemImage: "hand.thumbsup.fill")
-                        }
+                    LikedPostsView(
+                        isWelcomeViewPresented: $isWelcomeViewPresented,
+                        isNotificationPopupPresented: $isNotificationPopupPresented
+                    )
+                    .tabItem {
+                        Label("", systemImage: "hand.thumbsup.fill")
+                    }
                     
                     CreatedPostsView(isWelcomeViewPresented: $isWelcomeViewPresented)
                         .tabItem {
@@ -51,12 +79,19 @@ struct RootView: View {
                 }
                 .tint(Color(uiColor: .label))
                 .onAppear {
-                    UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
-                        print("Permission granted: \(granted)")
-                    }                                        
+                    decidePushRoute()
+                    isNotificationsPopupShowed = StorageManager.shared.isNotificationsPopupShowed()
+                    
+                    if !isNotificationsPopupShowed {
+                        isNotificationPopupPresented = true
+                    }
                 }
             }
         }
+        .overlay(
+            hudService.makeLoadingPopup(screenWidth: UIScreen.main.bounds.width),
+            alignment: .bottom
+        )
         .onChange(of: isWelcomeViewPresented) {
             if !isWelcomeViewPresented {
                 Task {
@@ -192,6 +227,11 @@ struct RootView: View {
             }
             
         }
+        .onChange(of: isNotificationPopupPresented) {
+            if isNotificationPopupPresented {
+                decidePushRoute()
+            }
+        }
         .fullScreenCover(isPresented: $isReadViewPresented, content: {
             ReadView(
                 id: prePost?.id ?? "",
@@ -203,6 +243,7 @@ struct RootView: View {
                 authorName: authorName ?? "",
                 isCheckmark: isCheckmark ?? false,
                 isArchive: prePost?.isArchive ?? true,
+                mediaCount: prePost?.mediaCount ?? 0,
                 user: $user,
                 isChannelViewPresented: $isChannelViewPresented
             )
@@ -211,6 +252,7 @@ struct RootView: View {
         .fullScreenCover(isPresented: $isChannelViewPresented, content: {
             ChannelView(
                 user: $user,
+                isNotificationPopupPrenseted: $isNotificationPopupPresented,
                 authorId: prePost?.authorId ?? "",
                 authorName: authorName ?? "",
                 isCheckmark: isCheckmark ?? false
@@ -222,6 +264,17 @@ struct RootView: View {
         })
         .popup(isPresented: $isLoadingPopupPresented) {
             LoadingPopup()
+                .shadow(radius: 3)
+        } customize: {
+            $0
+                .type(.toast)
+                .appearFrom(.bottomSlide)
+        }
+        .popup(isPresented: $isNotificationPopupPresented) {
+            NotificationPermissionView(
+                isPopupPresented: $isNotificationPopupPresented,
+                route: $route
+            )
                 .shadow(radius: 3)
         } customize: {
             $0

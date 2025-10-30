@@ -77,7 +77,7 @@ struct YourApp: App {
     var body: some Scene {
         WindowGroup {
             NavigationView {
-                RootView()
+                RootView()                
                     .onAppear {
                         DispatchQueue.main.async {
                             StorageManager.shared.setLanguage(
@@ -102,7 +102,7 @@ struct YourApp: App {
                             let storageDictionary = userDefaults.dictionaryRepresentation()
                             
                             for key in storageDictionary.keys {
-                                if key != "language" && key != "views" {
+                                if key != "language" && key != "views" && key != "fontSize" && key != "notificationPermission" {
                                     userDefaults.removeObject(forKey: key)
                                 }
                             }
