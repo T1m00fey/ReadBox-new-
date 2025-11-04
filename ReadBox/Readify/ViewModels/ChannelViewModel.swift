@@ -35,6 +35,7 @@ final class ChannelViewModel: ObservableObject {
     @Published var postToView: PrePost? = nil
     @Published var postToRead: PostToRead? = nil
     @Published var isDataLoaded = false
+    @Published var isSubscribeLoading = false
     
     func getAvatar() {
         DispatchQueue.main.async {

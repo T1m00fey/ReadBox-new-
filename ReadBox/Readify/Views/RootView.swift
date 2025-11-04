@@ -24,28 +24,10 @@ struct RootView: View {
     @State private var isLoadingPopupPresented = false
     @State private var isDescriptionPopupPresented = false
     @State private var isNotificationPopupPresented = false
-    @State private var isNotificationsPopupShowed = false
-    @State private var route = NotificationPushRoute.requestSystemPrompt
     
     @StateObject var hudService = HUDService()
     
     @Environment(\.dismiss) var dismiss
-    
-    func decidePushRoute() {
-        UNUserNotificationCenter.current().getNotificationSettings { s in
-            switch s.authorizationStatus {
-            case .notDetermined:
-                route = .requestSystemPrompt
-            case .denied:
-                route = .goToSettings
-            case .authorized, .provisional, .ephemeral:
-                route = .ok
-                StorageManager.shared.setApprovedNotificaitons(true)
-            @unknown default:
-                route = .goToSettings
-            }
-        }
-    }
     
     var body: some View {
         ZStack {
@@ -53,7 +35,7 @@ struct RootView: View {
                 TabView {
                     FeedView(
                         isWelcomeViewPresented: $isWelcomeViewPresented,
-                        isNotificationPopupPresented: $isNotificationPopupPresented
+                        isNotificationPopupPresented: $isNotificationPopupPresented,
                     )
                     .tabItem {
                         Label("", systemImage: "house.fill")
@@ -61,7 +43,7 @@ struct RootView: View {
                     
                     LikedPostsView(
                         isWelcomeViewPresented: $isWelcomeViewPresented,
-                        isNotificationPopupPresented: $isNotificationPopupPresented
+                        isNotificationPopupPresented: $isNotificationPopupPresented,
                     )
                     .tabItem {
                         Label("", systemImage: "hand.thumbsup.fill")
@@ -72,19 +54,17 @@ struct RootView: View {
                             Label("", systemImage: "pencil.and.scribble")
                         }
                     
-                    ProfileView(isWelcomeViewPresented: $isWelcomeViewPresented)
-                        .tabItem {
-                            Label("", systemImage: "person.fill")
-                        }
+                    ProfileView(
+                        isWelcomeViewPresented: $isWelcomeViewPresented,
+                        isNotificationPopupPrenseted: $isNotificationPopupPresented
+                    )
+                    .tabItem {
+                        Label("", systemImage: "person.fill")
+                    }
                 }
                 .tint(Color(uiColor: .label))
                 .onAppear {
-                    decidePushRoute()
-                    isNotificationsPopupShowed = StorageManager.shared.isNotificationsPopupShowed()
-                    
-                    if !isNotificationsPopupShowed {
-                        isNotificationPopupPresented = true
-                    }
+                    isNotificationPopupPresented = !StorageManager.shared.isNotificationsPopupShowed()
                 }
             }
         }
@@ -228,8 +208,8 @@ struct RootView: View {
             
         }
         .onChange(of: isNotificationPopupPresented) {
-            if isNotificationPopupPresented {
-                decidePushRoute()
+            if !isNotificationPopupPresented {
+                StorageManager.shared.setNotificationsPopupShowed(true)
             }
         }
         .fullScreenCover(isPresented: $isReadViewPresented, content: {
@@ -272,10 +252,9 @@ struct RootView: View {
         }
         .popup(isPresented: $isNotificationPopupPresented) {
             NotificationPermissionView(
-                isPopupPresented: $isNotificationPopupPresented,
-                route: $route
+                isPopupPresented: $isNotificationPopupPresented
             )
-                .shadow(radius: 3)
+            .shadow(radius: 3)
         } customize: {
             $0
                 .type(.toast)

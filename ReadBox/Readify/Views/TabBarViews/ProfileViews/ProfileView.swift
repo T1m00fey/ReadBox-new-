@@ -11,6 +11,7 @@ import SwiftfulLoadingIndicators
 
 struct ProfileView: View {
     @Binding var isWelcomeViewPresented: Bool
+    @Binding var isNotificationPopupPrenseted: Bool
     
     @StateObject var viewModel = ProfileViewModel()
     
@@ -26,7 +27,10 @@ struct ProfileView: View {
                         VStack {
                             if let user = viewModel.user, !((user.subscribes ?? []).isEmpty) {
                                 NavigationLink {
-                                    SubscribesView(user: $viewModel.user)
+                                    SubscribesView(
+                                        user: $viewModel.user,
+                                        isNotificationPopupPrenseted: $isNotificationPopupPrenseted
+                                    )
                                 } label: {
                                     ZStack {
                                         RoundedRectangle(cornerRadius: 20)

@@ -19,7 +19,11 @@ struct MemorySettingsView: View {
         let dictionary = userDefaults.dictionaryRepresentation()
         
         for key in dictionary.keys {
-            if key != "views" && key != "language" && key != "fontSize" && key != "notificationPermission" {
+            if key != "views"
+                && key != "language"
+                && key != "fontSize"
+                && key != "isNotificationsApproved"
+                && key != "isNotificationsPopupPresented" {
                 userDefaults.removeObject(forKey: key)
             }
         }

@@ -263,6 +263,21 @@ struct PostCreateView: View {
                                         }
                                     }
                                 }
+                                
+                                if viewModel.isCoverLoading {
+                                    ZStack {
+                                        RoundedRectangle(cornerRadius: 20)
+                                            .frame(width: 100, height: 100)
+                                            .foregroundStyle(Color(.secondarySystemBackground))
+                                        
+                                        LoadingIndicator(
+                                            animation: .circleRunner,
+                                            color: Color(.label),
+                                            size: .small,
+                                            speed: .fast
+                                        )
+                                    }
+                                }
                             }
                         }
                         .frame(width: UIScreen.main.bounds.width - 32)
@@ -388,8 +403,17 @@ struct PostCreateView: View {
                         .onChange(of: viewModel.imageItem) {
                             if viewModel.media.count < 10 {
                                 Task {
-                                    viewModel.didChangeCover = true
                                     guard let item = viewModel.imageItem else { return }
+                                    
+                                    withAnimation {
+                                        viewModel.isCoverLoading = true
+                                    }
+                                    
+                                    defer {
+                                        withAnimation {
+                                            viewModel.isCoverLoading = false
+                                        }
+                                    }                    
 
                                     guard let data = try? await item.loadTransferable(type: Data.self) else {
                                         print("⚠️ Невозможно загрузить данные из файла")
@@ -426,6 +450,7 @@ struct PostCreateView: View {
                                     let thumbnail = cgImage.map { UIImage(cgImage: $0) }
 
                                     withAnimation {
+                                        viewModel.isCoverLoading = false
                                         viewModel.media.append(MediaKind(videoURL: tempURL, videoPreview: thumbnail))
                                     }
                                 }

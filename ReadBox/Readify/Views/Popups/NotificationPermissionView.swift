@@ -9,7 +9,32 @@ import SwiftUI
 
 struct NotificationPermissionView: View {
     @Binding var isPopupPresented: Bool
-    @Binding var route: NotificationPushRoute
+    
+    @State private var route = NotificationPushRoute.requestSystemPrompt
+    
+    func decidePushRoute() -> NotificationPushRoute {
+        var route = NotificationPushRoute.requestSystemPrompt
+        
+        UNUserNotificationCenter.current().getNotificationSettings { s in
+            switch s.authorizationStatus {
+            case .notDetermined:
+                route = .requestSystemPrompt
+                print("DECIDE: \(route)")
+            case .denied:
+                route = .goToSettings
+                print("DECIDE_2≥: \(route)")
+            case .authorized, .provisional, .ephemeral:
+                route = .ok
+                StorageManager.shared.setApprovedNotificaitons(true)
+            @unknown default:
+                route = .goToSettings
+            }
+        }
+        
+        print("DECIDE: \(route)")
+        
+        return route
+    }
     
     var body: some View {
         VStack(spacing: 15) {
@@ -49,7 +74,6 @@ struct NotificationPermissionView: View {
                 Button {
                     if route == .requestSystemPrompt {
                         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
-                            StorageManager.shared.setNotificationsPopupShowed(true)
                             isPopupPresented = false
                         }
                     } else if route == .goToSettings {
@@ -83,13 +107,13 @@ struct NotificationPermissionView: View {
             }
             .padding(.bottom, 50)
         }
-        .onDisappear {
-            StorageManager.shared.setNotificationsPopupShowed(true)
-        }
         .frame(width: UIScreen.main.bounds.width)
         .frame(minHeight: 100)
         .background(Color(uiColor: .secondarySystemBackground))
         .clipShape(RoundedRectangle(cornerRadius: 30))
+        .onAppear {
+            route = decidePushRoute()
+        }
     }
 }
 

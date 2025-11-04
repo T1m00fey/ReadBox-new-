@@ -20,7 +20,7 @@ struct ChannelView: View {
     
     let authorId: String
     let authorName: String
-    let isCheckmark: Bool        
+    let isCheckmark: Bool
     
     var body: some View {
         NavigationStack {
@@ -142,9 +142,9 @@ struct ChannelView: View {
                                                 text: postToread.text,
                                                 mediaURLs: postToread.mediaURLs
                                             )
-
+                                            
                                             viewModel.isReadViewPresented = true
-
+                                            
                                         } catch {
                                             withAnimation {
                                                 viewModel.errorText = error.localizedDescription
@@ -206,41 +206,41 @@ struct ChannelView: View {
                             .padding(.top, -150)
                         }
                         
-//                        if !viewModel.isLoading && !viewModel.isAllLoading && viewModel.posts.count >= 20 {
-//                            Button {
-//                                Task {
-//                                    do {
-//                                        try await viewModel.loadPosts(by: authorId)
-//                                        return
-//                                    } catch {
-//                                        withAnimation {
-//                                            viewModel.errorText = error.localizedDescription
-//                                        }
-//                                    }
-//                                    
-//                                    viewModel.isErrorPopupPresented = true
-//                                }
-//                            } label: {
-//                                HStack {
-//                                    Image(systemName: "arrow.down")
-//                                        .foregroundStyle(Color(uiColor: .label))
-//                                        .font(.title3)
-//                                        .fontWeight(.light)
-//                                    
-//                                    Text(LocalizedStringKey("loadMore"))
-//                                        .font(.title3)
-//                                        .fontDesign(.rounded)
-//                                        .fontWeight(.light)
-//                                }
-//                                .padding(.horizontal, 16)
-//                                .padding(.vertical, 10)
-//                                .background(Color(uiColor: .secondarySystemBackground))
-//                                .clipShape(RoundedRectangle(cornerRadius: 10))
-//                                .shadow(radius: 2)
-//                                .padding(.top, 20)
-//                            }
-//                            .padding(.bottom, 10)
-//                        }
+                        //                        if !viewModel.isLoading && !viewModel.isAllLoading && viewModel.posts.count >= 20 {
+                        //                            Button {
+                        //                                Task {
+                        //                                    do {
+                        //                                        try await viewModel.loadPosts(by: authorId)
+                        //                                        return
+                        //                                    } catch {
+                        //                                        withAnimation {
+                        //                                            viewModel.errorText = error.localizedDescription
+                        //                                        }
+                        //                                    }
+                        //
+                        //                                    viewModel.isErrorPopupPresented = true
+                        //                                }
+                        //                            } label: {
+                        //                                HStack {
+                        //                                    Image(systemName: "arrow.down")
+                        //                                        .foregroundStyle(Color(uiColor: .label))
+                        //                                        .font(.title3)
+                        //                                        .fontWeight(.light)
+                        //
+                        //                                    Text(LocalizedStringKey("loadMore"))
+                        //                                        .font(.title3)
+                        //                                        .fontDesign(.rounded)
+                        //                                        .fontWeight(.light)
+                        //                                }
+                        //                                .padding(.horizontal, 16)
+                        //                                .padding(.vertical, 10)
+                        //                                .background(Color(uiColor: .secondarySystemBackground))
+                        //                                .clipShape(RoundedRectangle(cornerRadius: 10))
+                        //                                .shadow(radius: 2)
+                        //                                .padding(.top, 20)
+                        //                            }
+                        //                            .padding(.bottom, 10)
+                        //                        }
                         
                     }
                     .padding(.horizontal)
@@ -263,7 +263,7 @@ struct ChannelView: View {
                         .animation(.bouncy)
                         .dragToDismiss(true)
                         .autohideIn(5)
-                }               
+                }
                 .popup(isPresented: $viewModel.isLoadingPopupPresented) {
                     LoadingPopup()
                         .shadow(radius: 3)
@@ -382,31 +382,51 @@ struct ChannelView: View {
                                 .offset(y: 40)
                             
                             if !viewModel.isLoading {
-                                Text(
-                                    isSubscribed
-                                    ? NSLocalizedString("youSubscribedLabel", comment: "")
-                                    : NSLocalizedString("subscribeLabel", comment: "")
-                                )
-                                    .font(.system(size: 20))
-                                    .frame(width: UIScreen.main.bounds.width - 10, height: 50, alignment: .center)
-                                    .background(
-                                        RoundedRectangle(cornerRadius: 15)
-                                            .foregroundStyle(
+                                HStack {
+                                    if viewModel.isSubscribeLoading {
+                                        LoadingIndicator(
+                                            animation: .circleRunner,
+                                            color: Color(
                                                 isSubscribed
-                                                ? Color(.systemBackground)
-                                                : Color(uiColor: .label)
-                                            )
-                                            .shadow(radius: 1)
-                                    )
-                                    .foregroundColor(
-                                        isSubscribed
-                                        ? Color(.label)
-                                        : Color(uiColor: .systemBackground)
-                                    )
-                                    .offset(y: 20)
-                                    .onTapGesture {
+                                                ? .label
+                                                : .systemBackground
+                                            ),
+                                            size: .small,
+                                            speed: .fast
+                                        )
+                                    } else {
+                                        Text(
+                                            isSubscribed
+                                            ? NSLocalizedString("youSubscribedLabel", comment: "")
+                                            : NSLocalizedString("subscribeLabel", comment: "")
+                                        )
+                                        .font(.system(size: 20))
+                                        .foregroundColor(
+                                            isSubscribed
+                                            ? Color(.label)
+                                            : Color(uiColor: .systemBackground)
+                                        )
+                                    }
+                                }
+                                .frame(width: UIScreen.main.bounds.width - 10, height: 50, alignment: .center)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 15)
+                                        .foregroundStyle(
+                                            isSubscribed
+                                            ? Color(.systemBackground)
+                                            : Color(uiColor: .label)
+                                        )
+                                        .shadow(radius: 1)
+                                )
+                                .offset(y: 20)
+                                .onTapGesture {
+                                    if !viewModel.isSubscribeLoading {
                                         Task {
                                             do {
+                                                withAnimation {
+                                                    viewModel.isSubscribeLoading = true
+                                                }
+                                                
                                                 try await viewModel.un_subscribeUser(on: authorId, isNeedToSubscribe: isSubscribed ? false : true)
                                                 
                                                 if isSubscribed {
@@ -426,18 +446,24 @@ struct ChannelView: View {
                                                     viewModel.subscribersCount += isSubscribed ? -1 : 1
                                                 }
                                                 
+                                                withAnimation {
+                                                    viewModel.isSubscribeLoading = false
+                                                }
+                                                
                                                 let isNotificationsApproved = StorageManager.shared.getIsApprovedNotificaitons()
                                                 if !isSubscribed && !isNotificationsApproved {
                                                     isNotificationPopupPrenseted = true
                                                 }
                                             } catch {
                                                 withAnimation {
+                                                    viewModel.isSubscribeLoading = false
                                                     viewModel.errorText = error.localizedDescription
                                                     viewModel.isErrorPopupPresented = true
                                                 }
                                             }
                                         }
                                     }
+                                }
                             }
                         }
                     }
@@ -448,11 +474,12 @@ struct ChannelView: View {
                     
                     Spacer()
                 }.ignoresSafeArea()
-
+                
             }
         }
     }
 }
+
 
 private extension ChannelView {
     var headerView: some View {

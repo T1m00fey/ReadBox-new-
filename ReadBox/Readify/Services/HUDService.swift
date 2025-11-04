@@ -16,6 +16,8 @@ final class HUDService: ObservableObject {
     @Published var isErrorPopupPresented = false
     @Published var isSuccessPopupPresented = false
     
+    @Published var isNeedToShowShortLoading = false
+    
     private var vibrationsService = VibrationsService.shared
     
     func showLoading() {
@@ -62,39 +64,71 @@ final class HUDService: ObservableObject {
 extension HUDService {
     @ViewBuilder
     func makeLoadingPopup(screenWidth: CGFloat) -> some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 20)
-                .frame(width: screenWidth - 20, height: 70)
-                .foregroundStyle(.ultraThinMaterial)
+        if isNeedToShowShortLoading {
             
             HStack {
-                VStack(spacing: 5) {
-                    Text("Загружаем")
-                        .font(.system(size: 18))
-                        .foregroundStyle(Color.white)
-                        .fontWeight(.semibold)
-                        .fontDesign(.rounded)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        
-                    Text("Пожалуйста, не закрывайте приложение")
-                        .font(.system(size: 14))
-                        .foregroundStyle(Color.white)
-                        .fontDesign(.rounded)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                ZStack {
+                    RoundedRectangle(cornerRadius: 20)
+                        .frame(width: 70, height: 70)
+                        .foregroundStyle(.ultraThinMaterial)
+                    
+                    LoadingIndicator(
+                        animation: .circleRunner,
+                        color: Color.white,
+                        size: .small,
+                        speed: .fast
+                    )
                 }
-                
-                Spacer()
-                
-                LoadingIndicator(
-                    animation: .circleRunner,
-                    color: Color.white,
-                    size: .small,
-                    speed: .fast
-                )
             }
-            .frame(width: screenWidth - 40)
+            .frame(width: screenWidth - 20, alignment: .trailing)
+            .padding(.bottom, 60)
+            .onTapGesture {
+                withAnimation {
+                    self.isNeedToShowShortLoading.toggle()
+                }
+            }
+            
+        } else {
+            
+            ZStack {
+                RoundedRectangle(cornerRadius: 20)
+                    .frame(width: screenWidth - 20, height: 70)
+                    .foregroundStyle(.ultraThinMaterial)
+                
+                HStack {
+                    VStack(spacing: 5) {
+                        Text("Загружаем")
+                            .font(.system(size: 18))
+                            .foregroundStyle(Color.white)
+                            .fontWeight(.semibold)
+                            .fontDesign(.rounded)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        
+                        Text("Пожалуйста, не закрывайте приложение")
+                            .font(.system(size: 14))
+                            .foregroundStyle(Color.white)
+                            .fontDesign(.rounded)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    
+                    Spacer()
+                    
+                    LoadingIndicator(
+                        animation: .circleRunner,
+                        color: Color.white,
+                        size: .small,
+                        speed: .fast
+                    )
+                }
+                .frame(width: screenWidth - 40)
+            }
+            .padding(.bottom, 60)
+            .onTapGesture {
+                withAnimation {
+                    self.isNeedToShowShortLoading.toggle()
+                }
+            }
         }
-        .padding(.bottom, 60)
         
     }
 }

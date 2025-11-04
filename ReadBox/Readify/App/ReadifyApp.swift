@@ -102,7 +102,12 @@ struct YourApp: App {
                             let storageDictionary = userDefaults.dictionaryRepresentation()
                             
                             for key in storageDictionary.keys {
-                                if key != "language" && key != "views" && key != "fontSize" && key != "notificationPermission" {
+                                if key != "language"
+                                    && key != "views"
+                                    && key != "fontSize"
+                                    && key != "isNotificationsPopupPresented"
+                                    && key != "isNotificationsApproved"
+                                {
                                     userDefaults.removeObject(forKey: key)
                                 }
                             }

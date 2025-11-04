@@ -60,7 +60,10 @@ final class ProfileViewModel: ObservableObject {
         let dictionary = userDefaults.dictionaryRepresentation()
         
         for key in dictionary.keys {
-            if key != "language" && key != "fontSize" && key != "notificationPermission" {
+            if key != "language"
+                && key != "fontSize"
+                && key != "isNotificationsApproved"
+                && key != "isNotificationsPopupPresented" {
                 userDefaults.removeObject(forKey: key)
             }
         }

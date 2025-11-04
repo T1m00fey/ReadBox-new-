@@ -12,6 +12,7 @@ import PopupView
 
 struct SubscribesView: View {
     @Binding var user: DBUser?
+    @Binding var isNotificationPopupPrenseted: Bool
     
     @StateObject private var viewModel = SubscribesViewModel()
     
@@ -128,7 +129,7 @@ struct SubscribesView: View {
                     
                     ChannelView(
                         user: $user,
-                        isNotificationPopupPrenseted: .constant(false),
+                        isNotificationPopupPrenseted: $isNotificationPopupPrenseted,
                         authorId: channel?.authorId ?? "",
                         authorName: channel?.authorName ?? NSLocalizedString("notFoundLabel", comment: ""),
                         isCheckmark: channel?.isCheckmark ?? false

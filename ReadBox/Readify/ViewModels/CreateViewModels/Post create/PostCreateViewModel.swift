@@ -15,10 +15,10 @@ final class PostCreateViewModel: ObservableObject {
     @Published var imageItem: PhotosPickerItem? = nil
     @Published var selectedLanguage: String = StorageManager.shared.getLanguage()
     @Published var addingMode = 0
-    @Published var didChangeCover = false
     @Published var isLoading = false
     @Published var media: [MediaKind] = []
     @Published var oldMediaCount = 0
+    @Published var isCoverLoading = false
     
     @Published var errorText = ""
     @Published var isErrorPopupPresented = false
