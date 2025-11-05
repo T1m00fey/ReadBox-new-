@@ -26,6 +26,7 @@ struct PostCreateView: View {
     
     @FocusState private var isTEFocused: Bool
     
+    @EnvironmentObject var hudService: HUDService
     @Environment(\.dismiss) var dismiss
     
     init(
@@ -49,138 +50,58 @@ struct PostCreateView: View {
     }
     
     private func uploadPost() {
-        viewModel.isArchive = viewModel.addingMode == 2 ? true : false
-        
-        if postId == "" {
-            Task {
-                do {
-                    withAnimation {
-                        viewModel.isLoading = true
-                    }
-                    
-                    let id = try await viewModel.uploadPost(
-                        title: viewModel.text,
-                        isArchive: viewModel.isArchive,
-                        uploadingLanguage: viewModel.selectedLanguage,
-                        mediaCount: viewModel.media.count
+        viewModel.isArchive = (viewModel.addingMode == 2)
+        hudService.showLoading()
+
+        // снимки до dismiss
+        let isArchive = viewModel.isArchive
+        let selectedLanguage = viewModel.selectedLanguage
+        let mediaCount = viewModel.media.count
+        let titleText = viewModel.text
+        let currentPostId = postId
+        let author = authorId
+        let oldCount = postsCount
+        let wasArchived = isArchived
+
+        dismiss()
+
+        Task.detached {
+            do {
+                if currentPostId.isEmpty {
+                    _ = try await viewModel.uploadPost(
+                        title: titleText,
+                        isArchive: isArchive,
+                        uploadingLanguage: selectedLanguage,
+                        mediaCount: mediaCount
                     )
-                    
-                    let post = PrePost(
-                        id: id,
-                        title: viewModel.text,
-                        authorId: authorId,
-                        viewsCount: 0,
-                        likesCount: 0,
-                        isArchive: viewModel.isArchive,
-                        isShortPost: true,
-                        mediaCount: viewModel.media.count
+
+                    if !isArchive {
+                        let newCount = oldCount + 1
+                        try await UserManager.shared.updatePostsCount(userId: author, postsCount: newCount)
+                    }
+                } else {
+                    try await viewModel.updatePost(
+                        postId: currentPostId,
+                        title: titleText,
+                        isArchive: isArchive,
+                        uploadingLanguage: selectedLanguage,
+                        mediaCount: mediaCount
                     )
-                    
-                    withAnimation {
-                        if viewModel.isArchive {
-                            archivedPosts.insert(
-                                post,
-                                at: 0
-                            )
-                        } else {
-                            posts.insert(
-                                post,
-                                at: 0
-                            )
-                            
-                            postsCount += 1
-                            Task {
-                                try await UserManager.shared.updatePostsCount(userId: authorId, postsCount: postsCount)
-                            }
-                        }
-                    }
-                    
-                    withAnimation {
-                        viewModel.isLoading = false
-                    }
-                    
-                    dismiss()
-                } catch {
-                    withAnimation {
-                        viewModel.errorText = error.localizedDescription
-                        viewModel.isErrorPopupPresented = true
-                        
-                        viewModel.isLoading = false
+
+                    if isArchive != wasArchived {
+                        let delta = isArchive ? -1 : +1
+                        let newCount = max(0, oldCount + delta)
+                        try await UserManager.shared.updatePostsCount(userId: author, postsCount: newCount)
                     }
                 }
-            }
-        } else {
-            Task {
-                do {
-                    withAnimation {
-                        viewModel.isLoading = true
-                    }
-                    
-                    try await viewModel.updatePost(
-                        postId: postId,
-                        title: viewModel.text,
-                        isArchive: viewModel.isArchive,
-                        uploadingLanguage: viewModel.selectedLanguage,
-                        mediaCount: viewModel.media.count
-                    )
-                    
-                    let viewsCount = try await ArticlesManager.shared.getViews(at: postId)
-                    let likesCount = try await ArticlesManager.shared.getLikesCount(byPostId: postId)
-                                                        
-                    let post = PrePost(
-                        id: postId,
-                        title: viewModel.text,
-                        authorId: authorId,
-                        viewsCount: viewsCount,
-                        likesCount: likesCount,
-                        isArchive: viewModel.isArchive,
-                        isShortPost: true,
-                        mediaCount: viewModel.media.count
-                    )
-                    
-                    var index = 0
-                                                        
-                    if viewModel.isArchive {
-                        if viewModel.isArchive != isArchived {
-                            posts.removeAll { $0.id == postId }
-                            postsCount -= 1
-                            
-                            try await UserManager.shared.updatePostsCount(userId: authorId, postsCount: postsCount)
-                            
-                            index = posts.firstIndex { $0.id == postId } ?? 0
-                        } else {
-                            index = archivedPosts.firstIndex { $0.id == postId } ?? 0
-                        }
-                        
-                        archivedPosts.removeAll { $0.id == postId }
-                        archivedPosts.insert(post, at: index)
-                    } else {
-                        if viewModel.isArchive != isArchived {
-                            archivedPosts.removeAll { $0.id == postId }
-                            postsCount += 1
-                            try await UserManager.shared.updatePostsCount(userId: authorId, postsCount: postsCount)
-                            
-                            index = archivedPosts.firstIndex { $0.id == postId } ?? 0
-                        } else {
-                            index = posts.firstIndex { $0.id == postId } ?? 0
-                        }
-                        
-                        posts.removeAll { $0.id == postId }
-                        posts.insert(post, at: index)
-                    }
-                    
-                    withAnimation {
-                        viewModel.isLoading = false
-                    }
-                    
-                    dismiss()
-                } catch {
-                    withAnimation {
-                        viewModel.errorText = error.localizedDescription
-                        viewModel.isErrorPopupPresented = true
-                        
-                        viewModel.isLoading = false
-                    }
+
+                await MainActor.run {
+                    hudService.showSuccessPopup()
+                    NotificationCenter.default.post(name: .postsDidChange, object: nil)
+                }
+            } catch {
+                await MainActor.run {
+                    hudService.showErrorPopup(with: error.localizedDescription)
                 }
             }
         }
@@ -265,17 +186,38 @@ struct PostCreateView: View {
                                 }
                                 
                                 if viewModel.isCoverLoading {
-                                    ZStack {
-                                        RoundedRectangle(cornerRadius: 20)
-                                            .frame(width: 100, height: 100)
-                                            .foregroundStyle(Color(.secondarySystemBackground))
+                                    ZStack(alignment: .topTrailing) {
+                                        ZStack {
+                                            RoundedRectangle(cornerRadius: 20)
+                                                .frame(width: 100, height: 100)
+                                                .foregroundStyle(Color(.secondarySystemBackground))
+                                            
+                                            LoadingIndicator(
+                                                animation: .circleRunner,
+                                                color: Color(.label),
+                                                size: .small,
+                                                speed: .fast
+                                            )
+                                        }
                                         
-                                        LoadingIndicator(
-                                            animation: .circleRunner,
-                                            color: Color(.label),
-                                            size: .small,
-                                            speed: .fast
-                                        )
+                                        Image(systemName: "xmark")
+                                            .resizable()
+                                            .scaledToFit()
+                                            .frame(width: 12)
+                                            .padding(.all, 8)
+                                            .foregroundStyle(Color(.label))
+                                            .background(Color(.secondarySystemBackground))
+                                            .clipShape(Circle())
+                                            .offset(x: 10, y: -10)
+                                            .onTapGesture {
+                                                viewModel.imagePickerTask?.cancel()
+                                                viewModel.imagePickerTask = nil
+                                                
+                                                withAnimation {
+                                                    viewModel.isCoverLoading = false
+                                                }
+                                            }
+                                        
                                     }
                                 }
                             }
@@ -292,13 +234,14 @@ struct PostCreateView: View {
                                     width: UIScreen.main.bounds.width - 32,
                                     alignment: .topLeading
                                 )
+                                .frame(minHeight: 300)
                                 .padding(.bottom, 5)
                             
                             Text(NSLocalizedString("whatsNewLabel", comment: ""))
                                 .font(.system(size: 20))
                                 .foregroundStyle(Color.gray)
                                 .fontDesign(.rounded)
-                                .frame(width: UIScreen.main.bounds.width - 32, alignment: .topLeading)
+                                .frame(width: UIScreen.main.bounds.width - 32, height: 300, alignment: .topLeading)
                                 .padding(.leading, 10)
                                 .opacity(viewModel.text.isEmpty ? 1 : 0)
                         }
@@ -402,56 +345,73 @@ struct PostCreateView: View {
                         }
                         .onChange(of: viewModel.imageItem) {
                             if viewModel.media.count < 10 {
-                                Task {
-                                    guard let item = viewModel.imageItem else { return }
-                                    
-                                    withAnimation {
-                                        viewModel.isCoverLoading = true
-                                    }
-                                    
-                                    defer {
+                                viewModel.imagePickerTask = Task {
+                                    do {
+                                        try Task.checkCancellation()
+                                        guard let item = viewModel.imageItem else { return }
+                                        
                                         withAnimation {
-                                            viewModel.isCoverLoading = false
-                                        }
-                                    }                    
-
-                                    guard let data = try? await item.loadTransferable(type: Data.self) else {
-                                        print("⚠️ Невозможно загрузить данные из файла")
-                                        return
-                                    }
-
-                                    if let image = UIImage(data: data) {
-                                        print("🖼 Обложка — изображение")
-                                        withAnimation {
-                                            viewModel.media.append(MediaKind(image: image))
-                                        }
-                                        return
-                                    }
-
-                                    let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".mp4")
-                                    try? data.write(to: tempURL)
-
-                                    let asset = AVAsset(url: tempURL)
-                                    let duration = try await asset.load(.duration)
-                                    let secondsDuration = CMTimeGetSeconds(duration)
-                                    
-                                    guard secondsDuration <= 120 else {
-                                        withAnimation {
-                                            viewModel.errorText = NSLocalizedString("durationCoverErrorLabel", comment: "")
-                                            viewModel.isErrorPopupPresented = true
+                                            viewModel.isCoverLoading = true
                                         }
                                         
-                                        return
-                                    }
-                                    
-                                    let generator = AVAssetImageGenerator(asset: asset)
-                                    generator.appliesPreferredTrackTransform = true
-                                    let cgImage = try? generator.copyCGImage(at: .zero, actualTime: nil)
-                                    let thumbnail = cgImage.map { UIImage(cgImage: $0) }
+                                        defer {
+                                            withAnimation {
+                                                viewModel.isCoverLoading = false
+                                            }
+                                        }
+                                        
+                                        try Task.checkCancellation()
+                                        guard let data = try? await item.loadTransferable(type: Data.self) else {
+                                            print("⚠️ Невозможно загрузить данные из файла")
+                                            return
+                                        }
 
-                                    withAnimation {
-                                        viewModel.isCoverLoading = false
-                                        viewModel.media.append(MediaKind(videoURL: tempURL, videoPreview: thumbnail))
+                                        if let image = UIImage(data: data) {
+                                            print("🖼 Обложка — изображение")
+                                            withAnimation {
+                                                viewModel.media.append(MediaKind(image: image))
+                                            }
+                                            return
+                                        }
+
+                                        try Task.checkCancellation()
+                                        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".mp4")
+                                        try? data.write(to: tempURL)
+
+                                        try Task.checkCancellation()
+                                        let asset = AVAsset(url: tempURL)
+                                        let duration = try await asset.load(.duration)
+                                        let secondsDuration = CMTimeGetSeconds(duration)
+                                        
+                                        try Task.checkCancellation()
+                                        guard secondsDuration <= 120 else {
+                                            withAnimation {
+                                                viewModel.errorText = NSLocalizedString("durationCoverErrorLabel", comment: "")
+                                                viewModel.isErrorPopupPresented = true
+                                            }
+                                            
+                                            return
+                                        }
+                                        
+                                        try Task.checkCancellation()
+                                        let generator = AVAssetImageGenerator(asset: asset)
+                                        generator.appliesPreferredTrackTransform = true
+                                        
+                                        try Task.checkCancellation()
+                                        let cgImage = try? generator.copyCGImage(at: .zero, actualTime: nil)
+                                        let thumbnail = cgImage.map { UIImage(cgImage: $0) }
+
+                                        withAnimation {
+                                            viewModel.isCoverLoading = false
+                                            viewModel.media.append(MediaKind(videoURL: tempURL, videoPreview: thumbnail))
+                                        }
+                                    } catch is CancellationError {
+                                      print("ЗАДАЧА ОТМЕНЕНА")
+                                    } catch {
+                                        withAnimation {
+                                            viewModel.errorText = error.localizedDescription
+                                            viewModel.isErrorPopupPresented = true
+                                        }
                                     }
                                 }
                             } else {

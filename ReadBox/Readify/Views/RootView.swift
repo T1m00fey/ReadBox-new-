@@ -11,6 +11,13 @@ import PopupView
 import UserNotifications
 
 struct RootView: View {
+    private enum TabType {
+        case feed
+        case favourites
+        case create
+        case profile
+    }
+    
     @State private var isReadViewPresented = false
     @State private var user: DBUser? = nil
     @State private var prePost: PrePost? = nil
@@ -25,18 +32,24 @@ struct RootView: View {
     @State private var isDescriptionPopupPresented = false
     @State private var isNotificationPopupPresented = false
     
+    @State private var selectedTab = TabType.feed
+    @State private var bottomPaddingForHUD: CGFloat = 60
+    
     @StateObject var hudService = HUDService()
     
     @Environment(\.dismiss) var dismiss
     
+    private var screenWidth = UIScreen.main.bounds.width
+    
     var body: some View {
         ZStack {
             if let _ = try? AuthenticationManager.shared.getAuthenticatedUser() {
-                TabView {
+                TabView(selection: $selectedTab) {
                     FeedView(
                         isWelcomeViewPresented: $isWelcomeViewPresented,
                         isNotificationPopupPresented: $isNotificationPopupPresented,
                     )
+                    .tag(TabType.feed)
                     .tabItem {
                         Label("", systemImage: "house.fill")
                     }
@@ -45,19 +58,22 @@ struct RootView: View {
                         isWelcomeViewPresented: $isWelcomeViewPresented,
                         isNotificationPopupPresented: $isNotificationPopupPresented,
                     )
+                    .tag(TabType.favourites)
                     .tabItem {
                         Label("", systemImage: "hand.thumbsup.fill")
                     }
                     
                     CreatedPostsView(isWelcomeViewPresented: $isWelcomeViewPresented)
-                        .tabItem {
-                            Label("", systemImage: "pencil.and.scribble")
-                        }
+                    .tag(TabType.create)
+                    .tabItem {
+                        Label("", systemImage: "pencil.and.scribble")
+                    }
                     
                     ProfileView(
                         isWelcomeViewPresented: $isWelcomeViewPresented,
                         isNotificationPopupPrenseted: $isNotificationPopupPresented
                     )
+                    .tag(TabType.profile)
                     .tabItem {
                         Label("", systemImage: "person.fill")
                     }
@@ -68,10 +84,39 @@ struct RootView: View {
                 }
             }
         }
+        .environmentObject(hudService)
         .overlay(
-            hudService.makeLoadingPopup(screenWidth: UIScreen.main.bounds.width),
+            hudService.makeLoadingPopup(
+                screenWidth: screenWidth,
+                bottomPadding: bottomPaddingForHUD
+            ).opacity(hudService.isLoading ? 1 : 0),
             alignment: .bottom
         )
+        .overlay(
+            hudService.makeSuccessPopup(
+                screenWidth: screenWidth,
+                bottomPadding: bottomPaddingForHUD
+            ).opacity(hudService.isSuccessPopupPresented ? 1 : 0),
+            alignment: .bottom
+        )
+        .overlay(
+            hudService.makeErrorPopup(
+                screenWidth: screenWidth,
+                bottomPadding: bottomPaddingForHUD
+            ).opacity(hudService.isErrorPopupPresented ? 1 : 0),
+            alignment: .bottom
+        )
+        .onChange(of: selectedTab) {
+            if selectedTab == .create {
+                withAnimation {
+                    bottomPaddingForHUD = 120
+                }
+            } else {
+                withAnimation {
+                    bottomPaddingForHUD = 60
+                }
+            }
+        }
         .onChange(of: isWelcomeViewPresented) {
             if !isWelcomeViewPresented {
                 Task {

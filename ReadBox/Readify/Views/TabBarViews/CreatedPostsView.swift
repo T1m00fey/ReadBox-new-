@@ -29,6 +29,9 @@ struct CreatedPostsView: View {
                         isAuthorNameFocused = false
                         isDescriptionFocused = false
                     }
+                    .onReceive(NotificationCenter.default.publisher(for: .postsDidChange)) { _ in
+                        viewModel.isNeedToReload = true
+                    }
                     .onAppear {
                         if viewModel.isLoading {
                             viewModel.isLoading = false

@@ -301,7 +301,9 @@ extension View {
                     
                     switch viewModel.postOption {
                     case .editing:
-                        if let prePost, let isShortPost = prePost.isShortPost {
+                        if let prePost {
+                            let isShortPost = prePost.isShortPost ?? false
+                            
                             if isShortPost == false {
                                 viewModel.isLoadingPopupPresented = true
                                 
@@ -348,6 +350,7 @@ extension View {
                                         } catch {
                                             viewModel.isLoadingPopupPresented = false
                                             viewModel.clearData()
+                                            print("ERORORO: \(error.localizedDescription)")
                                         }
                                     }
                                 } else {
@@ -355,6 +358,8 @@ extension View {
                                     viewModel.clearData()
                                 }
                             }
+                        } else {
+                            viewModel.clearData()
                         }
                         
                     case .publish:

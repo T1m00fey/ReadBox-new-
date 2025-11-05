@@ -126,22 +126,24 @@ final class CreatedPostsViewModel: ObservableObject {
                 }
                 
                 let videoRef = storageRef.child("images/\(postId)_\(i).mp4")
-                let url = try await videoRef.downloadURL()
+                let url = try? await videoRef.downloadURL()
                 
-                let asset = AVAsset(url: url)
-                let _ = try? await asset.loadTracks(withMediaType: .video)
-                
-                let generator = AVAssetImageGenerator(asset: asset)
-                generator.appliesPreferredTrackTransform = true
-                let cgImage = try? generator.copyCGImage(at: .zero, actualTime: nil)
-                let thumbnail = cgImage.map { UIImage(cgImage: $0) }
-                
-                self.mediaKind.append(
-                    MediaKind(
-                        videoURL: url,
-                        videoPreview: thumbnail
+                if let url {
+                    let asset = AVAsset(url: url)
+                    let _ = try? await asset.loadTracks(withMediaType: .video)
+                    
+                    let generator = AVAssetImageGenerator(asset: asset)
+                    generator.appliesPreferredTrackTransform = true
+                    let cgImage = try? generator.copyCGImage(at: .zero, actualTime: nil)
+                    let thumbnail = cgImage.map { UIImage(cgImage: $0) }
+                    
+                    self.mediaKind.append(
+                        MediaKind(
+                            videoURL: url,
+                            videoPreview: thumbnail
+                        )
                     )
-                )
+                }
             }
         }
         

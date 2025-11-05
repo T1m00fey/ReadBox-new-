@@ -19,6 +19,7 @@ final class PostCreateViewModel: ObservableObject {
     @Published var media: [MediaKind] = []
     @Published var oldMediaCount = 0
     @Published var isCoverLoading = false
+    @Published var imagePickerTask: Task<Void, Never>? = nil
     
     @Published var errorText = ""
     @Published var isErrorPopupPresented = false
