@@ -83,7 +83,6 @@
 "becomeAuthorLabel" = "Стать автором";
 "addPostToFavoritesLabel" = "Невозможно добавить публикацию в избранное ";
 "addPhotoLabel" = "Добавить обложку";
-"addDescriptionLabel" = "Добавить описание +";
 "removePhotoLabel" = "Удалить обложку";
 "loadingLabel" = "Загрузка";
 "subscribeLabel" = "Подписаться +";
@@ -123,3 +122,12 @@
 "whatsNewLabel" = "Что нового?";
 "articleLabel" = "Статья";
 "maxAttachFilesCountLabel" = "К публикации можно прикерпить максимум 10 файлов";
+"notificationLabel" = "Уведомления";
+"pleaseTurnOnYourNotificationsLabel" = "Включите уведомления чтобы не пропускать последние публкации ваших любимых авторов!";
+"turnOnLabel" = "Включить";
+"laterLabel" = "Позже";
+"uploadingHUDLabel" = "Загружаем";
+"deletingHUDLabel" = "Удаляем";
+"postSuccessfullyUploadedHUDLabel" = "Пост успешно загружен";
+"postSuccessfullyDeletedHUDLabel" = "Пост успешно удалён";
+"pleaseDontCloseAppHUDLabel" = "Пожалуйста, не закрывайте приложение";

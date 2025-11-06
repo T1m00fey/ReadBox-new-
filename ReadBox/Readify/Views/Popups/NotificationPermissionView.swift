@@ -50,7 +50,7 @@ struct NotificationPermissionView: View {
 //                .foregroundStyle(Color.gray)
             
             HStack {
-                Text("Уведомления")
+                Text(NSLocalizedString("notificationLabel", comment: ""))
                     .font(.system(size: 27))
                     .fontDesign(.rounded)
                 
@@ -62,7 +62,7 @@ struct NotificationPermissionView: View {
             }
             .frame(width: UIScreen.main.bounds.width - 32, alignment: .leading)
             
-            Text("Включите уведомления чтобы не пропускать последние публкации ваших любимых авторов!")
+            Text(NSLocalizedString("pleaseTurnOnYourNotificationsLabel", comment: ""))
                 .multilineTextAlignment(.leading)
                 .font(.system(size: 19))
                 .fontDesign(.rounded)
@@ -85,7 +85,7 @@ struct NotificationPermissionView: View {
                         }
                     }
                 } label: {
-                    Text("Включить")
+                    Text(NSLocalizedString("turnOnLabel", comment: ""))
                         .font(.system(size: 20))
                         .fontDesign(.rounded)
                         .fontWeight(.light)
@@ -99,7 +99,7 @@ struct NotificationPermissionView: View {
                 Button {
                     isPopupPresented = false
                 } label: {
-                    Text("Позже")
+                    Text(NSLocalizedString("laterLabel", comment: ""))
                         .font(.system(size: 19))
                         .fontDesign(.rounded)
                         .foregroundStyle(Color.gray)

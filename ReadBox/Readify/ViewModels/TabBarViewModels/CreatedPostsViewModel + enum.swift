@@ -273,75 +273,63 @@ final class CreatedPostsViewModel: ObservableObject {
         }
     }
     
-    func deletePost(id: String) {
-        Task {
-            do {
-                guard let post = isArchivePresented
-                        ? archivePosts.first(where: { $0.id == id })
-                        : posts.first(where: { $0.id == id }) else { return }
+    func deletePost(id: String) async throws {
+        guard let post = isArchivePresented
+                ? archivePosts.first(where: { $0.id == id })
+                : posts.first(where: { $0.id == id }) else { return }
+        
+        if let isArchive = post.isArchive, isArchive == false {
+            withAnimation {
+                postsCount -= 1
+            }
+            
+            try await UserManager.shared.updatePostsCount(
+                userId: user?.userId ?? "",
+                postsCount: postsCount
+            )
+        }
+        
+        let mediaURLs = try await ArticlesManager.shared.getMediaURLs(from: id)
+        
+        try await ArticlesManager.shared.deletePost(id: id)
+        try await UserManager.shared.deleteCreatedPost(id: id)
+        
+        await deleteAllCovers(postId: id, mediaCount: post.mediaCount ?? 10)
+        
+        let storage = Storage.storage()
+        
+        for url in mediaURLs {
+            if let path = URLComponents(string: url.absoluteString)?
+                .path
+                .removingPercentEncoding?
+                .replacingOccurrences(of: "/v0/b/\(storage.reference().bucket)/o/", with: "")
+                .components(separatedBy: "?")
+                .first?
+                .replacingOccurrences(of: "%2F", with: "/") {
                 
-                if let isArchive = post.isArchive, isArchive == false {
-                    withAnimation {
-                        postsCount -= 1
-                    }
-                    
-                    try await UserManager.shared.updatePostsCount(
-                        userId: user?.userId ?? "",
-                        postsCount: postsCount
-                    )
-                }
-                
-                let mediaURLs = try await ArticlesManager.shared.getMediaURLs(from: id)
-                
-                try await ArticlesManager.shared.deletePost(id: id)
-                try await UserManager.shared.deleteCreatedPost(id: id)
-                
-                await deleteAllCovers(postId: id, mediaCount: post.mediaCount ?? 10)
-                
-                let storage = Storage.storage()
-                
-                for url in mediaURLs {
-                        if let path = URLComponents(string: url.absoluteString)?
-                            .path
-                            .removingPercentEncoding?
-                            .replacingOccurrences(of: "/v0/b/\(storage.reference().bucket)/o/", with: "")
-                            .components(separatedBy: "?")
-                            .first?
-                            .replacingOccurrences(of: "%2F", with: "/") {
-
-                            let ref = storage.reference(withPath: path)
-                            try? await ref.delete()
-                            print("🗑 Удалено: \(path)")
-                        }
-                    }
-                
-                withAnimation {
-                    if isArchivePresented {
-                        archivePosts.removeAll { $0.id == id }
-                    } else {
-                        posts.removeAll { $0.id == id }
-                    }
-                }
-                
-                self.id = ""
-            } catch {
-                withAnimation {
-                    errorText = error.localizedDescription
-                    isErrorPopupPresented = true
-                    self.id = ""
-                }
+                let ref = storage.reference(withPath: path)
+                try? await ref.delete()
+                print("🗑 Удалено: \(path)")
             }
         }
         
-        Task {
-            StorageManager.shared.deleteImage(id: id)
-            
-            let fileReference = Storage.storage().reference().child("images/\(id).jpg")
-            let videoReference = Storage.storage().reference().child("images/\(id).mp4")
-            
-            try? await fileReference.delete()
-            try? await videoReference.delete()
+        withAnimation {
+            if isArchivePresented {
+                archivePosts.removeAll { $0.id == id }
+            } else {
+                posts.removeAll { $0.id == id }
+            }
         }
+        
+        self.id = ""
+        
+        StorageManager.shared.deleteImage(id: id)
+        
+        let fileReference = Storage.storage().reference().child("images/\(id).jpg")
+        let videoReference = Storage.storage().reference().child("images/\(id).mp4")
+        
+        try? await fileReference.delete()
+        try? await videoReference.delete()
     }
     
     func updateIsArchiveStatus() {

@@ -9,9 +9,16 @@ import SwiftUI
 import SwiftfulLoadingIndicators
 
 final class HUDService: ObservableObject {
+    enum LoadingToastType {
+        case post
+        case delete
+    }
+    
     @Published var isLoading = false
     
     @Published var popupMessage = ""
+    
+    @Published var loadingTitle = ""
     
     @Published var isErrorPopupPresented = false
     @Published var isSuccessPopupPresented = false
@@ -20,13 +27,25 @@ final class HUDService: ObservableObject {
     
     private var vibrationsService = VibrationsService.shared
     
-    func showLoading() {
+    func showLoading(type: LoadingToastType = .post) {
+        if type == .post {
+             loadingTitle = NSLocalizedString("uploadingHUDLabel", comment: "")
+        } else {
+            loadingTitle = NSLocalizedString("deletingHUDLabel", comment: "")
+        }
+        
         withAnimation {
             isLoading = true
         }
     }
     
-    func showSuccessPopup() {
+    func showSuccessPopup(type: LoadingToastType = .post) {
+        if type == .post {
+            popupMessage = NSLocalizedString("postSuccessfullyUploadedHUDLabel", comment: "")
+        } else {
+            popupMessage = NSLocalizedString("postSuccessfullyDeletedHUDLabel", comment: "")
+        }
+        
         withAnimation {
             isLoading = false
             isErrorPopupPresented = false
@@ -83,7 +102,7 @@ extension HUDService {
                 ZStack {
                     RoundedRectangle(cornerRadius: 15)
                         .frame(width: 50, height: 50)
-                        .foregroundStyle(.ultraThinMaterial)
+                        .foregroundStyle(.thinMaterial)
                     
                     LoadingIndicator(
                         animation: .circleRunner,
@@ -106,18 +125,18 @@ extension HUDService {
             ZStack {
                 RoundedRectangle(cornerRadius: 15)
                     .frame(width: screenWidth - 10, height: 50)
-                    .foregroundStyle(.ultraThinMaterial)
+                    .foregroundStyle(.thinMaterial)
                 
                 HStack {
                     VStack(spacing: 2) {
-                        Text("Загружаем")
+                        Text(loadingTitle)
                             .font(.system(size: 16))
                             .foregroundStyle(Color.white)
                             .fontWeight(.semibold)
                             .fontDesign(.rounded)
                             .frame(maxWidth: .infinity, alignment: .leading)
                         
-                        Text("Пожалуйста, не закрывайте приложение")
+                        Text(NSLocalizedString("pleaseDontCloseAppHUDLabel", comment: ""))
                             .font(.system(size: 12))
                             .foregroundStyle(Color.white)
                             .fontDesign(.rounded)
@@ -151,7 +170,7 @@ extension HUDService {
         ZStack {
             RoundedRectangle(cornerRadius: 15)
                 .frame(width: screenWidth - 10, height: 50)
-                .foregroundStyle(.ultraThinMaterial)
+                .foregroundStyle(.thinMaterial)
                 .overlay(
                     RoundedRectangle(cornerRadius: 15)
                         .stroke(
@@ -167,7 +186,7 @@ extension HUDService {
                     .frame(width: 30, height: 30)
                     .foregroundStyle(Color.white)
                 
-                Text("Пост успешно загружен")
+                Text(popupMessage)
                     .font(.system(size: 16))
                     .foregroundStyle(Color.white)
                     .fontWeight(.semibold)

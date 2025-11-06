@@ -243,6 +243,7 @@ struct PostCreateView: View {
                                 .fontDesign(.rounded)
                                 .frame(width: UIScreen.main.bounds.width - 32, height: 300, alignment: .topLeading)
                                 .padding(.leading, 10)
+                                .padding(.top, 10)
                                 .opacity(viewModel.text.isEmpty ? 1 : 0)
                         }
                     }

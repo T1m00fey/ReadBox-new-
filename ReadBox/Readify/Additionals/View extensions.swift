@@ -1,10 +1,10 @@
+////
+////  View extensions.swift
+////  ReadBox
+////
+////  Created by Тимофей Юдин on 01.06.2025.
+////
 //
-//  View extensions.swift
-//  ReadBox
-//
-//  Created by Тимофей Юдин on 01.06.2025.
-//
-
 import SwiftUI
 import PopupView
 import SwiftfulLoadingIndicators
@@ -220,7 +220,8 @@ extension View {
 extension View {
     func trackChangesOnCreatedPostsView(
         viewModel: CreatedPostsViewModel,
-        isWelcomeViewPresented: Bool
+        isWelcomeViewPresented: Bool,
+        hudService: HUDService
     ) -> some View {
         self
             .onChange(of: viewModel.isDescriptionPopupPresented) {
@@ -231,7 +232,7 @@ extension View {
                 }
             }
             .onChange(of: viewModel.user) {
-                if viewModel.user != nil {                    
+                if viewModel.user != nil {
                     withAnimation {
                         viewModel.posts = []
                         viewModel.archivePosts = []
@@ -369,7 +370,20 @@ extension View {
                         viewModel.updateIsArchiveStatus()
                         viewModel.postOption = .nothing
                     case .delete:
-                        viewModel.deletePost(id: viewModel.id)
+                        
+                        Task {
+                            do {
+                                hudService.showLoading(type: .delete)
+                                try await viewModel.deletePost(id: viewModel.id)
+                                hudService.showSuccessPopup(type: .delete)
+                            } catch {
+                                withAnimation {
+                                    hudService.showErrorPopup(with: error.localizedDescription)
+                                    viewModel.id = ""
+                                }
+                            }
+                        }
+                        
                         viewModel.postOption = .nothing
                     default:
                         print("OK")

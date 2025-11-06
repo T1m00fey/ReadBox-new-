@@ -20,6 +20,8 @@ struct CreatedPostsView: View {
     @FocusState var isAuthorNameFocused: Bool
     @FocusState var isDescriptionFocused: Bool
     
+    @EnvironmentObject var hudService: HUDService
+    
     var body: some View {
         NavigationStack {
             ZStack {
@@ -115,7 +117,8 @@ struct CreatedPostsView: View {
                     })
                     .trackChangesOnCreatedPostsView(
                         viewModel: viewModel,
-                        isWelcomeViewPresented: isWelcomeViewPresented
+                        isWelcomeViewPresented: isWelcomeViewPresented,
+                        hudService: hudService
                     )
                     .makePopupsForCreatedPostsView(
                         viewModel: viewModel,

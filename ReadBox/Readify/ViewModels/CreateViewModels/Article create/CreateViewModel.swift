@@ -35,6 +35,9 @@ final class CreateViewModel: ObservableObject {
     
     @Published var titleTEHeight: CGFloat = 200
     
+    @Published var isCoverLoading = false
+    @Published var imagePickerTask: Task<Void, Never>? = nil
+    
     func getNavigationTitle(_ isEditing: Bool) -> String {
         isEditing ? NSLocalizedString("editingLabel", comment: "") : NSLocalizedString("creationLabel", comment: "")
     }

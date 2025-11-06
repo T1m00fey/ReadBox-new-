@@ -122,3 +122,12 @@
 "whatsNewLabel" = "What's new?";
 "articleLabel" = "Article";
 "maxAttachFilesCountLabel" = "You can attach a maximum of 10 files to a publication";
+"notificationLabel" = "Notifications";
+"pleaseTurnOnYourNotificationsLabel" = "Turn on notifications to stay up to date with the latest posts from your favorite authors!";
+"turnOnLabel" = "Turn On";
+"laterLabel" = "Later";
+"uploadingHUDLabel" = "Uploading";
+"deletingHUDLabel" = "Deleting";
+"postSuccessfullyUploadedHUDLabel" = "Post successfully uploaded";
+"postSuccessfullyDeletedHUDLabel" = "Post successfully deleted";
+"pleaseDontCloseAppHUDLabel" = "Please, don't close the app";

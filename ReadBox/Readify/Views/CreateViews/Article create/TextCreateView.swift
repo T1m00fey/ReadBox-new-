@@ -33,6 +33,29 @@ struct TextCreateView: View {
     @FocusState var isTEFocused: Bool
     
     @Environment(\.dismiss) var dismiss
+    
+    @EnvironmentObject var hudService: HUDService
+    
+    private func applyPostsCountDelta(forNewPost newIsArchive: Bool, createdNewPostId: String? = nil) async throws {
+        var delta = 0
+        
+        if isEditing == false {
+            if newIsArchive == false { delta = 1 }
+        } else {
+            let wasArchived = archivePosts.contains { $0.id == id }
+            let wasPublished = posts.contains { $0.id == id }
+            
+            if wasArchived && newIsArchive == false { delta = 1 }
+            if wasPublished && newIsArchive == true { delta = -1 }
+        }
+        
+        guard delta != 0 else { return }
+        postsCount += delta
+                
+        let userId = try AuthenticationManager.shared.getAuthenticatedUser().uid
+        
+        try await UserManager.shared.updatePostsCount(userId: userId, postsCount: postsCount)
+    }
 
     var body: some View {
         NavigationStack {
@@ -236,197 +259,62 @@ struct TextCreateView: View {
                     .dragToDismiss(true)
             }
             .onChange(of: viewModel.addingMode) {
-                Task {
-                    viewModel.isLoading = true
-                }
-                
-                var isArchive = false
-                
-                if viewModel.addingMode == 2 {
-                    isArchive = true
-                }
-                
+                hudService.showLoading()
+                isCreateViewPresented = false
+                let newIsArchive = (viewModel.addingMode == 2)
+
                 if viewModel.addingMode > 0 {
                     if isEditing {
                         Task {
                             do {
-                                let isArchived = try await ArticlesManager.shared.getIsArchive(of: id)
-                                let userId = try AuthenticationManager.shared.getAuthenticatedUser().uid
-                                
                                 try await viewModel.updatePost(
                                     id: id,
                                     title: title,
                                     text: viewModel.text,
-                                    isArchive: isArchive,
-                                    mediaURLs: mediaURLs,                                  
+                                    isArchive: newIsArchive,
+                                    mediaURLs: mediaURLs,
                                     uploadingLanguage: uploadingLanguage,
                                     media: media,
                                     oldMediaCount: oldMediaCount
                                 )
+
+                                try await applyPostsCountDelta(forNewPost: newIsArchive)
+
+                                hudService.showSuccessPopup(type: .post)
                                 
-                                if isArchived != isArchive {
-                                    postsCount += isArchive ? -1 : 1
-                                    
-                                    try await UserManager.shared.updatePostsCount(userId: userId, postsCount: postsCount)
-                                    
-                                    if isArchived {
-                                        archivePosts.removeAll { $0.id == id }
-                                        
-                                        let viewsCount = try await ArticlesManager.shared.getViews(at: id)
-                                        let likesCount = try await ArticlesManager.shared.getLikesCount(byPostId: id)
-                                        
-                                        posts.insert(
-                                            PrePost(
-                                                id: id,
-                                                title: title,
-                                                authorId: userId,
-                                                viewsCount: viewsCount,
-                                                likesCount: likesCount,
-                                                isArchive: false,
-                                                isShortPost: viewModel.text.isEmpty,
-                                                mediaCount: media.count
-                                            ),
-                                            at: 0
-                                        )
-                                    } else {
-                                        posts.removeAll { $0.id == id }
-                                        
-                                        let viewsCount = try await ArticlesManager.shared.getViews(at: id)
-                                        let likesCount = try await ArticlesManager.shared.getLikesCount(byPostId: id)
-                                        
-                                        archivePosts.insert(
-                                            PrePost(
-                                                id: id,
-                                                title: title,
-                                                authorId: userId,
-                                                viewsCount: viewsCount,
-                                                likesCount: likesCount,
-                                                isArchive: false,
-                                                isShortPost: viewModel.text.isEmpty,
-                                                mediaCount: media.count
-                                            ),
-                                            at: 0
-                                        )
-                                    }
-                                } else {
-                                    if isArchive {
-                                        let viewsCount = try await ArticlesManager.shared.getViews(at: id)
-                                        let likesCount = try await ArticlesManager.shared.getLikesCount(byPostId: id)
-                                        
-                                        if let index = archivePosts.firstIndex(where: { $0.id == id }) {
-                                            archivePosts[index] = PrePost(
-                                                id: id,
-                                                title: title,
-                                                authorId: userId,
-                                                viewsCount: viewsCount,
-                                                likesCount: likesCount,
-                                                isArchive: true,
-                                                isShortPost: viewModel.text.isEmpty,
-                                                mediaCount: media.count
-                                            )
-                                        }
-                                    } else {
-                                        let viewsCount = try await ArticlesManager.shared.getViews(at: id)
-                                        let likesCount = try await ArticlesManager.shared.getLikesCount(byPostId: id)
-                                        
-                                        if let index = posts.firstIndex(where: { $0.id == id }) {
-                                            posts[index] = PrePost(
-                                                id: id,
-                                                title: title,
-                                                authorId: userId,
-                                                viewsCount: viewsCount,
-                                                likesCount: likesCount,
-                                                isArchive: false,
-                                                isShortPost: viewModel.text.isEmpty,
-                                                mediaCount: media.count
-                                            )
-                                        }
-                                    }
-                                }
-                                
+                                NotificationCenter.default.post(name: .postsDidChange, object: nil)
                             } catch {
-                                withAnimation {
-                                    viewModel.isLoading = false
-                                    viewModel.errorText = error.localizedDescription
-                                    viewModel.isErrorPopupPresented = true
-                                    viewModel.isErrorPopup = true
-                                    
-                                    return
-                                }
+                                hudService.showErrorPopup(with: error.localizedDescription)
                             }
-                            
-                            isCreateViewPresented = false
                         }
-                        
-                        StorageManager.shared.deleteText()
-                        
                     } else {
                         Task {
                             do {
-                                let userId = try AuthenticationManager.shared.getAuthenticatedUser().uid
-                                
-                                let newId = try await viewModel.addNewPost(
+                                let _ = try await viewModel.addNewPost(
                                     title: title,
                                     text: viewModel.text,
-                                    isArchive: isArchive,
+                                    isArchive: newIsArchive,
                                     uploadingLanguage: uploadingLanguage,
                                     mediaURLs: mediaURLs,
                                     media: media
                                 )
-                                
-                                if !isArchive {
-                                    postsCount += 1
-                                    
-                                    try await UserManager.shared.updatePostsCount(userId: userId, postsCount: postsCount)
-                                    
-                                    posts.insert(
-                                        PrePost(
-                                            id: newId,
-                                            title: title,
-                                            authorId: userId,
-                                            viewsCount: 0,
-                                            likesCount: 0,
-                                            isArchive: false,
-                                            isShortPost: viewModel.text.isEmpty,
-                                            mediaCount: media.count
-                                        ),
-                                        at: 0
-                                    )
-                                } else {
-                                    archivePosts.insert(
-                                        PrePost(
-                                            id: newId,
-                                            title: title,
-                                            authorId: userId,
-                                            viewsCount: 0,
-                                            likesCount: 0,
-                                            isArchive: true,
-                                            isShortPost: viewModel.text.isEmpty,
-                                            mediaCount: media.count
-                                        ),
-                                        at: 0
-                                    )
-                                }
-                                
+
+                                try await applyPostsCountDelta(forNewPost: newIsArchive)
+
                                 StorageManager.shared.deleteText()
-                            } catch {
-                                withAnimation {
-                                    viewModel.isLoading = true
-                                    viewModel.errorText = error.localizedDescription
-                                    viewModel.isErrorPopupPresented = true
-                                    viewModel.isErrorPopup = false
-                                }
+                                hudService.showSuccessPopup(type: .post)
                                 
-                                return
+                                NotificationCenter.default.post(name: .postsDidChange, object: nil)
+                            } catch {
+                                hudService.showErrorPopup(with: error.localizedDescription)
                             }
-                            
-                            isCreateViewPresented = false
                         }
                     }
                 }
-                
+
                 viewModel.addingMode = 0
             }
+
             .popup(isPresented: $viewModel.isErrorPopupPresented) {
                 Text(viewModel.errorText)
                     .frame(width: UIScreen.main.bounds.width - 72, alignment: .leading)

@@ -8,6 +8,7 @@
 import SwiftUI
 import PhotosUI
 import PopupView
+import SwiftfulLoadingIndicators
 
 struct CreateView: View {
     @Binding var isCreateViewPresented: Bool
@@ -137,6 +138,42 @@ struct CreateView: View {
                                             }
                                         }
                                     }
+                                    
+                                    if viewModel.isCoverLoading {
+                                        ZStack(alignment: .topTrailing) {
+                                            ZStack {
+                                                RoundedRectangle(cornerRadius: 20)
+                                                    .frame(width: 100, height: 100)
+                                                    .foregroundStyle(Color(.secondarySystemBackground))
+                                                
+                                                LoadingIndicator(
+                                                    animation: .circleRunner,
+                                                    color: Color(.label),
+                                                    size: .small,
+                                                    speed: .fast
+                                                )
+                                            }
+                                            
+                                            Image(systemName: "xmark")
+                                                .resizable()
+                                                .scaledToFit()
+                                                .frame(width: 12)
+                                                .padding(.all, 8)
+                                                .foregroundStyle(Color(.label))
+                                                .background(Color(.secondarySystemBackground))
+                                                .clipShape(Circle())
+                                                .offset(x: 10, y: -10)
+                                                .onTapGesture {
+                                                    viewModel.imagePickerTask?.cancel()
+                                                    viewModel.imagePickerTask = nil
+                                                    
+                                                    withAnimation {
+                                                        viewModel.isCoverLoading = false
+                                                    }
+                                                }
+                                            
+                                        }
+                                    }
                                 }
                             }
                             .frame(width: UIScreen.main.bounds.width - 32)
@@ -161,50 +198,75 @@ struct CreateView: View {
                             }
                             .onChange(of: viewModel.imageItem) {
                                 if viewModel.media.count < 10 {
-                                    Task {
-                                        guard let item = viewModel.imageItem else { return }
-
-                                        // Загружаем Data
-                                        guard let data = try? await item.loadTransferable(type: Data.self) else {
-                                            print("⚠️ Невозможно загрузить данные из файла")
-                                            return
-                                        }
-
-                                        // Пробуем как изображение
-                                        if let image = UIImage(data: data) {
-                                            print("🖼 Обложка — изображение")
+                                    viewModel.imagePickerTask =  Task {
+                                        do {
+                                            guard let item = viewModel.imageItem else { return }
+                                            
                                             withAnimation {
-                                                viewModel.media.append(MediaKind(image: image))
-                                            }
-                                            return
-                                        }
-
-                                        // Иначе — это видео
-                                        print("🎞 Обложка — видео (по Data)")
-                                        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".mp4")
-                                        try? data.write(to: tempURL)
-
-                                        // Генерируем превью
-                                        let asset = AVAsset(url: tempURL)
-                                        let duration = try await asset.load(.duration)
-                                        let secondsDuration = CMTimeGetSeconds(duration)
-                                        
-                                        guard secondsDuration <= 120 else {
-                                            withAnimation {
-                                                viewModel.errorText = NSLocalizedString("durationCoverErrorLabel", comment: "")
-                                                viewModel.isErrorPopupPresented = true
+                                                viewModel.isCoverLoading = true
                                             }
                                             
-                                            return
-                                        }
-                                        
-                                        let generator = AVAssetImageGenerator(asset: asset)
-                                        generator.appliesPreferredTrackTransform = true
-                                        let cgImage = try? generator.copyCGImage(at: .zero, actualTime: nil)
-                                        let thumbnail = cgImage.map { UIImage(cgImage: $0) }
+                                            try Task.checkCancellation()
+                                            // Загружаем Data
+                                            guard let data = try? await item.loadTransferable(type: Data.self) else {
+                                                print("⚠️ Невозможно загрузить данные из файла")
+                                                return
+                                            }
 
-                                        withAnimation {
-                                            viewModel.media.append(MediaKind(videoURL: tempURL, videoPreview: thumbnail))
+                                            try Task.checkCancellation()
+                                            // Пробуем как изображение
+                                            if let image = UIImage(data: data) {
+                                                print("🖼 Обложка — изображение")
+                                                withAnimation {
+                                                    viewModel.media.append(MediaKind(image: image))
+                                                    viewModel.isCoverLoading = false
+                                                }
+                                                return
+                                            }
+
+                                            // Иначе — это видео
+                                            print("🎞 Обложка — видео (по Data)")
+                                            try Task.checkCancellation()
+                                            let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".mp4")
+                                            try? data.write(to: tempURL)
+
+                                            try Task.checkCancellation()
+                                            // Генерируем превью
+                                            let asset = AVAsset(url: tempURL)
+                                            let duration = try await asset.load(.duration)
+                                            let secondsDuration = CMTimeGetSeconds(duration)
+                                            
+                                            try Task.checkCancellation()
+                                            guard secondsDuration <= 120 else {
+                                                withAnimation {
+                                                    viewModel.errorText = NSLocalizedString("durationCoverErrorLabel", comment: "")
+                                                    viewModel.isErrorPopupPresented = true
+                                                    viewModel.isCoverLoading = false
+                                                }
+                                                
+                                                return
+                                            }
+                                            
+                                            try Task.checkCancellation()
+                                            let generator = AVAssetImageGenerator(asset: asset)
+                                            generator.appliesPreferredTrackTransform = true
+                                            
+                                            try Task.checkCancellation()
+                                            let cgImage = try? generator.copyCGImage(at: .zero, actualTime: nil)
+                                            let thumbnail = cgImage.map { UIImage(cgImage: $0) }
+
+                                            withAnimation {
+                                                viewModel.media.append(MediaKind(videoURL: tempURL, videoPreview: thumbnail))
+                                                viewModel.isCoverLoading = false
+                                            }
+                                        } catch is CancellationError {
+                                            print("Task was determined")
+                                        } catch {
+                                            withAnimation {
+                                                viewModel.errorText = NSLocalizedString("maxAttachFilesCountLabel", comment: "")
+                                                viewModel.isErrorPopupPresented = true
+                                                viewModel.isCoverLoading = false
+                                            }
                                         }
                                     }
                                 } else {
