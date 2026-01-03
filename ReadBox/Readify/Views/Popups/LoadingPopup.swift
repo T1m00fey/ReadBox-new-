@@ -25,7 +25,8 @@ struct LoadingPopup: View {
             .padding(.bottom, 100)
         }
         .frame(width: UIScreen.main.bounds.width)
-        .background(Color(uiColor: .secondarySystemBackground))
+//        .background(Color(uiColor: .secondarySystemBackground))
+        .background(.thinMaterial)
         .clipShape(RoundedRectangle(cornerRadius: 30))
     }
 }

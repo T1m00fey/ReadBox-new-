@@ -16,11 +16,59 @@ struct ChannelView: View {
     @Environment(\.dismiss) var dismiss
     
     @Binding var user: DBUser?
-    @Binding var isNotificationPopupPrenseted: Bool
     
     let authorId: String
     let authorName: String
     let isCheckmark: Bool
+    
+    private func un_subscribe(isSubscribed: Bool) {
+        if !viewModel.isSubscribeLoading {
+            Task {
+                do {
+                    withAnimation {
+                        viewModel.isSubscribeLoading = true
+                    }
+                    
+                    try await viewModel.un_subscribeUser(on: authorId, isNeedToSubscribe: isSubscribed ? false : true)
+                    
+                    if isSubscribed {
+                        VibrationsService.shared.lightImpact()
+                    } else {
+                        VibrationsService.shared.successFeedback()
+                    }
+                    
+                    withAnimation {
+                        if isSubscribed {
+                            user?.subscribes?.removeAll { $0 == authorId }
+                        } else {
+                            user?.subscribes?.append(authorId)
+                        }
+                        
+                        viewModel.isSubscribed?.toggle()
+                        viewModel.subscribersCount += isSubscribed ? -1 : 1
+                    }
+                    
+                    viewModel.pushRoute = await decidePushRoute()
+                    
+                    withAnimation {
+                        viewModel.isSubscribeLoading = false
+                    }
+                    
+                    guard let route = viewModel.pushRoute else { return }
+                    
+                    if !isSubscribed && route != .ok {
+                        viewModel.isNotificationPopupPresented = true
+                    }
+                } catch {
+                    withAnimation {
+                        viewModel.isSubscribeLoading = false
+                        viewModel.errorText = error.localizedDescription
+                        viewModel.isErrorPopupPresented = true
+                    }
+                }
+            }
+        }
+    }
     
     var body: some View {
         NavigationStack {
@@ -32,6 +80,8 @@ struct ChannelView: View {
                 
                 ScrollView(showsIndicators: false) {
                     LazyVStack(spacing: 20) {
+                        Color.clear.frame(height: 40)
+                        
                         if viewModel.isLoadingShowing {
                             Text("HelloWorldHelloWorld HelloWorld HelloWorld HelloWorldHelloWorld HelloWorld HelloWorld")
                                 .padding(.vertical, 20)
@@ -62,6 +112,7 @@ struct ChannelView: View {
                                     isArchive: true,
                                     isShortPost: false,
                                     mediaCount: 0,
+                                    mediaVersion: 2,
                                     user: .constant(nil),
                                     isZoomableViewPresented: .constant(false),
                                     zoomableImage: .constant(nil),
@@ -76,7 +127,7 @@ struct ChannelView: View {
                         } else if !viewModel.posts.isEmpty {
                             if viewModel.authorDescription != "" {
                                 Text(viewModel.authorDescription)
-                                    .font(.title3)
+                                    .font(.system(size: 20))
                                     .padding(.vertical, 20)
                                     .padding(.horizontal, 16)
                                     .frame(width: UIScreen.main.bounds.width, alignment: .leading)
@@ -102,6 +153,7 @@ struct ChannelView: View {
                                     isArchive: false,
                                     isShortPost: post.isShortPost ?? false,
                                     mediaCount: post.mediaCount ?? 1,
+                                    mediaVersion: post.mediaVersion ?? 1,
                                     user: $user,
                                     isZoomableViewPresented: $viewModel.isZoomableImageViewPresented,
                                     zoomableImage: $viewModel.zoomableImage,
@@ -134,7 +186,8 @@ struct ChannelView: View {
                                                 likesCount: post.likesCount,
                                                 isArchive: post.isArchive,
                                                 isShortPost: post.isShortPost,
-                                                mediaCount: post.mediaCount
+                                                mediaCount: post.mediaCount,
+                                                mediaVersion: post.mediaVersion
                                             )
                                             
                                             viewModel.postToRead = PostToRead(
@@ -177,7 +230,7 @@ struct ChannelView: View {
                             
                             if viewModel.authorDescription != "" {
                                 Text(viewModel.authorDescription)
-                                    .font(.title3)
+                                    .font(.system(size: 20))
                                     .padding(.vertical, 20)
                                     .padding(.horizontal, 16)
                                     .frame(width: UIScreen.main.bounds.width, alignment: .leading)
@@ -246,7 +299,6 @@ struct ChannelView: View {
                     .padding(.horizontal)
                     
                 }
-                .padding(.top, 50)
                 .popup(isPresented: $viewModel.isErrorPopupPresented) {
                     Text(viewModel.errorText)
                         .frame(width: UIScreen.main.bounds.width - 72, alignment: .leading)
@@ -254,7 +306,7 @@ struct ChannelView: View {
                         .padding(.vertical, 16)
                         .foregroundStyle(Color.white)
                         .background(Color.red)
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                        .clipShape(RoundedRectangle(cornerRadius: 20))
                         .padding(.top, 20)
                 } customize: {
                     $0
@@ -263,14 +315,28 @@ struct ChannelView: View {
                         .animation(.bouncy)
                         .dragToDismiss(true)
                         .autohideIn(5)
+                        .displayMode(.overlay)
                 }
                 .popup(isPresented: $viewModel.isLoadingPopupPresented) {
                     LoadingPopup()
-                        .shadow(radius: 3)
                 } customize: {
                     $0
                         .type(.toast)
                         .appearFrom(.bottomSlide)
+                        .displayMode(.sheet)
+                }
+                .popup(isPresented: $viewModel.isNotificationPopupPresented) {
+                    NotificationPermissionView(
+                        isPopupPresented: $viewModel.isNotificationPopupPresented,
+                        route: viewModel.pushRoute ?? .goToSettings
+                    )
+                    .shadow(radius: 2)
+                } customize: {
+                    $0
+                        .type(.toast)
+                        .appearFrom(.bottomSlide)
+                        .dragToDismiss(true)
+                        .displayMode(.sheet)
                 }
                 .fullScreenCover(isPresented: $viewModel.isZoomableImageViewPresented) {
                     if let image = viewModel.zoomableImage {
@@ -289,6 +355,7 @@ struct ChannelView: View {
                         isCheckmark: isCheckmark,
                         isArchive: false,
                         mediaCount: viewModel.postToView?.mediaCount ?? 1,
+                        mediaVersion: viewModel.postToView?.mediaVersion ?? 1,
                         user: $user,
                         isChannelViewPresented: .constant(false)
                     )
@@ -366,102 +433,83 @@ struct ChannelView: View {
                         
                     }
                 }
-                .toolbar {
-                    
-                }
                 
                 if let isSubscribed = viewModel.isSubscribed {
                     VStack {
                         Spacer()
                         
-                        ZStack {
-                            RoundedRectangle(cornerRadius: 20)
-                                .frame(width: UIScreen.main.bounds.width, height: 120)
-                                .foregroundStyle(Color(uiColor: .secondarySystemBackground))
-                                .shadow(radius: 2)
-                                .offset(y: 40)
-                            
+                        if #available(iOS 26.0, *) {
                             if !viewModel.isLoading {
-                                HStack {
-                                    if viewModel.isSubscribeLoading {
-                                        LoadingIndicator(
-                                            animation: .circleRunner,
-                                            color: Color(
-                                                isSubscribed
-                                                ? .label
-                                                : .systemBackground
-                                            ),
-                                            size: .small,
-                                            speed: .fast
-                                        )
-                                    } else {
-                                        Text(
-                                            isSubscribed
-                                            ? NSLocalizedString("youSubscribedLabel", comment: "")
-                                            : NSLocalizedString("subscribeLabel", comment: "")
-                                        )
-                                        .font(.system(size: 20))
-                                        .foregroundColor(
-                                            isSubscribed
-                                            ? Color(.label)
-                                            : Color(uiColor: .systemBackground)
-                                        )
+                                if isSubscribed {
+                                    Button {
+                                        un_subscribe(isSubscribed: isSubscribed)
+                                    } label: {
+                                        viewModel.buildSubscribeButtonView(isSubscribed)
                                     }
+                                    .buttonStyle(.glass)
+                                    .padding(.horizontal, 22.5)
+                                    .offset(y: 10)
+                                } else {
+                                    Button {
+                                        un_subscribe(isSubscribed: isSubscribed)
+                                    } label: {
+                                        viewModel.buildSubscribeButtonView(isSubscribed)
+                                    }
+                                    .tint(Color(.label))
+                                    .buttonStyle(.borderedProminent)
+                                    .padding(.horizontal, 22.5)
+                                    .offset(y: 10)
                                 }
-                                .frame(width: UIScreen.main.bounds.width - 10, height: 50, alignment: .center)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 15)
-                                        .foregroundStyle(
-                                            isSubscribed
-                                            ? Color(.systemBackground)
-                                            : Color(uiColor: .label)
-                                        )
-                                        .shadow(radius: 1)
-                                )
-                                .offset(y: 20)
-                                .onTapGesture {
-                                    if !viewModel.isSubscribeLoading {
-                                        Task {
-                                            do {
-                                                withAnimation {
-                                                    viewModel.isSubscribeLoading = true
-                                                }
-                                                
-                                                try await viewModel.un_subscribeUser(on: authorId, isNeedToSubscribe: isSubscribed ? false : true)
-                                                
-                                                if isSubscribed {
-                                                    VibrationsService.shared.lightImpact()
-                                                } else {
-                                                    VibrationsService.shared.successFeedback()
-                                                }
-                                                
-                                                withAnimation {
-                                                    if isSubscribed {
-                                                        user?.subscribes?.removeAll { $0 == authorId }
-                                                    } else {
-                                                        user?.subscribes?.append(authorId)
-                                                    }
-                                                    
-                                                    viewModel.isSubscribed?.toggle()
-                                                    viewModel.subscribersCount += isSubscribed ? -1 : 1
-                                                }
-                                                
-                                                withAnimation {
-                                                    viewModel.isSubscribeLoading = false
-                                                }
-                                                
-                                                let isNotificationsApproved = StorageManager.shared.getIsApprovedNotificaitons()
-                                                if !isSubscribed && !isNotificationsApproved {
-                                                    isNotificationPopupPrenseted = true
-                                                }
-                                            } catch {
-                                                withAnimation {
-                                                    viewModel.isSubscribeLoading = false
-                                                    viewModel.errorText = error.localizedDescription
-                                                    viewModel.isErrorPopupPresented = true
-                                                }
-                                            }
+                            }
+                        } else {
+                            ZStack {
+                                RoundedRectangle(cornerRadius: 20)
+                                    .frame(width: UIScreen.main.bounds.width, height: 120)
+                                //                                .foregroundStyle(Color(uiColor: .secondarySystemBackground))
+                                    .foregroundStyle(.thinMaterial)
+                                    .shadow(radius: 1)
+                                    .offset(y: 40)
+                                
+                                if !viewModel.isLoading {
+                                    HStack {
+                                        if viewModel.isSubscribeLoading {
+                                            LoadingIndicator(
+                                                animation: .circleRunner,
+                                                color: Color(
+                                                    isSubscribed
+                                                    ? .label
+                                                    : .systemBackground
+                                                ),
+                                                size: .small,
+                                                speed: .fast
+                                            )
+                                        } else {
+                                            Text(
+                                                isSubscribed
+                                                ? NSLocalizedString("youSubscribedLabel", comment: "")
+                                                : NSLocalizedString("subscribeLabel", comment: "")
+                                            )
+                                            .font(.system(size: 20))
+                                            .foregroundColor(
+                                                isSubscribed
+                                                ? Color(.label)
+                                                : Color(uiColor: .systemBackground)
+                                            )
                                         }
+                                    }
+                                    .frame(width: UIScreen.main.bounds.width - 10, height: 50, alignment: .center)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 15)
+                                            .foregroundStyle(
+                                                isSubscribed
+                                                ? Color(.systemBackground)
+                                                : Color(uiColor: .label)
+                                            )
+                                            .shadow(radius: 1)
+                                    )
+                                    .offset(y: 20)
+                                    .onTapGesture {
+                                        un_subscribe(isSubscribed: isSubscribed)
                                     }
                                 }
                             }
@@ -486,8 +534,9 @@ private extension ChannelView {
         ZStack {
             RoundedRectangle(cornerRadius: 15)
                 .frame(width: UIScreen.main.bounds.width, height: 140)
-                .foregroundStyle(Color(uiColor: .secondarySystemBackground))
-                .shadow(radius: 10)
+//                .foregroundStyle(Color(uiColor: .secondarySystemBackground))
+                .foregroundStyle(.thinMaterial)
+                .shadow(radius: 5)
             
             VStack(spacing: -3) {
                 HStack {
@@ -512,14 +561,14 @@ private extension ChannelView {
                     
                     HStack(spacing: 0) {
                         Text(authorName)
-                            .font(.system(size: 27))
+                            .font(.system(size: 25))
                             .fontWeight(.light)
                             .lineLimit(1)
                         
                         if isCheckmark {
                             Image(systemName: "checkmark.seal.fill")
                                 .foregroundStyle(Color.blue)
-                                .font(.footnote)
+                                .font(.system(size: 14))
                                 .padding(.top, 1)
                         }
                     }

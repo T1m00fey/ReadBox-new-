@@ -95,7 +95,7 @@ final class HUDService: ObservableObject {
 
 extension HUDService {
     @ViewBuilder
-    func makeLoadingPopup(screenWidth: CGFloat, bottomPadding: CGFloat) -> some View {
+    func makeLoadingPopup(screenWidth: CGFloat) -> some View {
         if isNeedToShowShortLoading {
             
             HStack {
@@ -106,14 +106,14 @@ extension HUDService {
                     
                     LoadingIndicator(
                         animation: .circleRunner,
-                        color: Color.white,
+                        color: Color(.label),
                         size: .small,
                         speed: .fast
                     )
                 }
             }
             .frame(width: screenWidth - 20, alignment: .trailing)
-            .padding(.bottom, bottomPadding)
+            .padding(.bottom, 60)
             .onTapGesture {
                 withAnimation {
                     self.isNeedToShowShortLoading.toggle()
@@ -122,42 +122,75 @@ extension HUDService {
             
         } else {
             
-            ZStack {
-                RoundedRectangle(cornerRadius: 15)
-                    .frame(width: screenWidth - 10, height: 50)
-                    .foregroundStyle(.thinMaterial)
-                
-                HStack {
-                    VStack(spacing: 2) {
-                        Text(loadingTitle)
-                            .font(.system(size: 16))
-                            .foregroundStyle(Color.white)
-                            .fontWeight(.semibold)
-                            .fontDesign(.rounded)
-                            .frame(maxWidth: .infinity, alignment: .leading)
+            if #available(iOS 26.0, *) {
+                GlassEffectContainer {
+                    HStack {
+                        VStack(spacing: 2) {
+                            Text(loadingTitle)
+                                .font(.system(size: 16))
+                                .fontWeight(.semibold)
+                                .fontDesign(.rounded)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                            
+                            Text(NSLocalizedString("pleaseDontCloseAppHUDLabel", comment: ""))
+                                .font(.system(size: 12))
+                                .foregroundStyle(Color(.label))
+                                .fontDesign(.rounded)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
                         
-                        Text(NSLocalizedString("pleaseDontCloseAppHUDLabel", comment: ""))
-                            .font(.system(size: 12))
-                            .foregroundStyle(Color.white)
-                            .fontDesign(.rounded)
-                            .frame(maxWidth: .infinity, alignment: .leading)
+                        Spacer()
+                        
+                        LoadingIndicator(
+                            animation: .circleRunner,
+                            color: Color(.label),
+                            size: .small,
+                            speed: .fast
+                        )
                     }
-                    
-                    Spacer()
-                    
-                    LoadingIndicator(
-                        animation: .circleRunner,
-                        color: Color.white,
-                        size: .small,
-                        speed: .fast
-                    )
+                    .padding(.all, 10)
+                    .glassEffect(.regular)
+                    .padding(.horizontal, 22.5)
+                    .padding(.bottom, 60)
                 }
-                .frame(width: screenWidth - 30)
-            }
-            .padding(.bottom, bottomPadding)
-            .onTapGesture {
-                withAnimation {
-                    self.isNeedToShowShortLoading.toggle()
+            } else {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 15)
+                        .frame(width: screenWidth - 10, height: 50)
+                        .foregroundStyle(.thinMaterial)
+                    
+                    HStack {
+                        VStack(spacing: 2) {
+                            Text(loadingTitle)
+                                .font(.system(size: 16))
+                                .foregroundStyle(Color(.label))
+                                .fontWeight(.semibold)
+                                .fontDesign(.rounded)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                            
+                            Text(NSLocalizedString("pleaseDontCloseAppHUDLabel", comment: ""))
+                                .font(.system(size: 12))
+                                .foregroundStyle(Color(.label))
+                                .fontDesign(.rounded)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        
+                        Spacer()
+                        
+                        LoadingIndicator(
+                            animation: .circleRunner,
+                            color: Color(.label),
+                            size: .small,
+                            speed: .fast
+                        )
+                    }
+                    .frame(width: screenWidth - 30)
+                }
+                .padding(.bottom, 60)
+                .onTapGesture {
+                    withAnimation {
+                        self.isNeedToShowShortLoading.toggle()
+                    }
                 }
             }
             
@@ -166,72 +199,172 @@ extension HUDService {
     }
     
     @ViewBuilder
-    func makeSuccessPopup(screenWidth: CGFloat, bottomPadding: CGFloat) -> some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 15)
-                .frame(width: screenWidth - 10, height: 50)
-                .foregroundStyle(.thinMaterial)
+    func makeSuccessPopup(screenWidth: CGFloat) -> some View {
+        if #available(iOS 26.0, *) {
+            GlassEffectContainer {
+                HStack {
+                    Image(systemName: "checkmark.circle")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 30, height: 30)
+                        .foregroundStyle(Color(.label))
+                    
+                    Text(popupMessage)
+                        .font(.system(size: 16))
+                        .fontWeight(.semibold)
+                        .fontDesign(.rounded)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .padding(.all, 10)
+                .glassEffect(.regular)
                 .overlay(
-                    RoundedRectangle(cornerRadius: 15)
+                    Capsule()
                         .stroke(
                             Color.green,
                             lineWidth: 1
                         )
                 )
-            
-            HStack {
-                Image(systemName: "checkmark.circle")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 30, height: 30)
-                    .foregroundStyle(Color.white)
-                
-                Text(popupMessage)
-                    .font(.system(size: 16))
-                    .foregroundStyle(Color.white)
-                    .fontWeight(.semibold)
-                    .fontDesign(.rounded)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 22.5)
+                .padding(.bottom, 60)
+                .onTapGesture {
+                    withAnimation {
+                        self.clearAllNow()
+                    }
+                }
             }
-            .frame(width: screenWidth - 30)
-        }
-        .padding(.bottom, bottomPadding)
-        .onTapGesture {
-            withAnimation {
-                self.clearAllNow()
+        } else {
+            if isNeedToShowShortLoading {
+                HStack {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 15)
+                            .frame(width: 50, height: 50)
+                            .foregroundStyle(.thinMaterial)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 15)
+                                    .stroke(
+                                        Color.green,
+                                        lineWidth: 1
+                                    )
+                            )
+                        
+                        Image(systemName: "checkmark.circle")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 30, height: 30)
+                            .foregroundStyle(Color(.label))
+                    }
+                }
+                .frame(width: screenWidth - 20, alignment: .trailing)
+                .padding(.bottom, 60)
+                .onTapGesture {
+                    withAnimation {
+                        self.isNeedToShowShortLoading.toggle()
+                    }
+                }
+            } else {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 15)
+                        .frame(width: screenWidth - 10, height: 50)
+                        .foregroundStyle(.thinMaterial)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 15)
+                                .stroke(
+                                    Color.green,
+                                    lineWidth: 1
+                                )
+                        )
+                    
+                    HStack {
+                        Image(systemName: "checkmark.circle")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 30, height: 30)
+                            .foregroundStyle(Color(.label))
+                        
+                        Text(popupMessage)
+                            .font(.system(size: 16))
+                            .foregroundStyle(Color(.label))
+                            .fontWeight(.semibold)
+                            .fontDesign(.rounded)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .frame(width: screenWidth - 30)
+                }
+                .padding(.bottom, 60)
+                .onTapGesture {
+                    withAnimation {
+                        self.clearAllNow()
+                    }
+                }
             }
         }
     }
     
     @ViewBuilder
     func makeErrorPopup(screenWidth: CGFloat, bottomPadding: CGFloat) -> some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 15)
-                .frame(width: screenWidth - 10, height: 50)
-                .foregroundStyle(Color.red)
-            
-            HStack {
-                Image(systemName: "xmark.circle")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 30, height: 30)
-                    .foregroundStyle(Color.white)
-                
-                Text(popupMessage)
-                    .font(.system(size: 14))
-                    .foregroundStyle(Color.white)
-                    .fontWeight(.semibold)
-                    .fontDesign(.rounded)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .lineLimit(2)
+        if #available(iOS 26.0, *) {
+            GlassEffectContainer {
+                HStack {
+                    Image(systemName: "xmark.circle")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 30, height: 30)
+                        .foregroundStyle(Color.red)
+                    
+                    Text(popupMessage)
+                        .font(.system(size: 14))
+                        .foregroundStyle(Color.white)
+                        .fontWeight(.semibold)
+                        .fontDesign(.rounded)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .lineLimit(2)
+                }
+                .padding(.all, 10)
+                .glassEffect(.regular)
+                .overlay(
+                    Capsule()
+                        .stroke(
+                            Color.red,
+                            lineWidth: 1
+                        )
+                )
+                .padding(.horizontal, 22.5)
+                .padding(.bottom, 60)
+                .onTapGesture {
+                    withAnimation {
+                        self.clearAllNow()
+                    }
+                }
             }
-            .frame(width: screenWidth - 30)
-            .frame(maxHeight: 30)
-        }
-        .padding(.bottom, bottomPadding)
-        .onTapGesture {
-            withAnimation {
-                self.clearAllNow()
+        } else {
+            ZStack {
+                RoundedRectangle(cornerRadius: 15)
+                    .frame(width: screenWidth - 10, height: 50)
+                    .foregroundStyle(Color.red)
+                
+                HStack {
+                    Image(systemName: "xmark.circle")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 30, height: 30)
+                        .foregroundStyle(Color.white)
+                    
+                    Text(popupMessage)
+                        .font(.system(size: 14))
+                        .foregroundStyle(Color.white)
+                        .fontWeight(.semibold)
+                        .fontDesign(.rounded)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .lineLimit(2)
+                }
+                .frame(width: screenWidth - 30)
+                .frame(maxHeight: 30)
+            }
+            .padding(.bottom, bottomPadding)
+            .onTapGesture {
+                withAnimation {
+                    self.clearAllNow()
+                }
             }
         }
     }

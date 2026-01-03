@@ -117,6 +117,8 @@ struct SignUpView: View {
                                 viewModel.vibrationsService.softImpact()
                                 try await viewModel.signUp()
                                 
+                                viewModel.vibrationsService.successFeedback()
+                                
                                 isWelcomeViewPresented = false
                                 
                                 viewModel.isLoading = false
@@ -180,6 +182,7 @@ struct SignUpView: View {
                         .animation(.bouncy)
                         .dragToDismiss(true)
                         .autohideIn(5)
+                        .displayMode(.sheet)
                 }
             }
             .onDisappear {

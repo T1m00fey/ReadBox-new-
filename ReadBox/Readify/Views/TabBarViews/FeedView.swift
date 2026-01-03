@@ -14,7 +14,6 @@ import PopupView
 
 struct FeedView: View {
     @Binding var isWelcomeViewPresented: Bool
-    @Binding var isNotificationPopupPresented: Bool
     
     @StateObject var viewModel = FeedViewModel()
     
@@ -23,12 +22,11 @@ struct FeedView: View {
             
             ZStack {
                 
-                Color(uiColor: .systemBackground)
-                    .ignoresSafeArea()
-                
                 ScrollView(showsIndicators: false) {
                     
                     LazyVStack {
+                        
+                        Color.clear.frame(height: 60)
                         
                         TabView {
                             
@@ -59,7 +57,6 @@ struct FeedView: View {
                         }
                         .tabViewStyle(.page)
                         .frame(height: 270)
-                        .padding(.top, 30)
                         
                         if viewModel.isLoadingShowing {
                             ForEach(0..<2) { num in
@@ -72,6 +69,7 @@ struct FeedView: View {
                                     isArchive: false,
                                     isShortPost: false,
                                     mediaCount: 0,
+                                    mediaVersion: 2,
                                     user: .constant(nil),
                                     isZoomableViewPresented: .constant(false),
                                     zoomableImage: .constant(nil),
@@ -93,6 +91,7 @@ struct FeedView: View {
                                     isArchive: post.isArchive ?? true,
                                     isShortPost: post.isShortPost ?? false,
                                     mediaCount: post.mediaCount ?? 1,
+                                    mediaVersion: post.mediaVersion ?? 1,
                                     user: $viewModel.user,
                                     isZoomableViewPresented: $viewModel.isZoomableImageViewPresented,
                                     zoomableImage: $viewModel.zoomableImage,
@@ -152,74 +151,8 @@ struct FeedView: View {
                         
                     }
                 }
-                .padding(.top, 30)
-                .disabled(viewModel.isBlur ? true : false)
-                .blur(radius: viewModel.isBlur ? 5 : 0)
-                .makePopupsForFeedView(
-                    viewModel: viewModel,
-                    isLoadingPopupPresented: $viewModel.isLoadingPopupPresented,
-                    isErrorPopupPresented: $viewModel.isErrorPopupPresented,
-                    isDescriptionPopupPresented: $viewModel.isDescriptionPopupPresented,
-                    isReadViewPresented: $viewModel.isReadViewPresented,
-                    errorText: $viewModel.errorText
-                )
-                .trackChangesOnFeedView(
-                    viewModel: viewModel,
-                    isWelcomeViewPresented: isWelcomeViewPresented
-                )
-                .task {
-                    try? Tips.configure()
-                }
-                .onAppear {
-                    if viewModel.isLoading {
-                        viewModel.isLoading = false
-                        
-                        Task {
-                            viewModel.isLoading = true
-                        }
-                    }
-                    
-                    viewModel.primaryLanguage = StorageManager.shared.getLanguage()
-                    
-                    if viewModel.user == nil {
-                        Task {
-                            try? await viewModel.loadUser()
-                        }
-                    }
-                    
-                    viewModel.getViews()                    
-                    viewModel.getRelevantVersion()
-                }
-                .navigationDestination(isPresented: $viewModel.isReadViewPresented, destination: {
-                    ReadView(
-                        id: viewModel.id,
-                        title: viewModel.title,
-                        text: viewModel.text,
-                        dateCreated: viewModel.dateCreated,
-                        likesCount: viewModel.likesCount,
-                        authorId: viewModel.authorId,
-                        authorName: viewModel.authorsNames[viewModel.authorId] ?? "",
-                        isCheckmark: viewModel.authorsCheckmarks[viewModel.authorId] ?? false,
-                        isArchive: viewModel.isArchive,
-                        mediaCount: viewModel.mediaCount,
-                        user: $viewModel.user,
-                        isChannelViewPresented: $viewModel.isChannelViewPresented
-                    )
-                })
-                .fullScreenCover(isPresented: $viewModel.isChannelViewPresented, content: {
-                    ChannelView(
-                        user: $viewModel.user,
-                        isNotificationPopupPrenseted: $isNotificationPopupPresented,
-                        authorId: viewModel.authorId as String,
-                        authorName: viewModel.authorsNames[viewModel.authorId] ?? NSLocalizedString("notFoundLabel", comment: ""),
-                        isCheckmark: viewModel.authorsCheckmarks[viewModel.authorId] ?? false                        
-                    )
-                })
-                .fullScreenCover(isPresented: $viewModel.isZoomableImageViewPresented, content: {
-                    if let image = viewModel.zoomableImage {
-                        ZoomableImageView(image: image)
-                    }
-                })
+//                .disabled(viewModel.isBlur ? true : false)
+//                .blur(radius: viewModel.isBlur ? 5 : 0)
                 .refreshable {
                     if !viewModel.isReadViewPresented {
                         viewModel.refresh()
@@ -235,18 +168,72 @@ struct FeedView: View {
                 }.ignoresSafeArea()
                 
             }
-            .popup(isPresented: $viewModel.isVersionPopupViewPresented) {
-                VersionPopupView(isCritical: viewModel.relevantVersion?.isCritical ?? false)
-                    .shadow(radius: 3)
-            } customize: {
-                $0
-                    .type(.toast)
-                    .appearFrom(.bottomSlide)
-                    .dragToDismiss(!(viewModel.relevantVersion?.isCritical ?? true))
+            .makePopupsForFeedView(
+                viewModel: viewModel,
+                isLoadingPopupPresented: $viewModel.isLoadingPopupPresented,
+                isErrorPopupPresented: $viewModel.isErrorPopupPresented,
+                isDescriptionPopupPresented: $viewModel.isDescriptionPopupPresented,
+                isReadViewPresented: $viewModel.isReadViewPresented,
+                errorText: $viewModel.errorText
+            )
+            .trackChangesOnFeedView(
+                viewModel: viewModel,
+                isWelcomeViewPresented: isWelcomeViewPresented
+            )
+            .task {
+                try? Tips.configure()
             }
+            .onAppear {
+                if viewModel.isLoading {
+                    viewModel.isLoading = false
+                    
+                    Task {
+                        viewModel.isLoading = true
+                    }
+                }
+                
+                viewModel.primaryLanguage = StorageManager.shared.getLanguage() ?? "en"
+                
+                if viewModel.user == nil {
+                    Task {
+                        try? await viewModel.loadUser()
+                    }
+                }
+                
+                viewModel.getViews()
+            }
+            .navigationDestination(isPresented: $viewModel.isReadViewPresented, destination: {
+                ReadView(
+                    id: viewModel.id,
+                    title: viewModel.title,
+                    text: viewModel.text,
+                    dateCreated: viewModel.dateCreated,
+                    likesCount: viewModel.likesCount,
+                    authorId: viewModel.authorId,
+                    authorName: viewModel.authorsNames[viewModel.authorId] ?? "",
+                    isCheckmark: viewModel.authorsCheckmarks[viewModel.authorId] ?? false,
+                    isArchive: viewModel.isArchive,
+                    mediaCount: viewModel.mediaCount,
+                    mediaVersion: viewModel.mediaVersion,
+                    user: $viewModel.user,
+                    isChannelViewPresented: $viewModel.isChannelViewPresented
+                )
+            })
+            .fullScreenCover(isPresented: $viewModel.isChannelViewPresented, content: {
+                ChannelView(
+                    user: $viewModel.user,
+                    authorId: viewModel.authorId as String,
+                    authorName: viewModel.authorsNames[viewModel.authorId] ?? NSLocalizedString("notFoundLabel", comment: ""),
+                    isCheckmark: viewModel.authorsCheckmarks[viewModel.authorId] ?? false
+                )
+            })
+            .fullScreenCover(isPresented: $viewModel.isZoomableImageViewPresented, content: {
+                if let image = viewModel.zoomableImage {
+                    ZoomableImageView(image: image)
+                }
+            })
             
         }
-        .navigationBarBackButtonHidden()
     }
 }
 
@@ -255,9 +242,10 @@ private extension FeedView {
         ZStack {
             RoundedRectangle(cornerRadius: 15)
                 .frame(width: UIScreen.main.bounds.width, height: 120)
-                .foregroundStyle(Color(uiColor: .secondarySystemBackground))
-                .shadow(radius: 10)
-            
+//                .foregroundStyle(Color(uiColor: .secondarySystemBackground))
+                .foregroundStyle(.thinMaterial)
+                .shadow(radius: 3)
+        
             HStack {
                 HStack(spacing: 1) {
                     Text("ReadBox")

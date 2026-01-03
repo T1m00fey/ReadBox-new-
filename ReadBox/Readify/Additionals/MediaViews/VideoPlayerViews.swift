@@ -55,7 +55,7 @@ struct CustomVideoPlayerView: UIViewRepresentable {
             // Настраиваем слой плеера
             playerLayer = AVPlayerLayer()
             playerLayer.player = player
-            playerLayer.videoGravity = .resizeAspect
+            playerLayer.videoGravity = .resizeAspectFill
             playerLayer.needsDisplayOnBoundsChange = true
 
             // ВАЖНО: добавляем один раз
@@ -173,6 +173,7 @@ struct AdaptiveVideoPlayerView: View {
     let width: CGFloat
     let isReady: Bool
     let height: CGFloat
+    let showSpinner: Bool   
     
     init(
         url: URL,
@@ -180,7 +181,8 @@ struct AdaptiveVideoPlayerView: View {
         externalPlayer: AVPlayer? = nil,
         width: CGFloat,
         isReady: Bool,
-        height: CGFloat
+        height: CGFloat,
+        showSpinner: Bool = true
     ) {
         self.url = url
         self.cornerRadius = cornerRadius
@@ -188,6 +190,7 @@ struct AdaptiveVideoPlayerView: View {
         self.width = width
         self.isReady = isReady
         self.height = height
+        self.showSpinner = showSpinner
     }
 
     var body: some View {
@@ -198,16 +201,21 @@ struct AdaptiveVideoPlayerView: View {
                     cornerRadius: cornerRadius
                 )
                 .frame(width: width, height: height)
-            } else {
+            } else if showSpinner {
                 LoadingIndicator(
                     animation: .circleRunner,
                     color: Color(.label),
                     size: .small,
                     speed: .fast
                 )
-                .frame(width: width, height: height > 300 ? 200 : height)
+                .frame(width: width, height: height)
                 .background(Color(.secondarySystemBackground))
                 .clipShape(RoundedRectangle(cornerRadius: 16))
+            } else {
+                Rectangle()
+                    .foregroundColor(.clear)
+                    .frame(width: width, height: height)
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
             }
         }
     }
@@ -275,17 +283,20 @@ struct TappableVideoPreview: View {
     let cornerRadius: CGFloat
     let width: CGFloat
     let height: CGFloat?
-    
+    let placeholder: UIImage?
+
     init(
         url: URL,
         cornerRadius: CGFloat,
         width: CGFloat = UIScreen.main.bounds.width - 32,
-        height: CGFloat? = nil
+        height: CGFloat? = nil,
+        placeholder: UIImage? = nil
     ) {
         self.url = url
         self.cornerRadius = cornerRadius
         self.width = width
         self.height = height
+        self.placeholder = placeholder
     }
     
     @StateObject private var playerHolder = PlayerHolder()
@@ -294,8 +305,43 @@ struct TappableVideoPreview: View {
     @State private var resumeAfterFullscreenTime: CMTime? = nil
     @State private var hasInitialized = false
     @State private var videoSize: CGSize? = nil
+    @State private var isManuallyPaused = false
+    @State private var showPlaceholderOverlay = true
+    @State private var overlayOpacity: Double = 1
+    @State private var overlayBlur: CGFloat = 8
+    
+    @State private var initializedURL: URL?
     
     @Environment(\.scenePhase) private var scenePhase
+    
+    private func configurePlayerIfNeeded() {
+        if initializedURL == url { return }
+        
+        initializedURL = url
+        hasInitialized = true
+        showPlaceholderOverlay = true
+        overlayOpacity = 1
+        overlayBlur = 8
+        
+        let asset = AVURLAsset(url: url, options: [
+            AVURLAssetPreferPreciseDurationAndTimingKey: false
+        ])
+        let item = AVPlayerItem(asset: asset)
+        
+        playerHolder.player.replaceCurrentItem(with: item)
+        playerHolder.player.automaticallyWaitsToMinimizeStalling = true
+        playerHolder.player.isMuted = true
+        
+        if let t = resumeAfterFullscreenTime {
+            playerHolder.player.seek(to: t, toleranceBefore: .zero, toleranceAfter: .zero)
+            resumeAfterFullscreenTime = nil
+        } else {
+            try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .moviePlayback)
+            try? AVAudioSession.sharedInstance().setActive(true)
+        }
+        
+        loadVideoSize()
+    }
 
     var body: some View {
         let calculatedHeight: CGFloat? = {
@@ -306,6 +352,8 @@ struct TappableVideoPreview: View {
             }
         }()
         
+        let h = height ?? calculatedHeight ?? 250
+        
         ZStack(alignment: .top) {
             AdaptiveVideoPlayerView(
                 url: url,
@@ -313,31 +361,16 @@ struct TappableVideoPreview: View {
                 externalPlayer: playerHolder.player,
                 width: width,
                 isReady: playerHolder.isReadyToPlay,
-                height: height ?? calculatedHeight ?? 250
+                height: h,
+                showSpinner: (placeholder == nil)
             )
             .id(playerViewId)
             .onAppear {
-                guard !hasInitialized else { return }
-                hasInitialized = true
-
-                let asset = AVURLAsset(url: url, options: [
-                    AVURLAssetPreferPreciseDurationAndTimingKey: false
-                ])
-                let item = AVPlayerItem(asset: asset)
-
-                playerHolder.player.replaceCurrentItem(with: item)
-                playerHolder.player.automaticallyWaitsToMinimizeStalling = true
-                playerHolder.player.isMuted = true
-
-                if let t = resumeAfterFullscreenTime {
-                    playerHolder.player.seek(to: t, toleranceBefore: .zero, toleranceAfter: .zero)
-                    resumeAfterFullscreenTime = nil
-                } else {
-                    try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .moviePlayback)
-                    try? AVAudioSession.sharedInstance().setActive(true)
+                    configurePlayerIfNeeded()
                 }
-
-                loadVideoSize()
+            .onChange(of: url) {
+                videoSize = nil
+                configurePlayerIfNeeded()
             }
             .onDisappear {
                 playerHolder.player.pause()
@@ -345,7 +378,7 @@ struct TappableVideoPreview: View {
             .onScreenVisibility(threshold: 0.25) { isVisible in
                 if !isVisible {
                     playerHolder.player.pause()
-                } else {
+                } else if !isManuallyPaused {
                     playerHolder.player.play()
                 }
             }
@@ -353,6 +386,43 @@ struct TappableVideoPreview: View {
                 if scenePhase != .active {
                     playerHolder.player.pause()
                 }
+            }
+            .onChange(of: playerHolder.isReadyToPlay) {
+                guard playerHolder.isReadyToPlay, showPlaceholderOverlay else { return }
+
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    withAnimation(.easeInOut(duration: 0.3)) {
+                        overlayBlur = 0
+                        overlayOpacity = 0
+                    }
+
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                        showPlaceholderOverlay = false
+                    }
+                }
+            }
+
+            if let ph = placeholder, showPlaceholderOverlay {
+                ZStack {
+                    Image(uiImage: ph)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: width, height: h)
+                        .clipped()
+                        .blur(radius: overlayBlur)
+                        .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
+
+                    if !playerHolder.isReadyToPlay {
+                        LoadingIndicator(
+                            animation: .circleRunner,
+                            color: Color(.label),
+                            size: .small,
+                            speed: .fast
+                        )
+                    }
+                }
+                .frame(width: width, height: h)
+                .opacity(overlayOpacity)
             }
 
             Rectangle()
@@ -388,11 +458,13 @@ struct TappableVideoPreview: View {
                 }
 
                 Spacer()
-
+                
                 Button(action: {
                     if playerHolder.isPlaying {
+                        isManuallyPaused = true
                         playerHolder.player.pause()
                     } else {
+                        isManuallyPaused = false
                         playerHolder.player.play()
                     }
                 }) {
@@ -403,24 +475,39 @@ struct TappableVideoPreview: View {
                         .clipShape(Circle())
                 }
             }
-            .padding(8)
+            .padding(.top, 10)
+            .padding(.horizontal, 12)
         }
     }
-    
+
     private func loadVideoSize() {
-        Task {
-            let asset = AVAsset(url: url)
-            let tracks = try? await asset.loadTracks(withMediaType: .video)
-            if let track = tracks?.first {
-                let naturalSize = try? await track.load(.naturalSize)
-                let transform = try? await track.load(.preferredTransform)
-                let size = naturalSize ?? .zero
-                let t = transform ?? .identity
-                let realSize = size.applying(t)
+        let asset = AVURLAsset(
+            url: url,
+            options: [AVURLAssetPreferPreciseDurationAndTimingKey: false]
+        )
+
+        Task.detached(priority: .utility) {
+            do {
+                let tracks = try await asset.loadTracks(withMediaType: .video)
+                guard let track = tracks.first else { return }
+
+                async let naturalSize = track.load(.naturalSize)
+                async let preferredTransform = track.load(.preferredTransform)
+
+                let size = try await naturalSize.applying(preferredTransform)
+                let w = abs(size.width)
+                let h = abs(size.height)
+                guard w > 0, h > 0 else { return }
+
                 await MainActor.run {
-                    self.videoSize = CGSize(width: abs(realSize.width), height: abs(realSize.height))
+                    withAnimation {
+                        videoSize = CGSize(width: w, height: h)
+                    }
                 }
+            } catch {
+                print("⚠️ loadVideoSize error:", error)
             }
         }
     }
 }
+

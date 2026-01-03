@@ -29,8 +29,9 @@ struct MemorySettingsView: View {
         }
         
         SDImageCache.shared.clear(with: .all)
-
-        // Очистка видео из tmp
+        
+        VideoCacheManager.shared.clear()
+            
         let tmp = FileManager.default.temporaryDirectory
         let fileURLs = try? FileManager.default.contentsOfDirectory(at: tmp, includingPropertiesForKeys: nil)
         fileURLs?.forEach { url in

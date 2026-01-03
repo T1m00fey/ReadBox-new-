@@ -20,8 +20,8 @@ struct TextCreateView: View {
     let text: String
     let isEditing: Bool
     let uploadingLanguage: String
-    let media: [MediaKind]
     let oldMediaCount: Int
+    @Binding var media: [MediaKind?]
     @Binding var mediaURLs: [URL]
     @Binding var postsCount: Int
     @Binding var posts: [PrePost]
@@ -35,6 +35,7 @@ struct TextCreateView: View {
     @Environment(\.dismiss) var dismiss
     
     @EnvironmentObject var hudService: HUDService
+    @EnvironmentObject var changedPostsManager: ChangedPostsManager
     
     private func applyPostsCountDelta(forNewPost newIsArchive: Bool, createdNewPostId: String? = nil) async throws {
         var delta = 0
@@ -128,6 +129,7 @@ struct TextCreateView: View {
                         .type(.toast)
                         .appearFrom(.bottomSlide)
                         .dragToDismiss(true)
+                        .displayMode(.sheet)
                 }
 
                 
@@ -137,22 +139,33 @@ struct TextCreateView: View {
                         
                         HStack {
                             
-                            Image(systemName: "photo.on.rectangle.angled")
-                                .font(.system(size: 22))
-                                .foregroundStyle(Color(.label))
-                                .frame(width: 50, height: 50)
-                                .background(Color(.secondarySystemBackground))
-                                .clipShape(RoundedRectangle(cornerRadius: 12))
-                                .shadow(radius: 2)
-                                .onTapGesture {
-                                    viewModel.isMediaControlViewPresented.toggle()
-                                }
-                                .popoverTip(AuthorMediaListTip())
+                            if #available(iOS 26.0, *) {
+                                Image(systemName: "photo.on.rectangle.angled")
+                                    .font(.system(size: 22))
+                                    .foregroundStyle(Color(.label))
+                                    .padding(.all, 10)
+                                    .glassEffect(.regular, in: .rect(cornerRadius: 12))
+                                    .onTapGesture {
+                                        viewModel.isMediaControlViewPresented.toggle()
+                                    }
+                                    .popoverTip(AuthorMediaListTip())
+                            } else {
+                                Image(systemName: "photo.on.rectangle.angled")
+                                    .font(.system(size: 22))
+                                    .foregroundStyle(Color(.label))
+                                    .background(Color(.secondarySystemBackground))
+                                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                                    .shadow(radius: 1)
+                                    .onTapGesture {
+                                        viewModel.isMediaControlViewPresented.toggle()
+                                    }
+                                    .popoverTip(AuthorMediaListTip())
+                            }
                             
                             ZStack {
                                 RoundedRectangle(cornerRadius: 20)
                                     .foregroundStyle(Color(uiColor: .secondarySystemBackground))
-                                    .shadow(radius: 3)
+                                    .shadow(radius: 1)
                                     .frame(height: 60)
                                 
                                 ScrollView(.horizontal, showsIndicators: false) {
@@ -164,7 +177,7 @@ struct TextCreateView: View {
                                                 .frame(width: 40, height: 40)
                                                 .background(Color(.systemBackground))
                                                 .clipShape(RoundedRectangle(cornerRadius: 10))
-                                                .shadow(radius: 2)
+                                                .shadow(radius: 1)
                                         }
                                         .disabled(viewModel.isImageUploading)
 //                                        .popoverTip(AuthorFileAttachTip())
@@ -201,6 +214,38 @@ struct TextCreateView: View {
                                 .clipShape(RoundedRectangle(cornerRadius: 10))
                                 .padding(.horizontal, 10)
                             }
+                            
+//                            if #available(iOS 26.0, *) {
+//                                Image(systemName: "arrow.right")
+//                                    .font(.system(size: 22))
+//                                    .foregroundStyle(Color(uiColor: .systemBackground))
+//                                    .padding(.all, 10)
+//                                    .glassEffect(.regular, in: .rect(cornerRadius: 12))
+//                                    .tint(Color(.label))
+//                                    .onTapGesture {
+//                                        guard !viewModel.isLoading else { return }
+//                                        guard !viewModel.isImageUploading else { return }
+//                                        
+//                                        isTEFocused = false
+//                                        viewModel.isConfirmationViewPresented = true
+//                                    }
+//                            } else {
+//                                Button {
+//                                    guard !viewModel.isLoading else { return }
+//                                    
+//                                    isTEFocused = false
+//                                    viewModel.isConfirmationViewPresented = true
+//                                } label: {
+//                                    Image(systemName: "arrow.right")
+//                                        .font(.system(size: 22))
+//                                        .foregroundStyle(Color(uiColor: .systemBackground))
+//                                        .frame(width: 50, height: 50)
+//                                        .background(Color(uiColor: .label))
+//                                        .clipShape(RoundedRectangle(cornerRadius: 12))
+//                                        .shadow(radius: 2)
+//                                }
+//                                .disabled(viewModel.isImageUploading)
+//                            }
                             
                             Button {
                                 guard !viewModel.isLoading else { return }
@@ -257,12 +302,14 @@ struct TextCreateView: View {
                     .type(.toast)
                     .appearFrom(.bottomSlide)
                     .dragToDismiss(true)
+                    .displayMode(.sheet)
             }
             .onChange(of: viewModel.addingMode) {
                 hudService.showLoading()
                 isCreateViewPresented = false
                 let newIsArchive = (viewModel.addingMode == 2)
-
+                let items = media.compactMap { $0 }
+ 
                 if viewModel.addingMode > 0 {
                     if isEditing {
                         Task {
@@ -274,12 +321,13 @@ struct TextCreateView: View {
                                     isArchive: newIsArchive,
                                     mediaURLs: mediaURLs,
                                     uploadingLanguage: uploadingLanguage,
-                                    media: media,
+                                    items: items,
                                     oldMediaCount: oldMediaCount
                                 )
 
                                 try await applyPostsCountDelta(forNewPost: newIsArchive)
 
+                                changedPostsManager.changedPostsIDs.append(id)
                                 hudService.showSuccessPopup(type: .post)
                                 
                                 NotificationCenter.default.post(name: .postsDidChange, object: nil)
@@ -296,7 +344,7 @@ struct TextCreateView: View {
                                     isArchive: newIsArchive,
                                     uploadingLanguage: uploadingLanguage,
                                     mediaURLs: mediaURLs,
-                                    media: media
+                                    items: items
                                 )
 
                                 try await applyPostsCountDelta(forNewPost: newIsArchive)
@@ -322,7 +370,7 @@ struct TextCreateView: View {
                     .padding(.vertical, 16)
                     .foregroundStyle(viewModel.isErrorPopup ? Color.white : Color(.label))
                     .background(viewModel.isErrorPopup ? Color.red : Color(.secondarySystemBackground))
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                    .clipShape(RoundedRectangle(cornerRadius: 20))
                     .padding(.top, 20)
             } customize: {
                 $0
@@ -331,6 +379,7 @@ struct TextCreateView: View {
                     .animation(.bouncy)
                     .dragToDismiss(true)
                     .autohideIn(5)
+                    .displayMode(.overlay)
             }
             .task {
                 try? Tips.configure()
@@ -342,11 +391,15 @@ struct TextCreateView: View {
                 
                 let savedText = StorageManager.shared.getText()
                 viewModel.text = savedText == "" ? text : savedText
+                
+                isTEFocused = false
             }
             .onDisappear {
                 if viewModel.isPreviewShowed {
                     StorageManager.shared.save(text: viewModel.text)
                 }
+                
+                isTEFocused = false
             }
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {

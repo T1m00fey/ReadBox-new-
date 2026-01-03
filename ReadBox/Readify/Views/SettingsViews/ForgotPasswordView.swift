@@ -114,7 +114,7 @@ struct ForgotPasswordView: View {
                     .padding(.vertical, 16)
                     .foregroundStyle(Color.white)
                     .background(Color.red)
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                    .clipShape(RoundedRectangle(cornerRadius: 20))
             } customize: {
                 $0
                     .type(.floater())
@@ -122,6 +122,7 @@ struct ForgotPasswordView: View {
                     .animation(.bouncy)
                     .dragToDismiss(true)
                     .autohideIn(5)
+                    .displayMode(.overlay)
             }
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {

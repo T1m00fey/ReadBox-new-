@@ -11,7 +11,6 @@ import Shimmer
 
 struct LikedPostsView: View {
     @Binding var isWelcomeViewPresented: Bool
-    @Binding var isNotificationPopupPresented: Bool
     
     @StateObject var viewModel = LikedPostsViewModel()
     
@@ -23,6 +22,8 @@ struct LikedPostsView: View {
                 ScrollView(showsIndicators: false) {
                     
                     LazyVStack {
+                        
+                        Color.clear.frame(height: 60)
                         
                         if viewModel.isLoadingShowed {
                             
@@ -36,6 +37,7 @@ struct LikedPostsView: View {
                                     isArchive: true,
                                     isShortPost: false,
                                     mediaCount: 0,
+                                    mediaVersion: 2,
                                     user: .constant(nil),
                                     isZoomableViewPresented: .constant(false),
                                     zoomableImage: .constant(nil),
@@ -79,6 +81,7 @@ struct LikedPostsView: View {
                                     isArchive: article.isArchive ?? false,
                                     isShortPost: article.isShortPost ?? false,
                                     mediaCount: article.mediaCount ?? 1,
+                                    mediaVersion: article.mediaVersion ?? 1,
                                     user: $viewModel.user,
                                     isZoomableViewPresented: $viewModel.isZoomableViewPresented,
                                     zoomableImage: $viewModel.zoomableImage,
@@ -95,48 +98,47 @@ struct LikedPostsView: View {
                                 }
                             }
                             
-                            if viewModel.indexesNeedToLoad.count > 0 && !viewModel.isLoading {
-                                Button {
-                                    Task {
-                                        do {
-                                            try await viewModel.getArticles()
-                                            return
-                                        } catch {
-                                            withAnimation {
-                                                viewModel.errorText = error.localizedDescription
-                                            }
-                                        }
-                                        
-                                        viewModel.isErrorPopupPresented = true
-                                    }
-                                } label: {
-                                    HStack {
-                                        Image(systemName: "arrow.down")
-                                            .foregroundStyle(Color(uiColor: .label))
-                                            .font(.title3)
-                                            .fontWeight(.light)
-                                        
-                                        Text(LocalizedStringKey("loadMore"))
-                                            .font(.title3)
-                                            .fontDesign(.rounded)
-                                            .fontWeight(.light)
-                                    }
-                                    .padding(.horizontal, 16)
-                                    .padding(.vertical, 10)
-                                    .background(Color(uiColor: .secondarySystemBackground))
-                                    .clipShape(RoundedRectangle(cornerRadius: 10))
-                                    .shadow(radius: 2)
-                                    .padding(.top, 20)
-                                }
-                                .padding(.bottom, 10)
-                                
-                            }
+//                            if viewModel.indexesNeedToLoad.count > 0 && !viewModel.isLoading {
+//                                Button {
+//                                    Task {
+//                                        do {
+//                                            try await viewModel.getArticles()
+//                                            return
+//                                        } catch {
+//                                            withAnimation {
+//                                                viewModel.errorText = error.localizedDescription
+//                                            }
+//                                        }
+//                                        
+//                                        viewModel.isErrorPopupPresented = true
+//                                    }
+//                                } label: {
+//                                    HStack {
+//                                        Image(systemName: "arrow.down")
+//                                            .foregroundStyle(Color(uiColor: .label))
+//                                            .font(.title3)
+//                                            .fontWeight(.light)
+//                                        
+//                                        Text(LocalizedStringKey("loadMore"))
+//                                            .font(.title3)
+//                                            .fontDesign(.rounded)
+//                                            .fontWeight(.light)
+//                                    }
+//                                    .padding(.horizontal, 16)
+//                                    .padding(.vertical, 10)
+//                                    .background(Color(uiColor: .secondarySystemBackground))
+//                                    .clipShape(RoundedRectangle(cornerRadius: 10))
+//                                    .shadow(radius: 2)
+//                                    .padding(.top, 20)
+//                                }
+//                                .padding(.bottom, 10)
+//                                
+//                            }
                         }
                         
                     }
                     
                 }
-                .padding(.top, 60)
                 .refreshable {
                     viewModel.reload()
                 }
@@ -152,6 +154,7 @@ struct LikedPostsView: View {
                         isCheckmark: viewModel.authorsCheckmarks[viewModel.authorId] ?? false,
                         isArchive: viewModel.isArchive,
                         mediaCount: viewModel.mediaCount,
+                        mediaVersion: viewModel.mediaVersion,
                         user: $viewModel.user,
                         isChannelViewPresented: $viewModel.isChannelViewPresented
                     )
@@ -159,7 +162,6 @@ struct LikedPostsView: View {
                 .fullScreenCover(isPresented: $viewModel.isChannelViewPresented, content: {
                     ChannelView(
                         user: $viewModel.user,
-                        isNotificationPopupPrenseted: $isNotificationPopupPresented,
                         authorId: viewModel.authorId,
                         authorName: viewModel.authorsNames[viewModel.authorId] ?? NSLocalizedString("notFoundLabel", comment: ""),
                         isCheckmark: viewModel.authorsCheckmarks[viewModel.authorId] ?? false
@@ -170,18 +172,6 @@ struct LikedPostsView: View {
                         ZoomableImageView(image: image)
                     }
                 })
-                .makePopupsForLikedView(
-                    viewModel: viewModel,
-                    isErrorPopupPresented: $viewModel.isErrorPopupPresented,
-                    isLoadingPopupPresented: $viewModel.isLoadingPopupPresented,
-                    isDescriptionPopupPresented: $viewModel.isDescriptionPopupPresented,
-                    isReadViewPresented: $viewModel.isReadViewPresented,
-                    errorText: $viewModel.errorText
-                )
-                .trackChangesOnLikedPosts(
-                    viewModel: viewModel,
-                    isWelcomeViewPresented: isWelcomeViewPresented
-                )
                 .onAppear {
                     if viewModel.isLoading {
                         viewModel.isLoading = false
@@ -210,6 +200,18 @@ struct LikedPostsView: View {
                     Spacer()
                 }.ignoresSafeArea()
             }
+            .makePopupsForLikedView(
+                viewModel: viewModel,
+                isErrorPopupPresented: $viewModel.isErrorPopupPresented,
+                isLoadingPopupPresented: $viewModel.isLoadingPopupPresented,
+                isDescriptionPopupPresented: $viewModel.isDescriptionPopupPresented,
+                isReadViewPresented: $viewModel.isReadViewPresented,
+                errorText: $viewModel.errorText
+            )
+            .trackChangesOnLikedPosts(
+                viewModel: viewModel,
+                isWelcomeViewPresented: isWelcomeViewPresented
+            )
         }
         
     }
@@ -220,8 +222,9 @@ private extension LikedPostsView {
         ZStack {
             RoundedRectangle(cornerRadius: 15)
                 .frame(width: UIScreen.main.bounds.width, height: 120)
-                .foregroundStyle(Color(uiColor: .secondarySystemBackground))
-                .shadow(radius: 10)
+//                .foregroundStyle(Color(uiColor: .secondarySystemBackground))
+                .foregroundStyle(.thinMaterial)
+                .shadow(radius: 5)
             
             HStack {
                 Text(LocalizedStringKey("favoritesLabel"))

@@ -11,26 +11,6 @@ import MarkdownUI
 import SwiftfulLoadingIndicators
 import SDWebImageSwiftUI
 
-struct VisibilityPreferenceKey: PreferenceKey {
-    static var defaultValue: [String: CGFloat] = [:]
-    static func reduce(value: inout [String: CGFloat], nextValue: () -> [String: CGFloat]) {
-        value.merge(nextValue()) { $1 }
-    }
-}
-
-struct VisibilityTracker: View {
-    let id: String
-    var body: some View {
-        GeometryReader { proxy in
-            let frame = proxy.frame(in: .global)
-            Color.clear
-                .preference(key: VisibilityPreferenceKey.self, value: [id: frame.minY])
-        }
-        .frame(height: 0)
-    }
-}
-
-
 struct ReadView: View {
     
     let id: String
@@ -43,6 +23,7 @@ struct ReadView: View {
     let isCheckmark: Bool
     let isArchive: Bool
     let mediaCount: Int
+    let mediaVersion: Int
     
     @Binding var user: DBUser?
     @Binding var isChannelViewPresented: Bool
@@ -52,6 +33,8 @@ struct ReadView: View {
     @StateObject var viewModel = ReadViewModel()
     
     @Environment(\.dismiss) var dismiss
+    
+    @Namespace var namespace
     
     var body: some View {
         NavigationStack {
@@ -79,7 +62,7 @@ struct ReadView: View {
                             
                             HStack {
                                 Text("by")
-                                    .font(.system(size: 21))
+                                    .font(.system(size: 20))
                                     .fontDesign(.rounded)
                                     .foregroundStyle(Color.gray)
                                 
@@ -119,13 +102,13 @@ struct ReadView: View {
                                     if isCheckmark {
                                         Image(systemName: "checkmark.seal.fill")
                                             .foregroundStyle(Color.blue)
-                                            .font(.subheadline)
+                                            .font(.system(size: 14))
                                             .padding(.top, 1)
                                     }
                                 }
                             }
                             .frame(width: UIScreen.main.bounds.width - 32, alignment: .leading)
-                            .padding(.vertical, viewModel.images.count > 0 ? 20 : 0)
+                            .padding(.bottom, 20)
                             .padding(.top, viewModel.images.count == 0 ? 10 : 0)
                         }
                        
@@ -144,82 +127,17 @@ struct ReadView: View {
 //                                .frame(width: UIScreen.main.bounds.width - 20)
 //                        }
                         
-                        if viewModel.images.count > 0 && mediaCount > 0 {
-                            if mediaCount == 1, let image = viewModel.images[0].image {
-                                Image(uiImage: image)
-                                    .resizable()
-                                    .scaledToFit()
-                                    .frame(width: UIScreen.main.bounds.width - 25)
-                                    .clipShape(RoundedRectangle(cornerRadius: 20))
-                                    .padding(.bottom, 10)
-                                    .onTapGesture {
-                                        withAnimation {
-                                            viewModel.zoomableImage = image
-                                            viewModel.isZoomableViewPresented = true
-                                        }
-                                    }
-                            } else if mediaCount == 1, let videoURL = viewModel.images[0].videoURL {
-                                TappableVideoPreview(url: videoURL, cornerRadius: 20, width: UIScreen.main.bounds.width - 25)
-                                    .frame(width: UIScreen.main.bounds.width - 25)
-                                    .padding(.bottom, 10)
-                            } else {
-                                VStack(spacing: 5) {
-                                    if mediaCount > 1 {
-                                        Text("\(viewModel.currentIndex + 1)/\(mediaCount)")
-                                            .font(.system(size: 18))
-                                            .fontDesign(.rounded)
-                                            .foregroundStyle(Color.gray)
-                                            .frame(width: UIScreen.main.bounds.width - 32, alignment: .trailing)
-                                            .padding(.top, -10)
-                                    }
-                                    
-                                    TabView(selection: $viewModel.currentIndex) {
-                                        ForEach(0..<mediaCount, id: \.self) { i in
-                                            ZStack {
-                                                if viewModel.images.count > i {
-                                                    if let image = viewModel.images[i].image {
-                                                        Image(uiImage: image)
-                                                            .resizable()
-                                                            .scaledToFit()
-                                                            .clipShape(RoundedRectangle(cornerRadius: 20))
-                                                            .frame(width: UIScreen.main.bounds.width - 25)
-                                                            .padding(.bottom, 10)
-                                                            .onTapGesture {
-                                                                withAnimation {
-                                                                    viewModel.zoomableImage = image
-                                                                    viewModel.isZoomableViewPresented = true
-                                                                }
-                                                            }
-                                                    } else if let videoURL = viewModel.images[i].videoURL {
-                                                        TappableVideoPreview(
-                                                            url: videoURL,
-                                                            cornerRadius: 20,
-                                                            width: UIScreen.main.bounds.width - 25,
-                                                            height: 350
-                                                        )
-                                                        .frame(width: UIScreen.main.bounds.width - 25)
-                                                        .padding(.bottom, 10)
-                                                    } else {
-                                                        LoadingIndicator(
-                                                            animation: .circleRunner,
-                                                            color: Color(.label),
-                                                            size: .small,
-                                                            speed: .fast
-                                                        )
-                                                        .frame(width: UIScreen.main.bounds.width - 25)
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                    .tabViewStyle(.page(indexDisplayMode: .never))
-                                    .frame(
-                                        width: UIScreen.main.bounds.width - 25,
-                                        height: 350
-                                    )
-                                    .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-                                }
-                            }
+                        if mediaCount > 0 {
+                            MediaViews(
+                                id: id,
+                                authorId: authorId,
+                                mediaCount: mediaCount,
+                                mediaVersion: mediaVersion,
+                                isArchive: isArchive,
+                                zoomableImage: $viewModel.zoomableImage,
+                                isZoomableViewPresented: $viewModel.isZoomableViewPresented,
+                                currentIndex: $viewModel.currentIndex
+                            )
                         }
                     
                         HStack {
@@ -288,61 +206,111 @@ struct ReadView: View {
                                     }
                                 }
                             } label: {
-                                Image(systemName: viewModel.isPostLiked ? "hand.thumbsup.fill" : "hand.thumbsup")
-                                    .scaleEffect(1.2)
-                                    .frame(width: 50, height: 50)
-                                    .background(Color(uiColor: .secondarySystemBackground))
-                                    .clipShape(RoundedRectangle(cornerRadius: 10))
-                                    .shadow(radius: 1)
+                                if #available(iOS 26.0, *) {
+                                    Image(systemName: viewModel.isPostLiked ? "hand.thumbsup.fill" : "hand.thumbsup")
+                                        .scaleEffect(1.2)
+                                        .frame(width: 50, height: 50)
+                                        .glassEffect(.regular, in: .rect(cornerRadius: 20))
+                                } else {
+                                    Image(systemName: viewModel.isPostLiked ? "hand.thumbsup.fill" : "hand.thumbsup")
+                                        .scaleEffect(1.2)
+                                        .frame(width: 50, height: 50)
+                                        .background(Color(uiColor: .secondarySystemBackground))
+                                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                                        .shadow(radius: 1)
+                                }
                             }
                             
                             if authorId != "" && authorId != user?.userId {
                                 ZStack {
-                                    RoundedRectangle(cornerRadius: 10)
-                                        .foregroundStyle(
-                                            isSubscribed
-                                            ? Color(uiColor: .secondarySystemBackground)
-                                            : Color(uiColor: .label)
-                                        )
-                                        .shadow(radius: isSubscribed ? 1 : 0)
-                                        .frame(width: 120)
-                                    
-                                    Text(
-                                        isSubscribed
-                                        ? NSLocalizedString("youSubscribedLabel", comment: "")
-                                        : NSLocalizedString("subscribeLabel", comment: "")
-                                    )
-                                    .font(.system(size: 14))
-                                    .fontDesign(.rounded)
-                                    .foregroundStyle(
-                                        isSubscribed
-                                        ? Color(uiColor: .label)
-                                        : Color(uiColor: .systemBackground)
-                                    )
+                                    if #available(iOS 26.0, *) {
+                                        if viewModel.isSubscribeLoading {
+                                            LoadingIndicator(
+                                                animation: .circleRunner,
+                                                color: Color(.label),
+                                                size: .small,
+                                                speed: .fast
+                                            )
+                                            .padding(.vertical, 10)
+                                            .frame(width: 130)
+                                            .glassEffect(.regular, in: .rect(cornerRadius: 20))
+                                        } else {
+                                            Text(
+                                                isSubscribed
+                                                ? NSLocalizedString("youSubscribedLabel", comment: "")
+                                                : NSLocalizedString("subscribeLabel", comment: "")
+                                            )
+                                            .font(.system(size: 14))
+                                            .fontDesign(.rounded)
+                                            .padding()
+                                            .glassEffect(.regular, in: .rect(cornerRadius: 20))
+                                        }
+                                    } else {
+                                        RoundedRectangle(cornerRadius: 10)
+                                            .foregroundStyle(
+                                                isSubscribed
+                                                ? Color(uiColor: .secondarySystemBackground)
+                                                : Color(uiColor: .label)
+                                            )
+                                            .shadow(radius: isSubscribed ? 1 : 0)
+                                            .frame(width: 120)
+                                        
+                                        if viewModel.isSubscribeLoading {
+                                            LoadingIndicator(
+                                                animation: .circleRunner,
+                                                color:  isSubscribed
+                                                ? Color(uiColor: .label)
+                                                : Color(uiColor: .systemBackground),
+                                                size: .small,
+                                                speed: .fast
+                                            )
+                                        } else {
+                                            Text(
+                                                isSubscribed
+                                                ? NSLocalizedString("youSubscribedLabel", comment: "")
+                                                : NSLocalizedString("subscribeLabel", comment: "")
+                                            )
+                                            .font(.system(size: 14))
+                                            .fontDesign(.rounded)
+                                            .foregroundStyle(
+                                                isSubscribed
+                                                ? Color(uiColor: .label)
+                                                : Color(uiColor: .systemBackground)
+                                            )
+                                        }
+                                    }
                                 }
                                 .onTapGesture {
-                                    Task {
-                                        do {
-                                            try await viewModel.un_subcribeUser(
-                                                on: authorId,
-                                                isNeedToSubscribe: !isSubscribed
-                                            )
-                                            
-                                            withAnimation {
-                                                if isSubscribed {
-                                                    user?.subscribes?.removeAll { $0 == authorId }
-                                                    viewModel.vibrationsService.lightImpact()
-                                                } else {
-                                                    user?.subscribes?.append(authorId)
-                                                    viewModel.vibrationsService.successFeedback()
+                                    if !viewModel.isSubscribeLoading {
+                                        Task {
+                                            do {
+                                                withAnimation {
+                                                    viewModel.isSubscribeLoading = true
                                                 }
                                                 
-                                                isSubscribed.toggle()
-                                            }
-                                        } catch {
-                                            withAnimation {
-                                                viewModel.errorText = error.localizedDescription
-                                                viewModel.isErrorPopupPresented = true
+                                                try await viewModel.un_subcribeUser(
+                                                    on: authorId,
+                                                    isNeedToSubscribe: !isSubscribed
+                                                )
+                                                
+                                                withAnimation {
+                                                    if isSubscribed {
+                                                        user?.subscribes?.removeAll { $0 == authorId }
+                                                        viewModel.vibrationsService.lightImpact()
+                                                    } else {
+                                                        user?.subscribes?.append(authorId)
+                                                        viewModel.vibrationsService.successFeedback()
+                                                    }
+                                                                                                    
+                                                    viewModel.isSubscribeLoading = false
+                                                    isSubscribed.toggle()
+                                                }
+                                            } catch {
+                                                withAnimation {
+                                                    viewModel.isSubscribeLoading = false
+                                                    viewModel.errorText = error.localizedDescription
+                                                    viewModel.isErrorPopupPresented = true
+                                                }
                                             }
                                         }
                                     }
@@ -379,22 +347,23 @@ struct ReadView: View {
                     }
                     
                 }
+                .coordinateSpace(name: "readScroll")
                 .fullScreenCover(isPresented: $viewModel.isZoomableViewPresented) {
                     if let image = viewModel.zoomableImage {
                         ZoomableImageView(image: image)
                     } else if let url = viewModel.selectedImageURL {
                         ZoomableImageView(imageURL: url)
                     }
-                    
                 }
                 .onPreferenceChange(VisibilityPreferenceKey.self) { values in
                     if let minY = values["authorBlock"] {
-                        let screenHeight = UIScreen.main.bounds.height
-                        
-                        withAnimation {
-                            viewModel.isAuthorBlockVisible = minY > 0 && minY < screenHeight
+                        let isVisible = minY > -20
+
+                        if viewModel.isAuthorBlockVisible != isVisible {
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                viewModel.isAuthorBlockVisible = isVisible
+                            }
                         }
-//                        print("👀 authorBlock is visible? \(isVisible)")
                     }
                 }
                 .onAppear {
@@ -404,7 +373,6 @@ struct ReadView: View {
                         }
                 
                         viewModel.isPostLiked = (user?.likedPosts ?? []).contains(id)
-                        viewModel.fetchImages(id, mediaCount)
                     }
                     
                     viewModel.getAvatar(authorId)
@@ -425,7 +393,7 @@ struct ReadView: View {
                         .padding(.vertical, 16)
                         .foregroundStyle(Color.white)
                         .background(Color.red)
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                        .clipShape(RoundedRectangle(cornerRadius: 20))
                 } customize: {
                     $0
                         .type(.floater())
@@ -433,6 +401,7 @@ struct ReadView: View {
                         .animation(.bouncy)
                         .dragToDismiss(true)
                         .autohideIn(5)
+                        .displayMode(.overlay)
                 }
                 .popup(isPresented: $viewModel.isFontSettingPopupPresented) {
                     FontSettingView(
@@ -440,12 +409,13 @@ struct ReadView: View {
                         successText: .constant(""),
                         isSuccessPopupPresented: .constant(false)
                     )
-                    .shadow(radius: 3)
+                    .shadow(radius: 2)
                 } customize: {
                     $0
                         .type(.toast)
                         .appearFrom(.bottomSlide)
                         .dragToDismiss(true)
+                        .displayMode(.sheet)
                 }
                 .onChange(of: viewModel.isFontSettingPopupPresented) {
                     withAnimation {
@@ -496,21 +466,40 @@ struct ReadView: View {
                     
                     ToolbarItem(placement: .topBarTrailing) {
                         
-                        HStack {
-                            if text != "" {
-                                Button {
-                                    viewModel.isFontSettingPopupPresented.toggle()
-                                } label: {
-                                    Image(systemName: "book.pages")
+                        if #available(iOS 26.0, *) {
+                            HStack(spacing: 10) {
+                                if text != "" {
+                                    Button {
+                                        viewModel.isFontSettingPopupPresented.toggle()
+                                    } label: {
+                                        Image(systemName: "book.pages")
+                                    }
                                 }
-                            }
-                            
-                            if !isArchive {
-                                ShareLink(item: URL(string: "https://readbox-links.online/posts/?index=\(id)")!) {
-                                    Image(systemName: "arrowshape.turn.up.right")
+                                
+                                if !isArchive {
+                                    ShareLink(item: URL(string: "https://readbox-links.online/posts/?index=\(id)")!) {
+                                        Image(systemName: "arrowshape.turn.up.right")
+                                    }
                                 }
+                                
                             }
-                            
+                        } else {
+                            HStack {
+                                if text != "" {
+                                    Button {
+                                        viewModel.isFontSettingPopupPresented.toggle()
+                                    } label: {
+                                        Image(systemName: "book.pages")
+                                    }
+                                }
+                                
+                                if !isArchive {
+                                    ShareLink(item: URL(string: "https://readbox-links.online/posts/?index=\(id)")!) {
+                                        Image(systemName: "arrowshape.turn.up.right")
+                                    }
+                                }
+                                
+                            }
                         }
                         
                     }

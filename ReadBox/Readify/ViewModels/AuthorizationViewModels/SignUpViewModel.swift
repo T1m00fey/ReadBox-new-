@@ -52,6 +52,8 @@ final class SignUpViewModel: ObservableObject {
         )
         
         try await UserManager.shared.createNewUser(user: user)
+        
+        try await UserManager.shared.set(fcmToken: StorageManager.shared.getFcmToken(), to: authDataResult.uid)
     }
     
     func isSignUpButtonEnabled() {

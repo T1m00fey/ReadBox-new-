@@ -19,6 +19,7 @@ struct ArticleView: View {
     let isArchive: Bool
     let isShortPost: Bool
     let mediaCount: Int
+    let mediaVersion: Int
     
     @Binding var user: DBUser?
     @Binding var isZoomableViewPresented: Bool
@@ -31,10 +32,13 @@ struct ArticleView: View {
     @State private var isExpanded = false
     @State private var isLiked = false
     @State private var currentIndex = 0
+    @State private var effectiveMediaCount = 0
     
-    @State private var images: [MediaKind] = []
+    @State private var images: [MediaKind?] = []
     
-    private let maxTitleLen = 200
+    @EnvironmentObject var sessionManager: SessionManager
+    
+    private let maxTitleLen = 250
     
     init(
         id: String,
@@ -45,11 +49,12 @@ struct ArticleView: View {
         isArchive: Bool,
         isShortPost: Bool,
         mediaCount: Int,
+        mediaVersion: Int,
         user: Binding<DBUser?>,
         isZoomableViewPresented: Binding<Bool>,
         zoomableImage: Binding<UIImage?>,
         selectedAuthorId: Binding<String>,
-        isChannelViewPresented: Binding<Bool>
+        isChannelViewPresented: Binding<Bool>,
     ) {
         self.id = id
         self.title = title
@@ -59,6 +64,7 @@ struct ArticleView: View {
         self.isArchive = isArchive
         self.isShortPost = isShortPost
         self.mediaCount = mediaCount
+        self.mediaVersion = mediaVersion
         self._user = user
         self._isZoomableViewPresented = isZoomableViewPresented
         self._zoomableImage = zoomableImage
@@ -66,99 +72,109 @@ struct ArticleView: View {
         self._isChannelViewPresented = isChannelViewPresented
     }
     
-    private func fetchImages() {
+    private func getAvatar() {
+        let cacheKey = "avatar_\(authorId)"
         let storageRef = Storage.storage().reference()
-        
-        for i in 0..<mediaCount {
-            let cachedImage = StorageManager.shared.getImage(id: "\(id)_\(i)")
-            
-            if let cachedImage {
-                withAnimation {
-                    images.append(MediaKind(image: cachedImage))
-                }
-            } else {
-                let islandRef = storageRef.child("images/\(id)_\(i).jpg")
-                
-                islandRef.getData(maxSize: 1 * 5012 * 5012) { data, error in
-                    if let data, let image = UIImage(data: data) {
-                        withAnimation {
-                            images.append(MediaKind(image: image))
-                            StorageManager.shared.saveImage(id: "\(id)_\(i)", image: image)
-                        }
-                    } else {
-                        let videoRef = storageRef.child("images/\(id)_\(i).mp4")
-                        
-                        videoRef.downloadURL { url, error in
-                            if let url {
-                                DispatchQueue.main.async {
-                                    withAnimation {
-                                        images.append(MediaKind(videoURL: url))
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+
+        let currentSessionId = sessionManager.sessionId
+        let lastSessionId = StorageManager.shared.getSessionId()
+        let isSameSession = (lastSessionId == currentSessionId)
+
+        if let cached = StorageManager.shared.getImage(id: cacheKey) {
+            withAnimation {
+                avatarImage = cached
             }
         }
-        
-        if let image = StorageManager.shared.getImage(id: authorId) {
-            withAnimation {
-                avatarImage = image
-            }
-        } else {
+
+        if isSameSession, avatarImage != nil {
+            return
+        }
+
+        let islandRef = storageRef.child("avatars/\(authorId).jpg")
+
+        islandRef.getData(maxSize: 1 * 5012 * 5012) { data, error in
+            guard let data, let image = UIImage(data: data) else { return }
+
             DispatchQueue.main.async {
-                let islandRef = storageRef.child("avatars/\(authorId).jpg")
-                
-                islandRef.getData(maxSize: 1 * 5012 * 5012) { data, error in
-                    if let data, let image = UIImage(data: data) {
-                        withAnimation {
-                            avatarImage = image
-                        }
-                        StorageManager.shared.saveImage(id: authorId, image: image)
-                    }
+                withAnimation {
+                    avatarImage = image
+                }
+                StorageManager.shared.saveImage(id: cacheKey, image: image)
+
+                if !isSameSession {
+                    StorageManager.shared.setSessionId(currentSessionId)
                 }
             }
         }
-        
-        if images.isEmpty {
-            fetchImage()
-        }
     }
+
     
-    private func fetchImage() {
-        let articleImage = StorageManager.shared.getImage(id: id)
-        let storage = Storage.storage()
-        let storageRef = storage.reference()
-        
-        if let articleImage {
-            withAnimation {
-                images.append(MediaKind(image: articleImage))
-            }
-        } else {
-            let islandRef = storageRef.child("images/\(id).jpg")
-            
-            islandRef.getData(maxSize: 1 * 5012 * 5012) { data, error in
-                if let data, let image = UIImage(data: data)  {
-                    withAnimation {
-                        images.append(MediaKind(image: image))
-                        StorageManager.shared.saveImage(id: id, image: image)
-                    }
-                } else {
-                    let videoRef = storageRef.child("images/\(id).mp4")
-                    videoRef.downloadURL { url, error in
-                        if let url {
-                            DispatchQueue.main.async {
-                                withAnimation {
-                                    images.append(MediaKind(videoURL: url))
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
+//    private func fetchImages() {
+//        let storageRef = Storage.storage().reference()
+//        
+//        images = Array(repeating: nil, count: mediaCount)
+//        
+//        for i in 0..<mediaCount {
+//            let cachedImage = StorageManager.shared.getImage(id: "\(id)_\(i)")
+//            
+//            if let cachedImage {
+//                withAnimation {
+////                    images.append(MediaKind(image: cachedImage))
+//                    images[i] = MediaKind(image: cachedImage)
+//                }
+//            } else {
+//                let islandRef = storageRef.child("images/\(id)_\(i).jpg")
+//                
+//                islandRef.getData(maxSize: 1 * 5012 * 5012) { data, error in
+//                    if let data, let image = UIImage(data: data) {
+//                        DispatchQueue.main.async {
+//                            withAnimation {
+//                                //                            images.append(MediaKind(image: image))
+//                                images[i] = MediaKind(image: image)
+//                                StorageManager.shared.saveImage(id: "\(id)_\(i)", image: image)
+//                            }
+//                        }
+//                    } else {
+//                        let videoRef = storageRef.child("images/\(id)_\(i).mp4")
+//                        
+//                        videoRef.downloadURL { url, error in
+//                            if let url {
+//                                DispatchQueue.main.async {
+//                                    withAnimation {
+////                                        images.append(MediaKind(videoURL: url))
+//                                        images[i] = MediaKind(videoURL: url)
+//                                    }
+//                                }
+//                            }
+//                        }
+//                    }
+//                }
+//            }
+//        }
+//        
+//        if let image = StorageManager.shared.getImage(id: authorId) {
+//            withAnimation {
+//                avatarImage = image
+//            }
+//        } else {
+//            DispatchQueue.main.async {
+//                let islandRef = storageRef.child("avatars/\(authorId).jpg")
+//                
+//                islandRef.getData(maxSize: 1 * 5012 * 5012) { data, error in
+//                    if let data, let image = UIImage(data: data) {
+//                        withAnimation {
+//                            avatarImage = image
+//                        }
+//                        StorageManager.shared.saveImage(id: authorId, image: image)
+//                    }
+//                }
+//            }
+//        }
+//        
+//        if images.isEmpty {
+//            fetchImage()
+//        }
+//    }
     
     private func updateLike() async throws {
         let likesCount = try await ArticlesManager.shared.getLikesCount(byPostId: id)
@@ -181,7 +197,7 @@ struct ArticleView: View {
             withAnimation {
                 isLiked.toggle()
             }
-            VibrationsService.shared.softImpact()
+            VibrationsService.shared.lightImpact()
             
             try await UserManager.shared.addLikedPost(id: user?.userId ?? "", likedPost: id)
             try await ArticlesManager.shared.updateLikes(at: id, likesCount: likesCount + 1)
@@ -220,8 +236,7 @@ struct ArticleView: View {
                 HStack(spacing: 5) {
                     HStack(spacing: 0) {
                         Text(authorName)
-                            .font(.system(size: 21))
-                            .fontDesign(.rounded)
+                            .font(.system(size: 20))
                             .lineLimit(1)
                             .underline()
                             .onTapGesture {
@@ -232,7 +247,7 @@ struct ArticleView: View {
                         if isCheckmark {
                             Image(systemName: "checkmark.seal.fill")
                                 .foregroundStyle(Color.blue)
-                                .font(.footnote)
+                                .font(.system(size: 14))
                                 .padding(.top, 1)
                         }
                     }
@@ -253,82 +268,18 @@ struct ArticleView: View {
             .padding(.top, 7)
             .padding(.vertical, 5)
             
-            if images.count > 0 && mediaCount > 0 {
-                if mediaCount == 1, let image = images[0].image {
-                    Image(uiImage: image)
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: UIScreen.main.bounds.width - 25)
-                        .clipShape(RoundedRectangle(cornerRadius: 20))
-                        .padding(.bottom, 10)
-                        .onTapGesture {
-                            withAnimation {
-                                zoomableImage = image
-                                isZoomableViewPresented = true
-                            }
-                        }
-                } else if mediaCount == 1, let videoURL = images[0].videoURL {
-                    TappableVideoPreview(url: videoURL, cornerRadius: 20, width: UIScreen.main.bounds.width - 25)
-                        .frame(width: UIScreen.main.bounds.width - 25)
-                        .padding(.bottom, 10)
-                } else {
-                    VStack(spacing: 5) {
-                        if mediaCount > 1 {
-                            Text("\(currentIndex + 1)/\(mediaCount)")
-                                .font(.system(size: 18))
-                                .fontDesign(.rounded)
-                                .foregroundStyle(Color.gray)
-                                .frame(width: UIScreen.main.bounds.width - 32, alignment: .trailing)
-                                .padding(.top, -10)
-                        }
-                        
-                        TabView(selection: $currentIndex) {
-                            ForEach(0..<mediaCount, id: \.self) { i in
-                                ZStack {
-                                    if images.count > i {
-                                        if let image = images[i].image {
-                                            Image(uiImage: image)
-                                                .resizable()
-                                                .scaledToFit()
-                                                .clipShape(RoundedRectangle(cornerRadius: 20))
-                                                .frame(width: UIScreen.main.bounds.width - 25)
-                                                .padding(.bottom, 10)
-                                                .onTapGesture {
-                                                    withAnimation {
-                                                        zoomableImage = image
-                                                        isZoomableViewPresented = true
-                                                    }
-                                                }
-                                        } else if let videoURL = images[i].videoURL {
-                                            TappableVideoPreview(
-                                                url: videoURL,
-                                                cornerRadius: 20,
-                                                width: UIScreen.main.bounds.width - 25,
-                                                height: 350
-                                            )
-                                            .frame(width: UIScreen.main.bounds.width - 25)
-                                            .padding(.bottom, 10)
-                                        } else {
-                                            LoadingIndicator(
-                                                animation: .circleRunner,
-                                                color: Color(.label),
-                                                size: .small,
-                                                speed: .fast
-                                            )
-                                            .frame(width: UIScreen.main.bounds.width - 25)
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        .tabViewStyle(.page(indexDisplayMode: .never))
-                        .frame(
-                            width: UIScreen.main.bounds.width - 25,
-                            height: 350
-                        )
-                        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-                    }
-                }
+            if mediaCount > 0 {
+                MediaViews(
+                    id: id,
+                    authorId: authorId,
+                    mediaCount: effectiveMediaCount,
+                    mediaVersion: mediaVersion,
+                    isArchive: isArchive,
+                    zoomableImage: $zoomableImage,
+                    isZoomableViewPresented: $isZoomableViewPresented,
+                    currentIndex: $currentIndex
+                )
+                .id("\(id)-\(effectiveMediaCount)")
             }
             
             ZStack {
@@ -338,11 +289,11 @@ struct ArticleView: View {
                         .lineLimit(!isExpanded && title.count >= maxTitleLen ? 4 : nil)
                         .fontDesign(.rounded)
                         .frame(width: UIScreen.main.bounds.width - 42, alignment: .leading)
-                        .padding(.bottom, !isExpanded && title.count >= maxTitleLen && isShortPost ? 10 : 0)
-                        .padding(.bottom, isShortPost ? 10 : 20)
-                        .padding(.bottom, !isExpanded && title.count >= maxTitleLen ? 17 : 0)
+                        .padding(.bottom, isShortPost ? 10 : 20)                    
+//                        .padding(.bottom, !isExpanded && title.count >= maxTitleLen && isShortPost ? 10 : 0)
+//                        .padding(.bottom, !isExpanded && title.count >= maxTitleLen ? 17 : 0)
                     
-                    if ((title.count >= maxTitleLen && isExpanded) || title.count < maxTitleLen) && isShortPost {
+                    if isShortPost {
                         HStack(spacing: 12) {
                             Image(systemName: isLiked ? "hand.thumbsup.fill" : "hand.thumbsup")
                                 .foregroundStyle(Color.gray)
@@ -361,6 +312,7 @@ struct ArticleView: View {
                                     .font(.system(size: 20))
                             }
                         }
+                        .padding(.top, title.count > maxTitleLen && !isExpanded ? 12 : 0)
                         .padding(.bottom, 15)
                         .frame(width: UIScreen.main.bounds.width - 50, alignment: .leading)
                     }
@@ -368,7 +320,7 @@ struct ArticleView: View {
                 
                 ZStack {
                     if !isExpanded && title.count >= maxTitleLen {
-                        RoundedRectangle(cornerRadius: 30)
+                        RoundedRectangle(cornerRadius: 20)
                             .fill(
                                 LinearGradient(
                                     gradient:
@@ -379,7 +331,7 @@ struct ArticleView: View {
                                     endPoint: .bottom
                                 )
                             )
-                            .frame(width: UIScreen.main.bounds.width - 40, height: 50)
+                            .frame(width: UIScreen.main.bounds.width - 38, height: 50)
                     }
                     
                     if !isExpanded && title.count >= maxTitleLen {
@@ -394,12 +346,18 @@ struct ArticleView: View {
                                     isExpanded = true
                                 }
                             }
-                            .offset(y: 30)
+                            .offset(y: 25)
                     }
                 }
                 .offset(y: 10)
             }
             
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .postMediaDidUpdate)) { note in
+            guard let pid = note.userInfo?["postId"] as? String, pid == id else { return }
+            if let newCount = note.userInfo?["mediaCount"] as? Int {
+                effectiveMediaCount = newCount
+            }
         }
         .frame(width: UIScreen.main.bounds.width - 10)
         .background(
@@ -407,14 +365,14 @@ struct ArticleView: View {
                 .foregroundStyle(Color(.secondarySystemBackground))
                 .shadow(radius: 1)
         )
-        .onAppear{
-            if images.count == 0 && mediaCount != 0 && !isArchive {
-                fetchImages()
-            }
-            
+        .onAppear {
             if let user, let likedPosts = user.likedPosts {
                 isLiked = likedPosts.contains(id)
             }
+        }
+        .onAppear {
+            effectiveMediaCount = mediaCount
+            getAvatar()
         }
     }
 }

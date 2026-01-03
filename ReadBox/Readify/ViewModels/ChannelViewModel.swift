@@ -8,6 +8,7 @@
 import SwiftUI
 import Firebase
 import FirebaseStorage
+import SwiftfulLoadingIndicators
 
 @MainActor
 final class ChannelViewModel: ObservableObject {
@@ -36,6 +37,8 @@ final class ChannelViewModel: ObservableObject {
     @Published var postToRead: PostToRead? = nil
     @Published var isDataLoaded = false
     @Published var isSubscribeLoading = false
+    @Published var pushRoute: NotificationPushRoute? = nil
+    @Published var isNotificationPopupPresented = false
     
     func getAvatar() {
         DispatchQueue.main.async {
@@ -58,6 +61,37 @@ final class ChannelViewModel: ObservableObject {
                     }
                 }
             }
+        }
+    }
+    
+    @ViewBuilder
+    func buildSubscribeButtonView(_ isSubscribed: Bool) -> some View {
+        if isSubscribeLoading {
+            LoadingIndicator(
+                animation: .circleRunner,
+                color: isSubscribed
+                ? Color(.label)
+                : Color(.systemBackground),
+                size: .small,
+                speed: .fast
+            )
+            .padding(.vertical, 5)
+            .frame(maxWidth: .infinity)
+        } else {
+            Text(
+                isSubscribed
+                ? NSLocalizedString("youSubscribedLabel", comment: "")
+                : NSLocalizedString("subscribeLabel", comment: "")
+            )
+            .foregroundStyle(
+                isSubscribed
+                ? Color(.label)
+                : Color(.systemBackground)
+            )
+            .font(.system(size: 20))
+            .fontDesign(.rounded)
+            .padding(.vertical, 5)
+            .frame(maxWidth: .infinity)
         }
     }
     
@@ -96,7 +130,10 @@ final class ChannelViewModel: ObservableObject {
     func loadPosts(by authorId: String) async throws {
         guard !isAllLoading else { return }
         
-        let (posts, lastDocument) = try await ArticlesManager.shared.getCreatedPosts(userId: authorId)
+        let (posts, lastDocument) = try await ArticlesManager.shared.getCreatedPosts(
+            userId: authorId,
+            startAfter: lastDocument
+        )
         
         if posts.isEmpty {
             isAllLoading = true            

@@ -39,8 +39,8 @@ final class StorageManager {
         userDefaults.set(language, forKey: "language")
     }
     
-    func getLanguage() -> String {
-        userDefaults.string(forKey: "language") ?? "en"
+    func getLanguage() -> String? {
+        userDefaults.string(forKey: "language")
     }
     
     func getFontSize() -> Int {
@@ -99,13 +99,29 @@ final class StorageManager {
     
     func setNotificationsPopupShowed(_ isShowed: Bool) {
         userDefaults.set(isShowed, forKey: "isNotificationsPopupPresented")
-    }
-    
-    func setApprovedNotificaitons(_ isApproved: Bool) {
-        userDefaults.set(isApproved, forKey: "isNotificationsApproved")
-    }
-    
-    func getIsApprovedNotificaitons() -> Bool {
-        userDefaults.bool(forKey: "isNotificationsApproved")
+    }   
+}
+
+extension StorageManager {
+    func deleteCacheForPost(id: String, maxIndex: Int) {
+        for i in 0..<maxIndex {
+            deleteImage(id: "\(id)_\(i)")
+            deleteImage(id: "\(id)_\(i)_preview")
+        }
+        deleteImage(id: id)
+        deleteImage(id: "\(id)_preview")  
     }
 }
+
+extension StorageManager {
+    private var sessionKey: String { "readbox_session_id" }
+
+    func getSessionId() -> String? {
+        UserDefaults.standard.string(forKey: sessionKey)
+    }
+
+    func setSessionId(_ id: String) {
+        UserDefaults.standard.set(id, forKey: sessionKey)
+    }
+}
+

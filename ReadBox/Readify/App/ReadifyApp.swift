@@ -33,20 +33,35 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         Messaging.messaging().apnsToken = deviceToken
     }
     
+    func application(
+        _ application: UIApplication,
+        didReceiveRemoteNotification userInfo: [AnyHashable : Any],
+        fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void
+    ) {
+        print("📨 [App] didReceiveRemoteNotification userInfo = \(userInfo)")
+        completionHandler(.noData)
+    }
+    
     func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
         completionHandler([.banner, .list, .sound])
     }
     
-    func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
+    func userNotificationCenter(_ center: UNUserNotificationCenter,
+                                didReceive response: UNNotificationResponse,
+                                withCompletionHandler completionHandler: @escaping () -> Void) {
         let userInfo = response.notification.request.content.userInfo
-        NotificationCenter.default.post(name: Notification.Name("didReceiveRemoteNotification"), object: nil, userInfo: userInfo)
+        print("📨 [UNUserNotificationCenter] didReceive, userInfo = \(userInfo)")
+        
+        NotificationCenter.default.post(name: Notification.Name("didReceiveRemoteNotification"),
+                                        object: nil,
+                                        userInfo: userInfo)
         completionHandler()
     }
     
     @objc func messaging(_ messaging: Messaging, didReceiveRegistrationToken fcmToken: String?) {
         print("Firebase token: \(String(describing: fcmToken))")
         
-        let originalLanguage = StorageManager.shared.getLanguage()
+        let originalLanguage = StorageManager.shared.getLanguage() ?? "en"
         
         print("Original language: \(originalLanguage)")
         
@@ -80,39 +95,41 @@ struct YourApp: App {
                 RootView()                
                     .onAppear {
                         DispatchQueue.main.async {
-                            StorageManager.shared.setLanguage(
-                                to: Locale.preferredLanguages.first?.components(separatedBy: "-").first == "ru"
-                                    ? "ru"
-                                    : "en"
-                            )
+                            if StorageManager.shared.getLanguage() == nil {
+                                StorageManager.shared.setLanguage(
+                                    to: Locale.preferredLanguages.first?.components(separatedBy: "-").first == "ru"
+                                        ? "ru"
+                                        : "en"
+                                )
+                            }
                         }
                         
                         // Пример: очистка кеша Firestore
-                        let db = Firestore.firestore()
-                        db.clearPersistence()
+//                        let db = Firestore.firestore()
+//                        db.clearPersistence()
                     }
-                    .onChange(of: scenePhase) {
-                        if scenePhase == .inactive || scenePhase == .background {
-                            let db = Firestore.firestore()
-                            db.clearPersistence()
-                            
-                            StorageManager.shared.deleteText()
-                            
-                            let userDefaults = UserDefaults.standard
-                            let storageDictionary = userDefaults.dictionaryRepresentation()
-                            
-                            for key in storageDictionary.keys {
-                                if key != "language"
-                                    && key != "views"
-                                    && key != "fontSize"
-                                    && key != "isNotificationsPopupPresented"
-                                    && key != "isNotificationsApproved"
-                                {
-                                    userDefaults.removeObject(forKey: key)
-                                }
-                            }
-                        }
-                    }
+//                    .onChange(of: scenePhase) {
+//                        if scenePhase == .inactive || scenePhase == .background {
+//                            let db = Firestore.firestore()
+//                            db.clearPersistence()
+//                            
+//                            StorageManager.shared.deleteText()
+//                            
+//                            let userDefaults = UserDefaults.standard
+//                            let storageDictionary = userDefaults.dictionaryRepresentation()
+//                            
+//                            for key in storageDictionary.keys {
+//                                if key != "language"
+//                                    && key != "views"
+//                                    && key != "fontSize"
+//                                    && key != "isNotificationsPopupPresented"
+//                                    && key != "isNotificationsApproved"
+//                                {
+//                                    userDefaults.removeObject(forKey: key)
+//                                }
+//                            }
+//                        }
+//                    }
             }
         }
         

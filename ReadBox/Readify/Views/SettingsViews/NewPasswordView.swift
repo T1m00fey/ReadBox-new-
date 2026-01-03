@@ -187,7 +187,7 @@ struct NewPasswordView: View {
                     .padding(.vertical, 16)
                     .foregroundStyle(Color.white)
                     .background(Color.red)
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                    .clipShape(RoundedRectangle(cornerRadius: 20))
             } customize: {
                 $0
                     .type(.floater())
@@ -195,6 +195,7 @@ struct NewPasswordView: View {
                     .animation(.bouncy)
                     .dragToDismiss(true)
                     .autohideIn(5)
+                    .displayMode(.overlay)
             }
         }
         .navigationBarBackButtonHidden()

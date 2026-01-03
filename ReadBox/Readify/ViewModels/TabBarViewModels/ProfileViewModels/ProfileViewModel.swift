@@ -63,7 +63,8 @@ final class ProfileViewModel: ObservableObject {
             if key != "language"
                 && key != "fontSize"
                 && key != "isNotificationsApproved"
-                && key != "isNotificationsPopupPresented" {
+                && key != "isNotificationsPopupPresented"
+                && key != "fcmToken" {
                 userDefaults.removeObject(forKey: key)
             }
         }

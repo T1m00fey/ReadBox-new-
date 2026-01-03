@@ -7,6 +7,7 @@
 
 import SwiftUI
 import _PhotosUI_SwiftUI
+import FirebaseStorage
 
 final class CreateViewModel: ObservableObject {
     @Published var isFirstTapOnTitleTE = true
@@ -16,7 +17,6 @@ final class CreateViewModel: ObservableObject {
     
     @Published var imageItem: PhotosPickerItem? = nil
     
-    @Published var media: [MediaKind] = []
     @Published var oldMediaCount = 0
     
     @Published var isErrorPopupPresented = false
@@ -29,11 +29,11 @@ final class CreateViewModel: ObservableObject {
     
     @Published var isFirstAppear = true
     
-    @Published var languageSelection = StorageManager.shared.getLanguage()
+    @Published var languageSelection = StorageManager.shared.getLanguage() ?? "en"
     
     @Published var mediaURLs: [URL] = []
     
-    @Published var titleTEHeight: CGFloat = 200
+//    @Published var titleTEHeight: CGFloat = 300
     
     @Published var isCoverLoading = false
     @Published var imagePickerTask: Task<Void, Never>? = nil

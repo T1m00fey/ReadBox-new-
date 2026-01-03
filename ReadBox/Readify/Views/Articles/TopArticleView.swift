@@ -66,7 +66,7 @@ struct TopArticleView: View {
                     .scaledToFit()
                     .clipShape(RoundedRectangle(cornerRadius: 20))
                     .frame(width: UIScreen.main.bounds.width - 10)
-                    .shadow(radius: 2)
+                    .shadow(radius: 1)
             } else if let videoURL {
                 TappableVideoPreview(
                     url: videoURL,
@@ -75,7 +75,7 @@ struct TopArticleView: View {
                     height: 260
                 )
                     .frame(width: UIScreen.main.bounds.width - 10)
-                    .shadow(radius: 2)
+                    .shadow(radius: 1)
             } else {
                 RoundedRectangle(cornerRadius: 20)
                     .frame(width: UIScreen.main.bounds.width - 10, height: 250)

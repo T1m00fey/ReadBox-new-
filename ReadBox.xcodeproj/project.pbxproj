@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		52207A082E38F83800D1564F /* NotificationService.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 52207A012E38F83800D1564F /* NotificationService.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		5258435D2E2A6BA000EF34F2 /* SDWebImageSwiftUI in Frameworks */ = {isa = PBXBuildFile; productRef = 5258435C2E2A6BA000EF34F2 /* SDWebImageSwiftUI */; };
+		52B21AA62EBDE5D800F1913F /* VideoPlayer in Frameworks */ = {isa = PBXBuildFile; productRef = 52B21AA52EBDE5D800F1913F /* VideoPlayer */; };
 		C46E2CCB2E0861A4008B4BB2 /* Shimmer in Frameworks */ = {isa = PBXBuildFile; productRef = C46E2CCA2E0861A4008B4BB2 /* Shimmer */; };
 		C49684412DABF0E0004ED3AB /* PopupView in Frameworks */ = {isa = PBXBuildFile; productRef = C49684402DABF0E0004ED3AB /* PopupView */; };
 		C49684442DABF0F0004ED3AB /* SwiftfulLoadingIndicators in Frameworks */ = {isa = PBXBuildFile; productRef = C49684432DABF0F0004ED3AB /* SwiftfulLoadingIndicators */; };
@@ -103,6 +104,7 @@
 				5258435D2E2A6BA000EF34F2 /* SDWebImageSwiftUI in Frameworks */,
 				C49684532DABF200004ED3AB /* FirebaseMessaging in Frameworks */,
 				C49684472DABF112004ED3AB /* MarkdownUI in Frameworks */,
+				52B21AA62EBDE5D800F1913F /* VideoPlayer in Frameworks */,
 				C49684552DABF20B004ED3AB /* FirebaseStorage in Frameworks */,
 				C496844D2DABF1EE004ED3AB /* FirebaseAuth in Frameworks */,
 				C49684412DABF0E0004ED3AB /* PopupView in Frameworks */,
@@ -118,11 +120,19 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		52B21AA42EBDE5D800F1913F /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 		C49683CC2DABF067004ED3AB = {
 			isa = PBXGroup;
 			children = (
 				C49683D72DABF067004ED3AB /* ReadBox */,
 				52207A022E38F83800D1564F /* NotificationService */,
+				52B21AA42EBDE5D800F1913F /* Frameworks */,
 				C49683D62DABF067004ED3AB /* Products */,
 			);
 			sourceTree = "<group>";
@@ -192,6 +202,7 @@
 				C49684582DABF26F004ED3AB /* SwiftUIMailView */,
 				C46E2CCA2E0861A4008B4BB2 /* Shimmer */,
 				5258435C2E2A6BA000EF34F2 /* SDWebImageSwiftUI */,
+				52B21AA52EBDE5D800F1913F /* VideoPlayer */,
 			);
 			productName = ReadBox;
 			productReference = C49683D52DABF067004ED3AB /* ReadBox.app */;
@@ -205,7 +216,7 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 1630;
-				LastUpgradeCheck = 1640;
+				LastUpgradeCheck = 2610;
 				TargetAttributes = {
 					52207A002E38F83800D1564F = {
 						CreatedOnToolsVersion = 16.3;
@@ -233,6 +244,7 @@
 				C49684572DABF26F004ED3AB /* XCRemoteSwiftPackageReference "swiftui-mail-view" */,
 				C46E2CC92E0861A4008B4BB2 /* XCRemoteSwiftPackageReference "SwiftUI-Shimmer" */,
 				5258435B2E2A6BA000EF34F2 /* XCRemoteSwiftPackageReference "SDWebImageSwiftUI" */,
+				52B21AA32EBDE55300F1913F /* XCRemoteSwiftPackageReference "VideoPlayer" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = C49683D62DABF067004ED3AB /* Products */;
@@ -304,7 +316,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 2.2.0;
+				MARKETING_VERSION = 3.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = Tim.ReadBox.NotificationService;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -330,7 +342,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 2.2.0;
+				MARKETING_VERSION = 3.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = Tim.ReadBox.NotificationService;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -400,6 +412,7 @@
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
@@ -458,6 +471,7 @@
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				VALIDATE_PRODUCT = YES;
 			};
@@ -466,7 +480,7 @@
 		C49683E12DABF068004ED3AB /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_APPICON_NAME = Icon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = ReadBox/ReadBox.entitlements;
 				CODE_SIGN_STYLE = Automatic;
@@ -486,7 +500,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 2.2.0;
+				MARKETING_VERSION = 3.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = Tim.ReadBox;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -502,7 +516,7 @@
 		C49683E22DABF068004ED3AB /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_APPICON_NAME = Icon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = ReadBox/ReadBox.entitlements;
 				CODE_SIGN_STYLE = Automatic;
@@ -522,7 +536,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 2.2.0;
+				MARKETING_VERSION = 3.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = Tim.ReadBox;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -574,6 +588,14 @@
 			requirement = {
 				kind = exactVersion;
 				version = 3.1.3;
+			};
+		};
+		52B21AA32EBDE55300F1913F /* XCRemoteSwiftPackageReference "VideoPlayer" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/wxxsw/VideoPlayer.git";
+			requirement = {
+				kind = exactVersion;
+				version = 1.2.5;
 			};
 		};
 		C46E2CC92E0861A4008B4BB2 /* XCRemoteSwiftPackageReference "SwiftUI-Shimmer" */ = {
@@ -631,6 +653,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 5258435B2E2A6BA000EF34F2 /* XCRemoteSwiftPackageReference "SDWebImageSwiftUI" */;
 			productName = SDWebImageSwiftUI;
+		};
+		52B21AA52EBDE5D800F1913F /* VideoPlayer */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 52B21AA32EBDE55300F1913F /* XCRemoteSwiftPackageReference "VideoPlayer" */;
+			productName = VideoPlayer;
 		};
 		C46E2CCA2E0861A4008B4BB2 /* Shimmer */ = {
 			isa = XCSwiftPackageProductDependency;

@@ -23,100 +23,141 @@ struct PostView: View {
     @State private var image: UIImage? = nil
     @State private var isVideo = false
     
-    private func fetchMultiImage() {
-        let imageRef = Storage.storage().reference().child("images/\(id)_0.jpg")
-        
-        imageRef.getData(maxSize: 1 * 5012 * 5012) { data, error in
-            if let data, let image = UIImage(data: data) {
-                withAnimation {
-                    self.image = image
-                    StorageManager.shared.saveImage(id: id, image: image)
-                }
-            } else {
-                let videoRef = Storage.storage().reference().child("images/\(id)_0.mp4")
-                
-                videoRef.downloadURL { url, error in
-                    guard let url else { return }
-                    
-                    Task.detached {
-                        let asset = AVAsset(url: url)
-                        
-                        do {
-                            let _ = try await asset.loadTracks(withMediaType: .video)
-                            
-                            let generator = AVAssetImageGenerator(asset: asset)
-                            generator.appliesPreferredTrackTransform = true
-                            
-                            let cgImage = try generator.copyCGImage(at: .zero, actualTime: nil)
-                            let preview = UIImage(cgImage: cgImage)
-                            
-                            await MainActor.run {
-                                withAnimation {
-                                    self.image = preview
-                                    self.isVideo = true
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        
-        if image == nil {
-            fetchImage()
-        }
+    @EnvironmentObject var hudService: HUDService
+    
+    private func makeVideoThumbnail(url: URL) async -> UIImage? {
+        let asset = AVURLAsset(url: url)
+        _ = try? await asset.load(.duration)
+        let gen = AVAssetImageGenerator(asset: asset)
+        gen.appliesPreferredTrackTransform = true
+        gen.maximumSize = CGSize(width: 220, height: 220)
+        gen.requestedTimeToleranceBefore = .zero
+        gen.requestedTimeToleranceAfter  = .zero
+        let time = CMTime(seconds: 0.05, preferredTimescale: 600)
+        let cg = try? gen.copyCGImage(at: time, actualTime: nil)
+        return cg.map { UIImage(cgImage: $0) }
     }
     
-    private func fetchImage() {
-        let articleImage = StorageManager.shared.getImage(id: id)
-        
-        if articleImage != nil {
-            withAnimation {
-                image = articleImage
-            }
-        } else {
-            let imageRef = Storage.storage().reference().child("images/\(id).jpg")
-            
-            imageRef.getData(maxSize: 1 * 5012 * 5012) { data, error in
-                if let data {
-                    withAnimation {
-                        image = UIImage(data: data) ?? UIImage()
-                        if let image {
-                            StorageManager.shared.saveImage(id: id, image: image)
-                            return
-                        }
-                    }
-                }
-            }
+    private func loadPreview(ignoreCache: Bool = false) async {
+        await MainActor.run {
+            image = nil
+            isVideo = false
         }
         
-        let videoRef = Storage.storage().reference().child("images/\(id).mp4")
-        videoRef.downloadURL { url, error in
-            guard let url else {
-                print("❌ Нет видео-обложки: \(error?.localizedDescription ?? "неизвестно")")
+        let root = Storage.storage().reference().child("images")
+        let mainCacheId = "\(id)_0"          // фото
+        let previewCacheId = "\(id)_0_preview" // превью для видео
+        
+        // 0) Если нужно игнорировать кэш — сбросим его
+        if ignoreCache {
+            StorageManager.shared.deleteImage(id: mainCacheId)
+            StorageManager.shared.deleteImage(id: previewCacheId)
+        } else {
+            // 1) Пробуем основное фото из кэша
+            if let cached = StorageManager.shared.getImage(id: mainCacheId) {
+                await MainActor.run {
+                    withAnimation {
+                        image = cached
+                        isVideo = false
+                    }
+                }
                 return
             }
             
-            // ✅ Асинхронная генерация превью
-            Task.detached {
-                let asset = AVAsset(url: url)
-                
-                do {
-                    let _ = try await asset.loadTracks(withMediaType: .video)
-                    
-                    let generator = AVAssetImageGenerator(asset: asset)
-                    generator.appliesPreferredTrackTransform = true
-                    let cgImage = try generator.copyCGImage(at: .zero, actualTime: nil)
-                    let preview = UIImage(cgImage: cgImage)
-                    
-                    await MainActor.run {
-                        withAnimation {
-                            self.image = preview
-                            self.isVideo = true
-                        }
+            // 2) Пробуем превью видео из кэша
+            if let cachedPreview = StorageManager.shared.getImage(id: previewCacheId) {
+                await MainActor.run {
+                    withAnimation {
+                        image = cachedPreview
+                        isVideo = true
                     }
-                } catch {
-                    print("❌ Не удалось создать превью: \(error)")
+                }
+                return
+            }
+        }
+        
+        // 3) Пытаемся получить первое медиа с сервера:
+        //    сначала jpg_0, потом _preview, потом mp4
+        // 3.1 jpg_0
+        do {
+            let data = try await root.child("\(id)_0.jpg").dataAsync(maxSize: 600 * 1024)
+            if let ui = UIImage(data: data) {
+                await MainActor.run {
+                    withAnimation {
+                        image = ui
+                        isVideo = false
+                    }
+                    StorageManager.shared.saveImage(id: mainCacheId, image: ui)
+                }
+                return
+            }
+        } catch {
+            // нет jpg_0 — идём дальше
+        }
+        
+        // 3.2 _preview для видео
+        do {
+            let data = try await root.child("\(id)_0_preview.jpg").dataAsync(maxSize: 600 * 1024)
+            if let ui = UIImage(data: data) {
+                await MainActor.run {
+                    withAnimation {
+                        image = ui
+                        isVideo = true
+                    }
+                    StorageManager.shared.saveImage(id: previewCacheId, image: ui)
+                }
+                return
+            }
+        } catch {
+            // нет превью — попробуем mp4
+        }
+        
+        // 3.3 mp4_0 + локальный thumbnail (fallback, на всякий)
+        do {
+            let url = try await root.child("\(id)_0.mp4").downloadURLAsync()
+            if let thumb = await makeVideoThumbnail(url: url) {
+                await MainActor.run {
+                    withAnimation {
+                        image = thumb
+                        isVideo = true
+                    }
+                    StorageManager.shared.saveImage(id: previewCacheId, image: thumb)
+                }
+                return
+            }
+        } catch {
+            // нет и mp4_0 — падаем в легаси-схему
+        }
+        
+        // 4) Легаси: id, images/id.jpg, images/id.mp4
+        if !ignoreCache, let cached = StorageManager.shared.getImage(id: id) {
+            await MainActor.run {
+                withAnimation {
+                    image = cached
+                    isVideo = false
+                }
+            }
+            return
+        }
+        
+        if let data = try? await root.child("\(id).jpg").dataAsync(maxSize: 600 * 1024),
+           let ui = UIImage(data: data) {
+            await MainActor.run {
+                withAnimation {
+                    image = ui
+                    isVideo = false
+                }
+                StorageManager.shared.saveImage(id: id, image: ui)
+            }
+            return
+        }
+        
+        if let url = try? await root.child("\(id).mp4").downloadURLAsync(),
+           let thumb = await makeVideoThumbnail(url: url) {
+            await MainActor.run {
+                withAnimation {
+                    image = thumb
+                    isVideo = true
                 }
             }
         }
@@ -134,8 +175,9 @@ struct PostView: View {
                     ZStack {
                         Image(uiImage: image)
                             .resizable()
-                            .scaledToFit()
+                            .scaledToFill()
                             .frame(width: 100)
+                            .clipped()
                             .clipShape(RoundedRectangle(cornerRadius: 20))
                             .padding(.vertical, 10)
                         
@@ -156,8 +198,7 @@ struct PostView: View {
                             .background(Color(.systemBackground))
                             .clipShape(Circle())
                             .offset(x: 10)
-                            .opacity(mediaCount > 1 ? 1 : 0)
-                        ,
+                            .opacity(mediaCount > 1 ? 1 : 0),
                         alignment: .topTrailing
                     )
                 }
@@ -238,13 +279,17 @@ struct PostView: View {
                         .frame(width: 30, height: 30)
                         .padding(.trailing, 10)
                 }
+                .opacity(hudService.isLoading ? 0 : 1)
+                .animation(.default, value: hudService.isLoading)
             }
             .frame(width: UIScreen.main.bounds.width - 30)
         }
         .onAppear {
-            if image == nil {
-                fetchMultiImage()
-            }
+            Task(priority: .userInitiated) { await loadPreview() }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .postMediaDidUpdate)) { note in
+            guard let pid = note.userInfo?["postId"] as? String, pid == id else { return }
+            Task(priority: .userInitiated) { await loadPreview(ignoreCache: true) }
         }
     }
 }

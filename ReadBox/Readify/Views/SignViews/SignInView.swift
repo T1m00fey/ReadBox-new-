@@ -98,6 +98,7 @@ struct SignInView: View {
                                 viewModel.vibrationsService.softImpact()
                                 try await viewModel.signIn()
                                 
+                                viewModel.vibrationsService.successFeedback()
                                 isWelcomeViewPresented = false
                                 
                                 viewModel.emailText = ""
@@ -201,7 +202,7 @@ struct SignInView: View {
                     .padding(.vertical, 16)
                     .foregroundStyle(Color.white)
                     .background(Color.red)
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                    .clipShape(RoundedRectangle(cornerRadius: 20))
             } customize: {
                 $0
                     .type(.floater())
@@ -209,6 +210,7 @@ struct SignInView: View {
                     .animation(.bouncy)
                     .dragToDismiss(true)
                     .autohideIn(5)
+                    .displayMode(.overlay)
             }
             .popup(isPresented: $viewModel.isSuccessPopupPresented) {
                 Text(LocalizedStringKey("resetPasswordLink"))
@@ -217,11 +219,11 @@ struct SignInView: View {
                     .padding(.vertical, 16)
                     .foregroundStyle(Color(.label))
                     .background(
-                        RoundedRectangle(cornerRadius: 10)
+                        RoundedRectangle(cornerRadius: 20)
                             .foregroundStyle(Color(.systemBackground))
                     )
                     .overlay(
-                        RoundedRectangle(cornerRadius: 10)
+                        RoundedRectangle(cornerRadius: 20)
                             .stroke(
                                 Color.green, lineWidth: 1
                             )
@@ -233,6 +235,7 @@ struct SignInView: View {
                     .animation(.bouncy)
                     .dragToDismiss(true)
                     .autohideIn(5)
+                    .displayMode(.overlay)
             }
             .fullScreenCover(isPresented: $viewModel.isSignUpViewPresented) {
                 SignUpView(isWelcomeViewPresented: $isWelcomeViewPresented)

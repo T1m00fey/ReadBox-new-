@@ -28,27 +28,11 @@ struct MarkdownTextView: UIViewRepresentable {
         textView.isScrollEnabled = true
         return textView
     }
-
-//    func updateUIView(_ uiView: UITextView, context: Context) {
-//        // Обновляем текст, если он изменился
-//        if uiView.text != text {
-//            uiView.text = text
-//        }
-//        // Обновляем выделение курсора асинхронно, чтобы избежать ошибки "Modifying state during view update"
-//        DispatchQueue.main.async {
-//            if uiView.selectedRange != self.selectedRange {
-//                uiView.selectedRange = self.selectedRange
-//            }
-//        }
-//    }
     
     func updateUIView(_ uiView: UITextView, context: Context) {
-        // Обновляем только если текст изменился
         if uiView.text != text {
             uiView.text = text
             uiView.selectedRange = selectedRange
-
-            // Иногда после установки текста scroll прыгает — вернём прокрутку на место
             uiView.scrollRangeToVisible(selectedRange)
         } else if uiView.selectedRange != selectedRange {
             uiView.selectedRange = selectedRange
@@ -130,7 +114,7 @@ final class TextCreateViewModel: ObservableObject {
         .padding(.horizontal)
         .background(Color(uiColor: .systemBackground))
         .clipShape(RoundedRectangle(cornerRadius: 10))
-        .shadow(radius: 2)
+        .shadow(radius: 1)
     }
     
     func getMarkdownLabel(_ type: MarkdownType) -> Markdown {
@@ -155,7 +139,6 @@ final class TextCreateViewModel: ObservableObject {
         guard let swiftRange = Range(selectedRange, in: text) else { return }
         
         switch type {
-        // Жирный: оборачиваем текст в "**"
         case .bold:
             let prefix = "**", suffix = "**"
             if selectedRange.length == 0 {
@@ -175,7 +158,6 @@ final class TextCreateViewModel: ObservableObject {
                 }
             }
             
-        // Курсив: оборачиваем текст в "_"
         case .italic:
             let prefix = "*", suffix = "*"
             if selectedRange.length == 0 {
@@ -195,7 +177,6 @@ final class TextCreateViewModel: ObservableObject {
                 }
             }
             
-        // Заголовки: действуют на всю строку, добавляя или удаляя префикс вида "# ", "## ", ... в зависимости от уровня
         case .header(let level):
             let prefix = String(repeating: "#", count: level) + " "
             let suffix = " #"
@@ -217,8 +198,6 @@ final class TextCreateViewModel: ObservableObject {
                 }
             }
 
-            
-        // Inline код: оборачиваем текст в "`"
         case .code:
             let prefix = "`", suffix = "`"
             if selectedRange.length == 0 {
@@ -238,7 +217,6 @@ final class TextCreateViewModel: ObservableObject {
                 }
             }
             
-        // Зачёркивание: оборачиваем текст в "~~"
         case .strikethrough:
             let prefix = "~~", suffix = "~~"
             if selectedRange.length == 0 {
@@ -258,7 +236,6 @@ final class TextCreateViewModel: ObservableObject {
                 }
             }
             
-        // Цитата: применяется ко всей строке, добавляя или удаляя префикс "> "
         case .blockquote:
             let nsText = text as NSString
             let lineRange = nsText.lineRange(for: selectedRange)
@@ -277,7 +254,6 @@ final class TextCreateViewModel: ObservableObject {
                 selectedRange = NSRange(location: newLocation, length: selectedRange.length)
             }
             
-        // Маркированный список: применяется ко всей строке, с префиксом "- "
         case .unorderedList:
             let nsText = text as NSString
             let lineRange = nsText.lineRange(for: selectedRange)
@@ -296,7 +272,6 @@ final class TextCreateViewModel: ObservableObject {
                 selectedRange = NSRange(location: newLocation, length: selectedRange.length)
             }
             
-        // Нумерованный список: применяется ко всей строке, с префиксом "1. "
         case .orderedList:
             let nsText = text as NSString
             let lineRange = nsText.lineRange(for: selectedRange)
@@ -315,13 +290,11 @@ final class TextCreateViewModel: ObservableObject {
                 selectedRange = NSRange(location: newLocation, length: selectedRange.length)
             }
             
-        // Ссылка: если текст не выделен — вставляется шаблон "[](url)", иначе оборачивается выделенный текст в квадратные скобки с "(url)"
         case .link:
             let linkPlaceholder = "url"
             if selectedRange.length == 0 {
                 let insertion = "[](\(linkPlaceholder))"
                 text.replaceSubrange(swiftRange, with: insertion)
-                // Ставим курсор между квадратными скобками
                 let newCursor = selectedRange.location + 1
                 selectedRange = NSRange(location: newCursor, length: 0)
             } else {
@@ -398,7 +371,7 @@ final class TextCreateViewModel: ObservableObject {
         isArchive: Bool,
         uploadingLanguage: String,
         mediaURLs: [URL],
-        media: [MediaKind]
+        items: [MediaKind]
     ) async throws -> String {
         let text = text
             .replacingOccurrences(of: "readbox-links.online", with: "firebasestorage.googleapis.com")
@@ -409,13 +382,13 @@ final class TextCreateViewModel: ObservableObject {
             text: text,
             isArchive: isArchive,
             uploadingLanguage: uploadingLanguage,
-            mediaCount: media.count,
+            mediaCount: items.count,
             isShortPost: false
         )
         
-        for i in 0..<media.count {
+        for i in 0..<items.count {
             try await uploadCover(
-                media: media[i],
+                media: items[i],
                 postId: id,
                 index: i
             )
@@ -434,35 +407,70 @@ final class TextCreateViewModel: ObservableObject {
         isArchive: Bool,
         mediaURLs: [URL],
         uploadingLanguage: String,
-        media: [MediaKind],
+        items: [MediaKind],
         oldMediaCount: Int
     ) async throws {
-        await deleteAllCovers(postId: id, mediaCount: oldMediaCount)
-        
-        let text = text
+        let textFixed = text
             .replacingOccurrences(of: "readbox-links.online", with: "firebasestorage.googleapis.com")
             .replacingOccurrences(of: "cont", with: "contentImages")
-        
+
+        // чистим кэш по посту (и для jpg, и для preview)
+        StorageManager.shared.deleteCacheForPost(
+            id: id,
+            maxIndex: max(oldMediaCount, items.count)
+        )
+
+        for i in 0..<items.count {
+            let jpgRef     = Storage.storage().reference(withPath: "images/\(id)_\(i).jpg")
+            let mp4Ref     = Storage.storage().reference(withPath: "images/\(id)_\(i).mp4")
+            let previewRef = Storage.storage().reference(withPath: "images/\(id)_\(i)_preview.jpg")
+            
+            let media = items[i]
+
+            if media.image != nil {
+                // стало фото → убираем старое видео и его превью
+                try? await mp4Ref.delete()
+                try? await previewRef.delete()
+                StorageManager.shared.deleteImage(id: "\(id)_\(i)_preview")
+            } else if media.videoURL != nil {
+                // стало видео → убираем старый jpg
+                try? await jpgRef.delete()
+                StorageManager.shared.deleteImage(id: "\(id)_\(i)")
+                // превью перезапишется в uploadCover
+            }
+
+            try await uploadCover(media: media, postId: id, index: i)
+        }
+
         try await ArticlesManager.shared.updatePost(
             id: id,
             title: title,
-            text: text,
+            text: textFixed,
             isArchive: isArchive,
             uploadingLanguage: uploadingLanguage,
-            mediaCount: media.count
+            mediaCount: items.count
         )
         
-        for i in 0..<media.count {
-            try await uploadCover(
-                media: media[i],
-                postId: id,
-                index: i
-            )
+        // удаляем "хвост" старых медиа, если их стало меньше
+        if oldMediaCount > items.count {
+            for i in items.count..<oldMediaCount {
+                let imageRef   = Storage.storage().reference(withPath: "images/\(id)_\(i).jpg")
+                let videoRef   = Storage.storage().reference(withPath: "images/\(id)_\(i).mp4")
+                let previewRef = Storage.storage().reference(withPath: "images/\(id)_\(i)_preview.jpg")
+                
+                try? await imageRef.delete()
+                try? await videoRef.delete()
+                try? await previewRef.delete()
+                
+                StorageManager.shared.deleteImage(id: "\(id)_\(i)")
+                StorageManager.shared.deleteImage(id: "\(id)_\(i)_preview")
+            }
         }
 
         let urls = mediaURLs.map { $0.absoluteString }
         try await ArticlesManager.shared.uploadMedia(URLs: urls, to: id)
     }
+
     
     func getNavigationTitle(_ isEditing: Bool) -> String {
         isEditing ? NSLocalizedString("editingLabel", comment: "") : NSLocalizedString("creationLabel", comment: "")
@@ -470,26 +478,67 @@ final class TextCreateViewModel: ObservableObject {
     
     private func deleteAllCovers(postId: String, mediaCount: Int) async {
         for i in 0..<mediaCount {
-            let imageRef = Storage.storage().reference(withPath: "images/\(postId)_\(i).jpg")
-            let videoRef = Storage.storage().reference(withPath: "images/\(postId)_\(i).mp4")
+            let imageRef   = Storage.storage().reference(withPath: "images/\(postId)_\(i).jpg")
+            let videoRef   = Storage.storage().reference(withPath: "images/\(postId)_\(i).mp4")
+            let previewRef = Storage.storage().reference(withPath: "images/\(postId)_\(i)_preview.jpg")
             
             try? await imageRef.delete()
             try? await videoRef.delete()
+            try? await previewRef.delete()
             
             StorageManager.shared.deleteImage(id: "\(postId)_\(i)")
+            StorageManager.shared.deleteImage(id: "\(postId)_\(i)_preview")
         }
     }
     
     private func uploadCover(media: MediaKind, postId: String, index: Int) async throws {
         if let image = media.image {
             let ref = Storage.storage().reference(withPath: "images/\(postId)_\(index).jpg")
-            _ = try await ref.putDataAsync(image.jpegData(compressionQuality: 0.9)!)
-            
+            let meta = StorageMetadata()
+            meta.contentType = "image/jpeg"
+            guard let data = image.jpegData(compressionQuality: 0.9) else { return }
+            _ = try await ref.putDataAsync(data, metadata: meta)
             StorageManager.shared.saveImage(id: "\(postId)_\(index)", image: image)
+
         } else if let videoURL = media.videoURL {
-            let data = try Data(contentsOf: videoURL)
+            // 1) Загружаем превью, если оно есть
+            if let preview = media.videoPreview {
+                let previewRef = Storage.storage().reference(
+                    withPath: "images/\(postId)_\(index)_preview.jpg"
+                )
+                let previewMeta = StorageMetadata()
+                previewMeta.contentType = "image/jpeg"
+                
+                if let previewData = preview.jpegData(compressionQuality: 0.4) {
+                    _ = try? await previewRef.putDataAsync(previewData, metadata: previewMeta)
+                    StorageManager.shared.saveImage(
+                        id: "\(postId)_\(index)_preview",
+                        image: preview
+                    )
+                }
+            }
+
+            // 2) Само видео
             let ref = Storage.storage().reference(withPath: "images/\(postId)_\(index).mp4")
-            _ = try await ref.putDataAsync(data)
+            let meta = StorageMetadata()
+            meta.contentType = "video/mp4"
+
+            if videoURL.isFileURL {
+                var needsStop = false
+                if videoURL.startAccessingSecurityScopedResource() {
+                    needsStop = true
+                }
+                defer { if needsStop { videoURL.stopAccessingSecurityScopedResource() } }
+                _ = try await ref.putFileAsync(from: videoURL, metadata: meta)
+            } else {
+                let (data, _) = try await URLSession.shared.data(from: videoURL)
+                _ = try await ref.putDataAsync(data, metadata: meta)
+            }
         }
     }
+    
+    private func currentItems(from media: [MediaKind?]) -> [MediaKind] {
+        media.compactMap { $0 }
+    }
+
 }

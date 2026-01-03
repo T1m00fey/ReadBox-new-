@@ -56,6 +56,8 @@ final class CreatedPostsViewModel: ObservableObject {
     @Published var addingMode = 0
     @Published var isConfirmationPopupPresented = false
     @Published var isPostCreateViewPresented = false
+    @Published var mediaKind: [MediaKind?] = []
+    @Published var isPublicationsLabelVisisble = true
     
     @Published var user: DBUser? = nil
     
@@ -70,8 +72,8 @@ final class CreatedPostsViewModel: ObservableObject {
     var dateCreated = Date()
     var isEditing = false
     var postId = ""
-    var mediaKind: [MediaKind] = []
     var mediaCount = 0
+    var mediaVersion = 0
     
     var alertText = ""
     
@@ -107,80 +109,6 @@ final class CreatedPostsViewModel: ObservableObject {
         text = ""
         mediaURLs = []
         mediaKind = []
-    }
-    
-    func getMedia(mediaCount: Int, postId: String) async throws {
-        let storageRef = Storage.storage().reference()
-        
-        for i in 0..<mediaCount {
-            if let image = StorageManager.shared.getImage(id: "\(postId)_\(i)") {
-                mediaKind.append(MediaKind(image: image))
-            } else {
-                let islandRef = storageRef.child("images/\(postId)_\(i).jpg")
-                
-                islandRef.getData(maxSize: 1 * 5012 * 5012) { data, error in
-                    if let data, let image = UIImage(data: data) {
-                        self.mediaKind.append(MediaKind(image: image))
-                        return
-                    }
-                }
-                
-                let videoRef = storageRef.child("images/\(postId)_\(i).mp4")
-                let url = try? await videoRef.downloadURL()
-                
-                if let url {
-                    let asset = AVAsset(url: url)
-                    let _ = try? await asset.loadTracks(withMediaType: .video)
-                    
-                    let generator = AVAssetImageGenerator(asset: asset)
-                    generator.appliesPreferredTrackTransform = true
-                    let cgImage = try? generator.copyCGImage(at: .zero, actualTime: nil)
-                    let thumbnail = cgImage.map { UIImage(cgImage: $0) }
-                    
-                    self.mediaKind.append(
-                        MediaKind(
-                            videoURL: url,
-                            videoPreview: thumbnail
-                        )
-                    )
-                }
-            }
-        }
-        
-        if mediaKind.count == 0 {
-            let islandRef = storageRef.child("images/\(postId).jpg")
-            
-            islandRef.getData(maxSize: 1 * 5012 * 5012) { data, eror in
-                if let data, let image = UIImage(data: data) {
-                    self.mediaKind.append(MediaKind(image: image))
-                    return
-                }
-            }
-            
-            Task {
-                do {
-                    let videoRef = storageRef.child("images/\(postId).mp4")
-                    let url = try? await videoRef.downloadURL()
-                    
-                    if let url {
-                        let asset = AVAsset(url: url)
-                        let _ = try? await asset.loadTracks(withMediaType: .video)
-                        
-                        let generator = AVAssetImageGenerator(asset: asset)
-                        generator.appliesPreferredTrackTransform = true
-                        let cgImage = try? generator.copyCGImage(at: .zero, actualTime: nil)
-                        let thumbnail = cgImage.map { UIImage(cgImage: $0) }
-                        
-                        self.mediaKind.append(
-                            MediaKind(
-                                videoURL: url,
-                                videoPreview: thumbnail
-                            )
-                        )
-                    }
-                }
-            }
-        }
     }
     
     func isButtonEnable() {
@@ -248,6 +176,7 @@ final class CreatedPostsViewModel: ObservableObject {
             isAllArchivedLoaded = false
             lastPostSnapshot = nil
             lastArchivedPostSnapshot = nil
+            isNeedToReload = false
             
             user = nil
         }
@@ -263,13 +192,16 @@ final class CreatedPostsViewModel: ObservableObject {
     
     private func deleteAllCovers(postId: String, mediaCount: Int) async {
         for i in 0..<mediaCount {
-            let imageRef = Storage.storage().reference(withPath: "images/\(postId)_\(i).jpg")
-            let videoRef = Storage.storage().reference(withPath: "images/\(postId)_\(i).mp4")
-            
+            let imageRef   = Storage.storage().reference(withPath: "images/\(postId)_\(i).jpg")
+            let videoRef   = Storage.storage().reference(withPath: "images/\(postId)_\(i).mp4")
+            let previewRef = Storage.storage().reference(withPath: "images/\(postId)_\(i)_preview.jpg")
+
             try? await imageRef.delete()
             try? await videoRef.delete()
-            
+            try? await previewRef.delete()
+
             StorageManager.shared.deleteImage(id: "\(postId)_\(i)")
+            StorageManager.shared.deleteImage(id: "\(postId)_\(i)_preview")
         }
     }
     
@@ -422,6 +354,7 @@ final class CreatedPostsViewModel: ObservableObject {
         likesCount = post.likesCount ?? 0
         id = post.id
         mediaCount = post.mediaCount ?? 1
+        mediaVersion = post.mediaVersion ?? 1
         
         if post.isArchive ?? true {
             image = UIImage()
@@ -452,4 +385,123 @@ final class CreatedPostsViewModel: ObservableObject {
         }
     }
     
+}
+
+extension CreatedPostsViewModel {
+
+    @MainActor
+    func getMedia(mediaCount: Int, postId: String, ignoreCache: Bool = false) async {
+        let storage = Storage.storage()
+        let root = storage.reference().child("images")
+
+        mediaKind = Array(repeating: nil, count: mediaCount)
+
+        for i in 0..<mediaCount {
+            let imageCacheId   = "\(postId)_\(i)"
+            let previewCacheId = "\(postId)_\(i)_preview"
+            
+            if ignoreCache {
+                StorageManager.shared.deleteImage(id: imageCacheId)
+                StorageManager.shared.deleteImage(id: previewCacheId)
+            } else {
+                if let cached = StorageManager.shared.getImage(id: imageCacheId) {
+                    mediaKind[i] = MediaKind(image: cached)
+                    continue
+                }
+            }
+
+            let jpgRef = root.child("\(postId)_\(i).jpg")
+            do {
+                let data = try await jpgRef.dataAsync(maxSize: 1 * 5012 * 5012)
+                if let ui = UIImage(data: data) {
+                    withAnimation { mediaKind[i] = MediaKind(image: ui) }
+                    StorageManager.shared.saveImage(id: imageCacheId, image: ui)
+                    continue
+                }
+            } catch {
+                // object-not-found — норм, идём к mp4
+            }
+            
+            let mp4Ref = root.child("\(postId)_\(i).mp4")
+            do {
+                let url = try await mp4Ref.downloadURLAsync()
+                
+                var preview: UIImage? = StorageManager.shared.getImage(id: previewCacheId)
+                
+                if preview == nil {
+                    do {
+                        let data = try await root
+                            .child("\(postId)_\(i)_preview.jpg")
+                            .dataAsync(maxSize: 512 * 1024)
+                        if let ui = UIImage(data: data) {
+                            preview = ui
+                            StorageManager.shared.saveImage(id: previewCacheId, image: ui)
+                        }
+                    } catch {
+                        if let thumb = try? await makeVideoThumbnail(url: url) {
+                            preview = thumb
+                            StorageManager.shared.saveImage(id: previewCacheId, image: thumb)
+                        }
+                    }
+                }
+                
+                withAnimation {
+                    mediaKind[i] = MediaKind(videoURL: url, videoPreview: preview)
+                }
+                
+            } catch {
+                // нет ни jpg, ни mp4 — оставляем nil, потом fallback
+            }
+        }
+
+        if mediaKind.compactMap({ $0 }).isEmpty {
+            await fetchFallbackCover(postId: postId)
+        }
+    }
+
+    // MARK: - Helpers
+
+    private func makeVideoThumbnail(url: URL) async throws -> UIImage? {
+        let asset = AVURLAsset(url: url)
+        let _ = try await asset.load(.duration)
+        let generator = AVAssetImageGenerator(asset: asset)
+        generator.appliesPreferredTrackTransform = true
+        let time = CMTime(seconds: 0.05, preferredTimescale: 600)
+        let cg = try? generator.copyCGImage(at: time, actualTime: nil)
+        return cg.map { UIImage(cgImage: $0) }
+    }
+
+    @MainActor
+    private func fetchFallbackCover(postId: String) async {
+        let storage = Storage.storage()
+        let storageRef = storage.reference()
+
+        if let cached = StorageManager.shared.getImage(id: postId) {
+            withAnimation { mediaKind = [MediaKind(image: cached)] }
+            return
+        }
+
+        do {
+            let data = try await storageRef.child("images/\(postId).jpg").dataAsync(maxSize: 1 * 5012 * 5012)
+            if let ui = UIImage(data: data) {
+                withAnimation {
+                    mediaKind = [MediaKind(image: ui)]
+                    StorageManager.shared.saveImage(id: postId, image: ui)
+                }
+                return
+            }
+        } catch { /* ignore */ }
+
+        do {
+            let url = try await storageRef.child("images/\(postId).mp4").downloadURLAsync()
+            let thumb = try await makeVideoThumbnail(url: url)
+            withAnimation { mediaKind = [MediaKind(videoURL: url, videoPreview: thumb)] }
+        } catch { /* nothing */ }
+    }
+    
+    private func isNotFound(_ error: Error) -> Bool {
+        let ns = error as NSError
+        return ns.domain == StorageErrorDomain
+            && StorageErrorCode(rawValue: ns.code) == .objectNotFound
+    }
 }

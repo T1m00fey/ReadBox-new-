@@ -30,13 +30,13 @@ final class FeedViewModel: ObservableObject {
     @Published var views: [String] = []
     @Published var isLoadingPopupPresented = false
     @Published var isLoadingShowing = true
-    @Published var relevantVersion: AppVersion? = nil
-    @Published var isVersionPopupViewPresented = false
-    @Published var isBlur = false
+//    @Published var relevantVersion: AppVersion? = nil
+//    @Published var isVersionPopupViewPresented = false
+//    @Published var isBlur = false
     @Published var lastDocument: DocumentSnapshot? = nil
     @Published var isZoomableImageViewPresented = false
     @Published var zoomableImage: UIImage? = nil
-    @Published var isUpdatePopupDidPresneted = false
+//    @Published var isUpdatePopupDidPresneted = false
     @Published var authorId = ""
     
     @Published var user: DBUser? = nil
@@ -50,6 +50,7 @@ final class FeedViewModel: ObservableObject {
     var userId = ""
     var isArchive = false
     var mediaCount = 0
+    var mediaVersion = 0
     
     private var db = Firestore.firestore()
     
@@ -68,36 +69,36 @@ final class FeedViewModel: ObservableObject {
         self.user = user
     }
     
-    func getRelevantVersion() {
-        Task {
-            do {
-                relevantVersion = try? await VersionManager.shared.getRelevantVersion()
-                
-                if let currentVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String, let relevantVersion {
-                    
-                    if relevantVersion.appVersion != currentVersion && !isUpdatePopupDidPresneted {
-                        isVersionPopupViewPresented = true
-                        isUpdatePopupDidPresneted = true
-                        
-                        if let isCritical = relevantVersion.isCritical {
-                            withAnimation {
-                                isBlur = isCritical ? true : false
-                            }
-                        }
-                    } else {
-                        withAnimation {
-                            isBlur = false
-                        }
-                    }
-                    
-                }
-                
-            }
-        }
-    }
+//    func getRelevantVersion() {
+//        Task {
+//            do {
+//                relevantVersion = try? await VersionManager.shared.getRelevantVersion()
+//                
+//                if let currentVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String, let relevantVersion {
+//                    
+//                    if relevantVersion.appVersion != currentVersion && !isUpdatePopupDidPresneted {
+//                        isVersionPopupViewPresented = true
+//                        isUpdatePopupDidPresneted = true
+//                        
+//                        if let isCritical = relevantVersion.isCritical {
+//                            withAnimation {
+//                                isBlur = isCritical ? true : false
+//                            }
+//                        }
+//                    } else {
+//                        withAnimation {
+//                            isBlur = false
+//                        }
+//                    }
+//                    
+//                }
+//                
+//            }
+//        }
+//    }
     
     func refresh() {
-        primaryLanguage = StorageManager.shared.getLanguage()
+        primaryLanguage = StorageManager.shared.getLanguage() ?? "en"
         
         Task {
             isLoading = true
@@ -158,7 +159,8 @@ final class FeedViewModel: ObservableObject {
                                     viewsCount: 0,
                                     likesCount: 0,
                                     isShortPost: false,
-                                    mediaCount: 0
+                                    mediaCount: 0,
+                                    mediaVersion: 2
                                 )
                             )
                         }
@@ -181,7 +183,8 @@ final class FeedViewModel: ObservableObject {
                                 viewsCount: 0,
                                 likesCount: 0,
                                 isShortPost: false,
-                                mediaCount: 0
+                                mediaCount: 0,
+                                mediaVersion: 2
                             )
                         )
                         
@@ -197,7 +200,8 @@ final class FeedViewModel: ObservableObject {
                             viewsCount: 0,
                             likesCount: 0,
                             isShortPost: false,
-                            mediaCount: 0
+                            mediaCount: 0,
+                            mediaVersion: 2
                         )
                     )
                 }
@@ -218,34 +222,35 @@ final class FeedViewModel: ObservableObject {
     }
     
     func getArticles() async throws {
-        Task {
-            var query = db.collection("articles")
-                .whereField("id", notIn: topArticlesIndexes)
-                .whereField("is_archive", isEqualTo: false)
-                .whereField("original_language", isEqualTo: primaryLanguage)
-                .order(by: "date_created", descending: true)
-                .limit(to: 20)
-            
-            if let last = lastDocument {
-                query = query.start(afterDocument: last)
-            }
-            
-            do {
-                let snapshot = try await query.getDocuments()
-                let newPosts = snapshot.documents.compactMap { PrePost(document: $0) }
+        var query = db.collection("articles")
+            .whereField("id", notIn: topArticlesIndexes)
+            .whereField("is_archive", isEqualTo: false)
+            .whereField("original_language", isEqualTo: primaryLanguage)
+            .order(by: "date_created", descending: true)
+            .limit(to: 20)
+
+        if let last = lastDocument {
+            query = query.start(afterDocument: last)
+        }
+
+        do {
+            let snapshot = try await query.getDocuments()
+            let newPosts = snapshot.documents.compactMap { PrePost(document: $0) }
+
+            withAnimation {
                 self.articles.append(contentsOf: newPosts)
                 self.lastDocument = snapshot.documents.count == 20 ? snapshot.documents.last : nil
-            } catch {
-                withAnimation {
-                    errorText = error.localizedDescription
-                    isErrorPopupPresented = true
-                }
+                self.isLoading = false
+                self.isLoadingShowing = false
             }
-            
+        } catch {
             withAnimation {
-                isLoading = false
-                isLoadingShowing = false
+                self.errorText = error.localizedDescription
+                self.isErrorPopupPresented = true
+                self.isLoading = false
+                self.isLoadingShowing = false
             }
+            throw error
         }
     }
     
@@ -298,6 +303,7 @@ final class FeedViewModel: ObservableObject {
     }
     
     func tapGestureHandler(on post: PrePost) {
+        // 1. Базовые данные для ReadView
         title = post.title ?? NSLocalizedString("notFoundLabel", comment: "")
         image = StorageManager.shared.getImage(id: post.id) ?? UIImage()
         likesCount = post.likesCount ?? 0
@@ -305,58 +311,63 @@ final class FeedViewModel: ObservableObject {
         authorId = post.authorId ?? ""
         isArchive = post.isArchive ?? true
         mediaCount = post.mediaCount ?? 1
+        mediaVersion = post.mediaVersion ?? 1
         
         if post.isArchive ?? true {
             image = UIImage()
         }
         
-        if user != nil {
-            if likedPosts == [] {
-                likedPosts = user?.likedPosts ?? []
-            }
-            
-            if userId == "" {
-                userId = user?.userId ?? ""
-            }
-            
-            Task {
-                do {
-                    isLoadingPopupPresented = true
-                    try await getPostToRead(id: post.id)
-                    
-                    isLoadingPopupPresented = false
-                    
-                    isReadViewPresented = true
-                    
-                    if let isShort = post.isShortPost {
-                        if !isShort {
-                            if user?.userId ?? "" != post.authorId {
-                                if !views.contains(id) {
-                                    Task {
-                                        do {
-                                            try await ArticlesManager.shared.updateViews(at: id)
-                                            
-                                            views.append(id)
-                                            saveViews()
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                } catch {
-                    withAnimation {
-                        errorText = error.localizedDescription
-                        isErrorPopupPresented = true
-                    }
-                }
-                
-                isLoadingPopupPresented = false
-            }
-        } else {
+        // 2. Проверка пользователя
+        guard let user else {
             withAnimation {
                 errorText = NSLocalizedString("loadDataErrorText", comment: "")
                 isErrorPopupPresented = true
+            }
+            return
+        }
+        
+        if likedPosts.isEmpty {
+            likedPosts = user.likedPosts ?? []
+        }
+        if userId.isEmpty {
+            userId = user.userId
+        }
+        
+        isLoadingPopupPresented = true
+        
+        Task {
+            do {
+                try await getPostToRead(id: post.id)
+                
+                await MainActor.run {
+                    self.isLoadingPopupPresented = false
+                    withAnimation {
+                        self.isReadViewPresented = true
+                    }
+                }
+                
+                if let isShort = post.isShortPost, !isShort {
+                    if user.userId != post.authorId, !views.contains(post.id) {
+                        Task {
+                            do {
+                                try await ArticlesManager.shared.updateViews(at: post.id)
+                                await MainActor.run {
+                                    self.views.append(post.id)
+                                    self.saveViews()
+                                }
+                            } catch {
+                            }
+                        }
+                    }
+                }
+            } catch {
+                await MainActor.run {
+                    self.isLoadingPopupPresented = false
+                    withAnimation {
+                        self.errorText = error.localizedDescription
+                        self.isErrorPopupPresented = true
+                    }
+                }
             }
         }
     }

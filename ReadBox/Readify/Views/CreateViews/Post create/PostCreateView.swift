@@ -16,8 +16,8 @@ struct PostCreateView: View {
     let title: String
     let authorId: String
     let isArchived: Bool
-    let media: [MediaKind]
     
+    @Binding var media: [MediaKind?]
     @Binding var posts: [PrePost]
     @Binding var archivedPosts: [PrePost]
     @Binding var postsCount: Int
@@ -27,14 +27,16 @@ struct PostCreateView: View {
     @FocusState private var isTEFocused: Bool
     
     @EnvironmentObject var hudService: HUDService
-    @Environment(\.dismiss) var dismiss
+    @EnvironmentObject var changedPostsManager: ChangedPostsManager
     
+    @Environment(\.dismiss) var dismiss
+
     init(
         postId: String = "",
         title: String = "",
         authorId: String,
         isArchived: Bool,
-        media: [MediaKind],
+        media: Binding<[MediaKind?]>,
         posts: Binding<[PrePost]>,
         archivedPosts: Binding<[PrePost]>,
         postsCount: Binding<Int>
@@ -43,7 +45,7 @@ struct PostCreateView: View {
         self.title = title
         self.authorId = authorId
         self.isArchived = isArchived
-        self.media = media
+        self._media = media
         self._posts = posts
         self._archivedPosts = archivedPosts
         self._postsCount = postsCount
@@ -53,10 +55,10 @@ struct PostCreateView: View {
         viewModel.isArchive = (viewModel.addingMode == 2)
         hudService.showLoading()
 
-        // снимки до dismiss
+        let items = media.compactMap { $0 }
+
         let isArchive = viewModel.isArchive
         let selectedLanguage = viewModel.selectedLanguage
-        let mediaCount = viewModel.media.count
         let titleText = viewModel.text
         let currentPostId = postId
         let author = authorId
@@ -72,7 +74,7 @@ struct PostCreateView: View {
                         title: titleText,
                         isArchive: isArchive,
                         uploadingLanguage: selectedLanguage,
-                        mediaCount: mediaCount
+                        items: items
                     )
 
                     if !isArchive {
@@ -85,13 +87,17 @@ struct PostCreateView: View {
                         title: titleText,
                         isArchive: isArchive,
                         uploadingLanguage: selectedLanguage,
-                        mediaCount: mediaCount
+                        items: items
                     )
 
                     if isArchive != wasArchived {
                         let delta = isArchive ? -1 : +1
                         let newCount = max(0, oldCount + delta)
                         try await UserManager.shared.updatePostsCount(userId: author, postsCount: newCount)
+                    }
+                    
+                    await MainActor.run {
+                        changedPostsManager.changedPostsIDs.append(currentPostId)
                     }
                 }
 
@@ -101,6 +107,7 @@ struct PostCreateView: View {
                 }
             } catch {
                 await MainActor.run {
+                    print("Error: \(error.localizedDescription)")
                     hudService.showErrorPopup(with: error.localizedDescription)
                 }
             }
@@ -129,58 +136,91 @@ struct PostCreateView: View {
                         
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 20) {
-                                ForEach(0..<viewModel.media.count, id: \.self) { i in
-                                    let media = viewModel.media[i]
-                                    
-                                    if let image = media.image {
-                                        ZStack(alignment: .topTrailing) {
-                                            Image(uiImage: image)
-                                                .resizable()
-                                                .scaledToFit()
-                                                .frame(width: 100)
-                                                .clipShape(RoundedRectangle(cornerRadius: 20))
-                                            
-                                            Image(systemName: "xmark")
-                                                .resizable()
-                                                .scaledToFit()
-                                                .frame(width: 12)
-                                                .padding(.all, 8)
-                                                .foregroundStyle(Color(.label))
-                                                .background(Color(.secondarySystemBackground))
-                                                .clipShape(Circle())
-                                                .offset(x: 10, y: -10)
-                                                .onTapGesture {
-                                                    viewModel.media.remove(at: i)
-                                                }
-                                        }
-                                    } else if let _ = media.videoURL, let videoPreview = media.videoPreview {
-                                        ZStack(alignment: .topTrailing) {
-                                            ZStack {
-                                                Image(uiImage: videoPreview)
+                                ForEach(Array(media.indices), id: \.self) { i in
+                                    if i < media.count {
+                                        let item = media[i]
+                                        
+                                        if let image = item?.image {
+                                            ZStack(alignment: .topTrailing) {
+                                                Image(uiImage: image)
                                                     .resizable()
                                                     .scaledToFit()
                                                     .frame(width: 100)
                                                     .clipShape(RoundedRectangle(cornerRadius: 20))
                                                 
-                                                Image(systemName: "play.fill")
+                                                Image(systemName: "xmark")
                                                     .resizable()
                                                     .scaledToFit()
-                                                    .frame(width: 30)
-                                                    .foregroundStyle(Color(.secondarySystemBackground))
+                                                    .frame(width: 12)
+                                                    .padding(.all, 8)
+                                                    .foregroundStyle(Color(.label))
+                                                    .background(Color(.secondarySystemBackground))
+                                                    .clipShape(Circle())
+                                                    .offset(x: 10, y: -10)
+                                                    .onTapGesture {
+                                                        guard !viewModel.isCoverLoading else { return }
+                                                        let idx = i
+                                                        DispatchQueue.main.async {
+                                                            if idx < media.count {
+                                                                withAnimation {
+                                                                    _ = media.remove(at: idx)
+                                                                }
+                                                            }
+                                                        }
+                                                    }
                                             }
-                                            
-                                            Image(systemName: "xmark")
-                                                .resizable()
-                                                .scaledToFit()
-                                                .frame(width: 12)
-                                                .padding(.all, 8)
-                                                .foregroundStyle(Color(.label))
-                                                .background(Color(.secondarySystemBackground))
-                                                .clipShape(Circle())
-                                                .offset(x: 10, y: -10)
-                                                .onTapGesture {
-                                                    viewModel.media.remove(at: i)
+                                        } else if let _ = item?.videoURL {
+                                            ZStack(alignment: .topTrailing) {
+                                                ZStack {
+                                                    if let videoPreview = item?.videoPreview {
+                                                        Image(uiImage: videoPreview)
+                                                            .resizable()
+                                                            .scaledToFit()
+                                                            .frame(width: 100)
+                                                            .clipShape(RoundedRectangle(cornerRadius: 20))
+                                                        
+                                                        Image(systemName: "play.fill")
+                                                            .resizable()
+                                                            .scaledToFit()
+                                                            .frame(width: 30)
+                                                            .foregroundStyle(Color(.secondarySystemBackground))
+                                                    } else {
+                                                        RoundedRectangle(cornerRadius: 20)
+                                                            .fill(Color(.secondarySystemBackground))
+                                                            .frame(width: 100, height: 100)
+                                                            .overlay {
+                                                                ProgressView().scaleEffect(0.8)
+                                                            }
+                                                        
+                                                        Image(systemName: "play.fill")
+                                                            .resizable()
+                                                            .scaledToFit()
+                                                            .frame(width: 30)
+                                                            .foregroundStyle(Color(.label))
+                                                    }
                                                 }
+                                                
+                                                Image(systemName: "xmark")
+                                                    .resizable()
+                                                    .scaledToFit()
+                                                    .frame(width: 12)
+                                                    .padding(.all, 8)
+                                                    .foregroundStyle(Color(.label))
+                                                    .background(Color(.secondarySystemBackground))
+                                                    .clipShape(Circle())
+                                                    .offset(x: 10, y: -10)
+                                                    .onTapGesture {
+                                                        guard !viewModel.isCoverLoading else { return }
+                                                        let idx = i
+                                                        DispatchQueue.main.async {
+                                                            if idx < media.count {
+                                                                withAnimation {
+                                                                    _ = media.remove(at: idx)
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                            }
                                         }
                                     }
                                 }
@@ -254,8 +294,7 @@ struct PostCreateView: View {
                 }
                 .onAppear {
                     viewModel.text = title
-                    viewModel.media = media
-                    viewModel.oldMediaCount = media.count
+                    viewModel.oldMediaCount = media.compactMap { $0 }.count
                 }
                 .popup(isPresented: $viewModel.isConfirmationPopupPresented) {
                     ConfirmationView(
@@ -268,6 +307,7 @@ struct PostCreateView: View {
                         .type(.toast)
                         .appearFrom(.bottomSlide)
                         .dragToDismiss(true)
+                        .displayMode(.sheet)
                 }
                 .popup(isPresented: $viewModel.isErrorPopupPresented) {
                     Text(viewModel.errorText)
@@ -276,8 +316,7 @@ struct PostCreateView: View {
                         .padding(.vertical, 16)
                         .foregroundStyle(Color.white)
                         .background(Color.red)
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
-                        .padding(.top, 20)
+                        .clipShape(RoundedRectangle(cornerRadius: 20))
                 } customize: {
                     $0
                         .type(.floater())
@@ -285,12 +324,19 @@ struct PostCreateView: View {
                         .animation(.bouncy)
                         .dragToDismiss(true)
                         .autohideIn(5)
+                        .displayMode(.overlay)
                 }
                 .scrollClipDisabled()
                 .toolbar {
                     ToolbarItem(placement: .topBarLeading) {
-                        Text(NSLocalizedString("cancelButton", comment: ""))
-                            .font(.system(size: 17))
+//                        Text(NSLocalizedString("cancelButton", comment: ""))
+//                            .font(.system(size: 17))
+//                            .fontDesign(.rounded)
+//                            .onTapGesture {
+//                                dismiss()
+//                            }
+                        Image(systemName: "xmark")
+                            .font(.system(size: 20))
                             .fontDesign(.rounded)
                             .onTapGesture {
                                 dismiss()
@@ -306,18 +352,38 @@ struct PostCreateView: View {
                                 speed: .fast
                             )
                         } else {
-                            Button {
-                                VibrationsService.shared.lightImpact()
-                                viewModel.isConfirmationPopupPresented = true
-                            } label: {
-                                Text(NSLocalizedString("publishLabel", comment: ""))
-                                    .foregroundStyle(Color(.systemBackground))
-                                    .font(.system(size: 16))
-                                    .padding(.horizontal, 10)
-                                    .padding(.vertical, 5).background(Color(.label))
-                                    .clipShape(Capsule())
+                            if #available(iOS 26.0, *) {
+                                Button {
+                                    VibrationsService.shared.lightImpact()
+                                    viewModel.isConfirmationPopupPresented = true
+                                } label: {
+                                    Image(systemName: "paperplane")
+                                        .font(.system(size: 20))
+                                        .foregroundStyle(Color(.systemBackground))
+                                }
+                                .tint(Color(.label))
+                                .buttonStyle(.glassProminent)
+                            } else {
+                                Button {
+                                    VibrationsService.shared.lightImpact()
+                                    viewModel.isConfirmationPopupPresented = true
+                                } label: {
+                                    Text(NSLocalizedString("publishLabel", comment: ""))
+                                        .foregroundStyle(Color(.systemBackground))
+                                        .font(.system(size: 16))
+                                        .padding(.horizontal, 10)
+                                        .padding(.vertical, 5)
+                                        .background(
+                                            viewModel.text.isEmpty || viewModel.isCoverLoading
+                                            ? Color.gray
+                                            : Color(.label)
+                                        )
+                                        .clipShape(Capsule())
+                                    
+                                }
+                                .disabled(viewModel.text.isEmpty || viewModel.isCoverLoading)
+                                .animation(.default, value: viewModel.text)
                             }
-                            .disabled(viewModel.text.isEmpty)
                         }
                     }
                 }
@@ -332,20 +398,26 @@ struct PostCreateView: View {
                         Spacer()
                         
                         PhotosPicker(selection: $viewModel.imageItem, matching: .any(of: [.images, .videos])) {
-                            Image(systemName: "photo.badge.plus.fill")
-                                .foregroundStyle(Color(.label))
-                                .font(.system(size: 20))
-                                .padding()
-                                .background(
-                                    RoundedRectangle(cornerRadius: 10)
-                                        .foregroundStyle(Color(.secondarySystemBackground))
-                                        .shadow(radius: 1)
-                                )
-                                .opacity(isTEFocused ? 1 : 0)
-                                .padding(.bottom, 10)
+                            if #available(iOS 26.0, *) {
+                                Image(systemName: "photo.badge.plus.fill")
+                                    .foregroundStyle(Color(.label))
+                                    .font(.system(size: 20))
+                                    .padding()
+                                    .glassEffect(.regular)
+                                    .opacity(isTEFocused ? 1 : 0)
+                                    .padding(.bottom, 10)
+                            } else {
+                                Image(systemName: "photo.badge.plus.fill")
+                                    .foregroundStyle(Color(.label))
+                                    .font(.system(size: 20))
+                                    .padding()
+                                    .opacity(isTEFocused ? 1 : 0)
+                                    .padding(.bottom, 10)
+                            }
                         }
+                        .opacity(viewModel.isCoverLoading ? 0 : 1)
                         .onChange(of: viewModel.imageItem) {
-                            if viewModel.media.count < 10 {
+                            if media.count < 10 {
                                 viewModel.imagePickerTask = Task {
                                     do {
                                         try Task.checkCancellation()
@@ -370,7 +442,7 @@ struct PostCreateView: View {
                                         if let image = UIImage(data: data) {
                                             print("🖼 Обложка — изображение")
                                             withAnimation {
-                                                viewModel.media.append(MediaKind(image: image))
+                                                media.append(MediaKind(image: image))
                                             }
                                             return
                                         }
@@ -404,7 +476,7 @@ struct PostCreateView: View {
 
                                         withAnimation {
                                             viewModel.isCoverLoading = false
-                                            viewModel.media.append(MediaKind(videoURL: tempURL, videoPreview: thumbnail))
+                                            media.append(MediaKind(videoURL: tempURL, videoPreview: thumbnail))
                                         }
                                     } catch is CancellationError {
                                       print("ЗАДАЧА ОТМЕНЕНА")

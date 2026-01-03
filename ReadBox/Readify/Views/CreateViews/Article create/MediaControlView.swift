@@ -67,7 +67,7 @@ struct MediaControlView: View {
                                 RoundedRectangle(cornerRadius: 20)
                                     .frame(width: UIScreen.main.bounds.width - 10)
                                     .foregroundStyle(Color(.systemBackground))
-                                    .shadow(radius: 2)
+                                    .shadow(radius: 1)
                                     .onAppear {
                                         generatePreviewImage(from: url) { image in
                                             if let image {
@@ -161,7 +161,7 @@ struct MediaControlView: View {
                                                 RoundedRectangle(cornerRadius: 12)
                                                     .frame(width: 40, height: 40)
                                                     .foregroundStyle(Color(.secondarySystemBackground))
-                                                    .shadow(radius: 2)
+                                                    .shadow(radius: 1)
                                                 
                                                 Image(systemName: "document.on.document")
                                                     .font(.system(size: 22))
@@ -200,7 +200,7 @@ struct MediaControlView: View {
                                                 RoundedRectangle(cornerRadius: 12)
                                                     .frame(width: 40, height: 40)
                                                     .foregroundStyle(Color(.secondarySystemBackground))
-                                                    .shadow(radius: 2)
+                                                    .shadow(radius: 1)
                                                 
                                                 Image(systemName: "minus.circle")
                                                     .font(.system(size: 22))

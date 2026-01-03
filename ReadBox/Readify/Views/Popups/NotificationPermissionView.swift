@@ -10,31 +10,7 @@ import SwiftUI
 struct NotificationPermissionView: View {
     @Binding var isPopupPresented: Bool
     
-    @State private var route = NotificationPushRoute.requestSystemPrompt
-    
-    func decidePushRoute() -> NotificationPushRoute {
-        var route = NotificationPushRoute.requestSystemPrompt
-        
-        UNUserNotificationCenter.current().getNotificationSettings { s in
-            switch s.authorizationStatus {
-            case .notDetermined:
-                route = .requestSystemPrompt
-                print("DECIDE: \(route)")
-            case .denied:
-                route = .goToSettings
-                print("DECIDE_2≥: \(route)")
-            case .authorized, .provisional, .ephemeral:
-                route = .ok
-                StorageManager.shared.setApprovedNotificaitons(true)
-            @unknown default:
-                route = .goToSettings
-            }
-        }
-        
-        print("DECIDE: \(route)")
-        
-        return route
-    }
+    let route: NotificationPushRoute
     
     var body: some View {
         VStack(spacing: 15) {
@@ -74,15 +50,24 @@ struct NotificationPermissionView: View {
                 Button {
                     if route == .requestSystemPrompt {
                         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
-                            isPopupPresented = false
+                            if granted {
+                                DispatchQueue.main.async {
+                                    isPopupPresented = false
+                                }
+                            }
                         }
                     } else if route == .goToSettings {
+                        print("DECIDEEE: go settings")
                         if let url = URL(string: UIApplication.openNotificationSettingsURLString),
                            UIApplication.shared.canOpenURL(url) {
+                            print("DECIDEEE: go settings 1")
                             UIApplication.shared.open(url)
                         } else if let url = URL(string: UIApplication.openSettingsURLString) {
                             UIApplication.shared.open(url)
+                            print("DECIDEEE: go settings 2")
                         }
+                        
+                        print("DECIDEEE: go settings 3")
                     }
                 } label: {
                     Text(NSLocalizedString("turnOnLabel", comment: ""))
@@ -110,10 +95,7 @@ struct NotificationPermissionView: View {
         .frame(width: UIScreen.main.bounds.width)
         .frame(minHeight: 100)
         .background(Color(uiColor: .secondarySystemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 30))
-        .onAppear {
-            route = decidePushRoute()
-        }
+        .clipShape(RoundedRectangle(cornerRadius: 30))        
     }
 }
 

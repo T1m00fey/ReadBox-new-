@@ -78,7 +78,7 @@ struct CreatedPostsView: View {
                             text: viewModel.text,
                             isEditing: viewModel.isEditing,
                             mediaURLs: viewModel.mediaURLs,
-                            media: viewModel.mediaKind,
+                            media: $viewModel.mediaKind,
                             postsCount: $viewModel.postsCount,
                             posts: $viewModel.posts,
                             archivePosts: $viewModel.archivePosts
@@ -96,6 +96,7 @@ struct CreatedPostsView: View {
                             isCheckmark: viewModel.user?.isCheckmark ?? false,
                             isArchive: false,
                             mediaCount: viewModel.mediaCount,
+                            mediaVersion: viewModel.mediaVersion,
                             user: $viewModel.user,
                             isChannelViewPresented: .constant(false)
                         )
@@ -109,31 +110,17 @@ struct CreatedPostsView: View {
                             title: viewModel.title,
                             authorId: viewModel.user?.userId ?? "",
                             isArchived: viewModel.isArchivePresented,
-                            media: viewModel.mediaKind,
+                            media: $viewModel.mediaKind,
                             posts: $viewModel.posts,
                             archivedPosts: $viewModel.archivePosts,
                             postsCount: $viewModel.postsCount
                         )
                     })
-                    .trackChangesOnCreatedPostsView(
-                        viewModel: viewModel,
-                        isWelcomeViewPresented: isWelcomeViewPresented,
-                        hudService: hudService
-                    )
-                    .makePopupsForCreatedPostsView(
-                        viewModel: viewModel,
-                        isErrorPopupPresented: $viewModel.isErrorPopupPresented,
-                        isDescriptionPopupPresented: $viewModel.isDescriptionPopupPresented,
-                        isSuccessPopupPresented: $viewModel.isSuccessPopupPresented,
-                        isLoadingPopupPresented: $viewModel.isLoadingPopupPresented,
-                        isReadViewPresented: $viewModel.isReadViewPresented,
-                        isConfirmationPopupPresented: $viewModel.isConfirmationPopupPresented,
-                        addingMode: $viewModel.addingMode,
-                        errorText: $viewModel.errorText
-                    )
                 
                 if viewModel.user?.name != "" && !viewModel.isSettingViewPresented {
                     ScrollView(showsIndicators: false) {
+                        Color.clear.frame(height: 60)
+                        
                         LazyVStack(spacing: 20) {
                             if viewModel.isLoadingShowing {
                                 
@@ -177,7 +164,7 @@ struct CreatedPostsView: View {
                                 
                                 if viewModel.user?.authorDescription ?? "" != "" {
                                     Text(viewModel.user?.authorDescription ?? NSLocalizedString("notFoundLabel", comment: ""))
-                                        .font(.title3)
+                                        .font(.system(size: 20))
                                         .padding(.vertical, 20)
                                         .padding(.horizontal, 16)
                                         .frame(width: UIScreen.main.bounds.width, alignment: .leading)
@@ -221,15 +208,20 @@ struct CreatedPostsView: View {
                                             viewModel.tapGestureHandler(on: post)
                                         }
                                         .onAppear {
-                                            let lastPost = viewModel.isArchivePresented
+                                            let isArchive = viewModel.isArchivePresented
+                                            let lastPost = isArchive
                                             ? viewModel.archivePosts.last
                                             : viewModel.posts.last
                                             
-                                            if post == lastPost, !viewModel.isAllLoaded {
-                                                Task {
-                                                    viewModel.isArchivePresented
-                                                    ? try? await viewModel.getPosts()
-                                                    : try? await viewModel.getArchivedPost()
+                                            guard post.id == lastPost?.id else { return }
+                                            
+                                            Task {
+                                                if isArchive {
+                                                    guard !viewModel.isAllArchivedLoaded else { return }
+                                                    try? await viewModel.getArchivedPost()
+                                                } else {
+                                                    guard !viewModel.isAllLoaded else { return }
+                                                    try? await viewModel.getPosts()
                                                 }
                                             }
                                         }
@@ -286,7 +278,7 @@ struct CreatedPostsView: View {
                             } else {
                                 if viewModel.user?.authorDescription ?? "" != "" {
                                     Text(viewModel.user?.authorDescription ?? NSLocalizedString("notFoundLabel", comment: ""))
-                                        .font(.title3)
+                                        .font(.system(size: 20))
                                         .padding(.vertical, 20)
                                         .padding(.horizontal, 16)
                                         .frame(width: UIScreen.main.bounds.width, alignment: .leading)
@@ -362,31 +354,54 @@ struct CreatedPostsView: View {
                         }
                     }
                     .frame(width: UIScreen.main.bounds.width)
-                    .padding(.top, 50)
                     .refreshable {
                         viewModel.reload()
                     }
                     .task {
                         try? Tips.configure()
-                    }
+                    }                   
                     
-                    if !viewModel.isLoading && viewModel.isNewPublicationButtonPresented && viewModel.user?.name != "" {
+                    if !viewModel.isLoading
+                        && !hudService.isLoading
+                        && viewModel.isNewPublicationButtonPresented
+                        && viewModel.user?.name != ""
+                        && !hudService.isSuccessPopupPresented
+                        && !hudService.isErrorPopupPresented
+                    {
                         VStack {
                             Spacer()
                             
-                            Text(NSLocalizedString("newPublicationLabel", comment: ""))
-                                .frame(width: UIScreen.main.bounds.width - 10, height: 50, alignment: .center)
-                                .font(.title3)
-                                .fontDesign(.rounded)
-                                .background(Color(uiColor: .label))
-                                .foregroundStyle(Color(uiColor: .systemBackground))
-                                .clipShape(RoundedRectangle(cornerRadius: 15))
-                                .shadow(radius: 3)
-                                .padding(.bottom, 10)
-                                .popoverTip(AuthorMultiLanguageTip())
-                                .onTapGesture {
+                            if #available(iOS 26.0, *) {
+                                Button {
                                     viewModel.isConfirmationPopupPresented = true
+                                } label: {
+                                    Text(NSLocalizedString("newPublicationLabel", comment: ""))
+                                        .font(.system(size: 19))
+                                        .fontDesign(.rounded)
+                                        .foregroundStyle(Color(.systemBackground))
+                                        .popoverTip(AuthorMultiLanguageTip())
+                                        .frame(maxWidth: .infinity, alignment: .center)
+                                        .frame(height: 35)
                                 }
+                                .tint(Color(.label))
+                                .buttonStyle(.glassProminent)
+                                .padding(.bottom, 10)
+                                .padding(.horizontal, 22.5)
+                            } else {
+                                Text(NSLocalizedString("newPublicationLabel", comment: ""))
+                                    .frame(width: UIScreen.main.bounds.width - 10, height: 50, alignment: .center)
+                                    .font(.system(size: 19))
+                                    .fontDesign(.rounded)
+                                    .background(Color(uiColor: .label))
+                                    .foregroundStyle(Color(uiColor: .systemBackground))
+                                    .clipShape(RoundedRectangle(cornerRadius: 15))
+                                    .shadow(radius: 3)
+                                    .padding(.bottom, 10)
+                                    .popoverTip(AuthorMultiLanguageTip())
+                                    .onTapGesture {
+                                        viewModel.isConfirmationPopupPresented = true
+                                    }
+                            }
                         }
                     }
                 } else if viewModel.user?.name ?? "" == "" || viewModel.isSettingViewPresented == true {
@@ -538,6 +553,22 @@ struct CreatedPostsView: View {
                 }.ignoresSafeArea()
                 
             }
+            .trackChangesOnCreatedPostsView(
+                viewModel: viewModel,
+                isWelcomeViewPresented: isWelcomeViewPresented,
+                hudService: hudService
+            )
+            .makePopupsForCreatedPostsView(
+                viewModel: viewModel,
+                isErrorPopupPresented: $viewModel.isErrorPopupPresented,
+                isDescriptionPopupPresented: $viewModel.isDescriptionPopupPresented,
+                isSuccessPopupPresented: $viewModel.isSuccessPopupPresented,
+                isLoadingPopupPresented: $viewModel.isLoadingPopupPresented,
+                isReadViewPresented: $viewModel.isReadViewPresented,
+                isConfirmationPopupPresented: $viewModel.isConfirmationPopupPresented,
+                addingMode: $viewModel.addingMode,
+                errorText: $viewModel.errorText
+            )
         }
         .navigationBarBackButtonHidden()
     }
@@ -548,8 +579,9 @@ private extension CreatedPostsView {
         ZStack {
             RoundedRectangle(cornerRadius: 15)
                 .frame(width: UIScreen.main.bounds.width, height: viewModel.isSettingViewPresented ? 120 : 140)
-                .foregroundStyle(Color(uiColor: .secondarySystemBackground))
-                .shadow(radius: 10)
+//                .foregroundStyle(Color(uiColor: .secondarySystemBackground))
+                .foregroundStyle(.thinMaterial)
+                .shadow(radius: 3)
             
             if viewModel.isSettingViewPresented {
                 Text(NSLocalizedString("editingLabel", comment: ""))
@@ -639,14 +671,14 @@ private extension CreatedPostsView {
                             
                             HStack(spacing: 0) {
                                 Text(viewModel.user?.name ?? "")
-                                    .font(.system(size: 27))
+                                    .font(.system(size: 25))
                                     .fontWeight(.light)
                                     .lineLimit(1)
                                 
                                 if viewModel.user?.isCheckmark ?? false {
                                     Image(systemName: "checkmark.seal.fill")
                                         .foregroundStyle(Color.blue)
-                                        .font(.footnote)
+                                        .font(.system(size: 14))
                                         .padding(.top, 1)
                                 }
                             }

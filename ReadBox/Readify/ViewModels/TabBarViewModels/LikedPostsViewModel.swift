@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import FirebaseFirestore
 
 @MainActor
 final class LikedPostsViewModel: ObservableObject {
@@ -29,6 +30,8 @@ final class LikedPostsViewModel: ObservableObject {
     @Published var zoomableImage: UIImage? = nil
     @Published var authorId = ""
     
+    @Published var lastDocument: DocumentSnapshot? = nil
+    
     var title = ""
     var image = UIImage()
     var dateCreated = Date()
@@ -38,6 +41,9 @@ final class LikedPostsViewModel: ObservableObject {
     var userId = ""
     var isArchive = false
     var mediaCount = 0
+    var mediaVersion = 0
+    
+    private var db = Firestore.firestore()
     
     func getPostToRead(id: String) {
         Task {
@@ -96,72 +102,33 @@ final class LikedPostsViewModel: ObservableObject {
     }
     
     func getArticles() async throws {
-        var indexesToAdd: [String] = []
+        var query = db.collection("articles")
+            .whereField("id", in: indexesNeedToLoad)
+            .whereField("is_archive", isEqualTo: false)
+            .order(by: "date_created", descending: true)
+            .limit(to: 20)
         
-        var count = 0
-        
-        for index in indexesNeedToLoad.reversed() {
-            if count < 20 {
-                indexesToAdd.append(index)
-                count += 1
-            }
+        if let last = lastDocument {
+            query = query.start(afterDocument: last)
         }
         
-        count = 0
-        
-        for index in indexesToAdd {
-            do {
-                let isArchive = try await ArticlesManager.shared.getIsArchive(of: index)
-    
-                if isArchive {
-                    let authorId = try await ArticlesManager.shared.getAuthorId(byPostId: index)
-                    let likesCount = try await ArticlesManager.shared.getLikesCount(byPostId: index)
-                    
-                    withAnimation {
-                        articles.append(
-                            PrePost(
-                                id: index,
-                                title: NSLocalizedString("archiveArticleLabel", comment: ""),
-                                authorId: authorId,
-                                viewsCount: 0,
-                                likesCount: likesCount,
-                                isArchive: isArchive,
-                                isShortPost: false,
-                                mediaCount: 0
-                            )
-                        )
-                    }
-                } else {
-                    let post = try await ArticlesManager.shared.getPrePost(id: index)
-                    
-                    withAnimation {
-                        articles.append(post)
-                        isLoadingShowed = false
-                    }
-                    
-                }
-            } catch {
-                withAnimation {
-                    articles.append(
-                        PrePost(
-                            id: index,
-                            title: NSLocalizedString("articleErrorLabel", comment: ""),
-                            authorId: nil,
-                            viewsCount: nil,
-                            likesCount: nil,
-                            isShortPost: false,
-                            mediaCount: 0
-                        )
-                    )
-                }
-            }
+        do {
+            let snapshot = try await query.getDocuments()
+            let newPosts = snapshot.documents.compactMap { PrePost(document: $0) }
             
-            indexesNeedToLoad.removeAll { $0 == index }
-        }
-        
-        withAnimation {
-            isLoading = false
-            isLoadingShowed = false
+            withAnimation {
+                self.articles.append(contentsOf: newPosts)
+                self.lastDocument = snapshot.documents.count == 20 ? snapshot.documents.last : nil
+                self.isLoading = false
+                self.isLoadingShowed = false
+            }
+        } catch {
+            withAnimation {
+                errorText = error.localizedDescription
+                self.isErrorPopupPresented = true
+                self.isLoading = false
+                self.isLoadingShowed = false
+            }
         }
     }
     
@@ -185,7 +152,7 @@ final class LikedPostsViewModel: ObservableObject {
             }
         }
         
-        if post == articles.last, articles.count >= 20 {
+        if post == articles.last && lastDocument != nil {
             Task {
                 try? await getArticles()
             }
@@ -200,6 +167,7 @@ final class LikedPostsViewModel: ObservableObject {
         authorId = post.authorId ?? ""
         isArchive = post.isArchive ?? true
         mediaCount = post.mediaCount ?? 1
+        mediaVersion = post.mediaVersion ?? 1
         
         if user != nil {
             if likedPosts == [] {

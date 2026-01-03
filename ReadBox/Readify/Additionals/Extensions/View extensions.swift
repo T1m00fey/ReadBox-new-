@@ -25,11 +25,11 @@ extension View {
         self
             .popup(isPresented: isLoadingPopupPresented) {
                 LoadingPopup()
-                    .shadow(radius: 3)
             } customize: {
                 $0
                     .type(.toast)
                     .appearFrom(.bottomSlide)
+                    .displayMode(.overlay)
             }
             .popup(isPresented: isErrorPopupPresented) {
                 Text(viewModel.errorText)
@@ -38,7 +38,7 @@ extension View {
                     .padding(.vertical, 16)
                     .foregroundStyle(Color.white)
                     .background(Color.red)
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                    .clipShape(RoundedRectangle(cornerRadius: 20))
                     .padding(.top, 20)
             } customize: {
                 $0
@@ -47,6 +47,7 @@ extension View {
                     .animation(.bouncy)
                     .dragToDismiss(true)
                     .autohideIn(5)
+                    .displayMode(.overlay)
             }
     }
     
@@ -61,47 +62,55 @@ extension View {
                 }
             }
             .onChange(of: viewModel.topArticlesIndexes) {
-                if viewModel.topArticlesIndexes.count == 5 {
-                    Task {
-                        do {
-                            try await viewModel.getTopArticles()
-                            
-                            return
-                        } catch {
-                            //                                withAnimation {
-                            //                                    viewModel.errorText = error.localizedDescription
-                            //                                }
-                        }
+                guard !viewModel.topArticlesIndexes.isEmpty else { return }
+                
+                Task {
+                    do {                        
+                        try await viewModel.getTopArticles()
                         
-                        //                            viewModel.isErrorPopupPresented = true
-                    }
-                }
-            }
-            .onChange(of: viewModel.topArticles) {
-                if viewModel.topArticles.count == 5 {
-                    withAnimation {
-                        viewModel.articles = []
-                        viewModel.lastDocument = nil
-                        viewModel.isLoadingShowing = true
-                    }
-                    
-                    Task {
+                        withAnimation {
+                            viewModel.articles = []
+                            viewModel.lastDocument = nil
+                            viewModel.isLoadingShowing = true
+                        }
                         viewModel.isLoading = true
                         
-                        do {
-                            try await viewModel.getArticles()
-                            
-                            return
-                        } catch {
-//                                                            withAnimation {
-//                                                                viewModel.errorText = error.localizedDescription
-//                                                            }
+                        try await viewModel.getArticles()
+                    } catch {
+                        withAnimation {
+                            viewModel.errorText = error.localizedDescription
+                            viewModel.isErrorPopupPresented = true
+                            viewModel.isLoading = false
+                            viewModel.isLoadingShowing = false
                         }
-                        
-//                                                    viewModel.isErrorPopupPresented = true
                     }
                 }
             }
+//            .onChange(of: viewModel.topArticles) {
+//                if viewModel.topArticles.count == 5 {
+//                    withAnimation {
+//                        viewModel.articles = []
+//                        viewModel.lastDocument = nil
+//                        viewModel.isLoadingShowing = true
+//                    }
+//                    
+//                    Task {
+//                        viewModel.isLoading = true
+//                        
+//                        do {
+//                            try await viewModel.getArticles()
+//                            
+//                            return
+//                        } catch {
+////                                                            withAnimation {
+////                                                                viewModel.errorText = error.localizedDescription
+////                                                            }
+//                        }
+//                        
+////                                                    viewModel.isErrorPopupPresented = true
+//                    }
+//                }
+//            }
             .onChange(of: viewModel.user) {
                 if viewModel.user != nil {
                     Task {
@@ -142,7 +151,7 @@ extension View {
                     .padding(.vertical, 16)
                     .foregroundStyle(Color.white)
                     .background(Color.red)
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                    .clipShape(RoundedRectangle(cornerRadius: 20))
                     .padding(.top, 20)
             } customize: {
                 $0
@@ -151,14 +160,15 @@ extension View {
                     .animation(.bouncy)
                     .dragToDismiss(true)
                     .autohideIn(5)
+                    .displayMode(.overlay)
             }
             .popup(isPresented: isLoadingPopupPresented) {
                 LoadingPopup()
-                    .shadow(radius: 3)
             } customize: {
                 $0
                     .type(.toast)
                     .appearFrom(.bottomSlide)
+                    .displayMode(.sheet)
             }
     }
     
@@ -278,6 +288,7 @@ extension View {
                     viewModel.text = ""
                     viewModel.mediaURLs = []
                     viewModel.mediaCount = 0
+                    viewModel.mediaVersion = 0
                 }
             }
             .onChange(of: viewModel.isCreateViewPresented) {
@@ -315,9 +326,10 @@ extension View {
                                     Task {
                                         do {
                                             try await viewModel.getPostToRead(id: viewModel.id)
-                                            try await viewModel.getMedia(
+                                            await viewModel.getMedia(
                                                 mediaCount: prePost.mediaCount ?? 1,
-                                                postId: prePost.id
+                                                postId: prePost.id,
+                                                ignoreCache: true
                                             )
                                             
                                             viewModel.isLoadingPopupPresented = false
@@ -341,17 +353,14 @@ extension View {
                                     
                                     Task {
                                         do {
-                                            try await viewModel.getMedia(
+                                            await viewModel.getMedia(
                                                 mediaCount: prePost.mediaCount ?? 1,
-                                                postId: prePost.id
+                                                postId: prePost.id,
+                                                ignoreCache: true
                                             )
                                             
                                             viewModel.isLoadingPopupPresented = false
                                             viewModel.isPostCreateViewPresented = true
-                                        } catch {
-                                            viewModel.isLoadingPopupPresented = false
-                                            viewModel.clearData()
-                                            print("ERORORO: \(error.localizedDescription)")
                                         }
                                     }
                                 } else {
@@ -429,7 +438,7 @@ extension View {
                     .padding(.vertical, 16)
                     .foregroundStyle(Color.white)
                     .background(Color.red)
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                    .clipShape(RoundedRectangle(cornerRadius: 20))
                     .padding(.top, 20)
             } customize: {
                 $0
@@ -438,7 +447,8 @@ extension View {
                     .animation(.bouncy)
                     .dragToDismiss(true)
                     .autohideIn(5)
-            }            
+                    .displayMode(.overlay)
+            }
             .popup(isPresented: isSuccessPopupPresented) {
                 Text(viewModel.errorText)
                     .frame(width: UIScreen.main.bounds.width - 72, alignment: .leading)
@@ -446,11 +456,11 @@ extension View {
                     .padding(.vertical, 16)
                     .foregroundStyle(Color(.label))
                     .background(
-                        RoundedRectangle(cornerRadius: 10)
+                        RoundedRectangle(cornerRadius: 20)
                             .foregroundStyle(Color(.systemBackground))
                     )
                     .overlay(
-                        RoundedRectangle(cornerRadius: 10)
+                        RoundedRectangle(cornerRadius: 20)
                             .stroke(
                                 Color.green, lineWidth: 1
                             )
@@ -463,26 +473,28 @@ extension View {
                     .animation(.bouncy)
                     .dragToDismiss(true)
                     .autohideIn(5)
+                    .displayMode(.overlay)
             }
             .popup(isPresented: isLoadingPopupPresented) {
                 LoadingPopup()
-                    .shadow(radius: 3)
             } customize: {
                 $0
                     .type(.toast)
                     .appearFrom(.bottomSlide)
+                    .displayMode(.sheet)
             }
             .popup(isPresented: isConfirmationPopupPresented) {
                 ConfirmationView(
                     addingMode: addingMode,
                     popupType: .postType
                 )
-                .shadow(radius: 3)
+                .shadow(radius: 2)
             } customize: {
                 $0
                     .type(.toast)
                     .appearFrom(.bottomSlide)
                     .dragToDismiss(true)
+                    .displayMode(.sheet)
             }
     }
 }

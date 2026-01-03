@@ -9,4 +9,5 @@ import Foundation
 
 extension Notification.Name {
     static let postsDidChange = Notification.Name("postsDidChange")
+    static let postMediaDidUpdate = Notification.Name("postMediaDidUpdate")
 }

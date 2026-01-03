@@ -91,9 +91,18 @@ final class ArticlesManager {
     }
     
     func updateIsArchiveStatus(id: String, isArchive: Bool) async throws {
-        let data: [String: Any] = [
-            "is_archive": isArchive
-        ]
+        var data: [String: Any] = [:]
+        
+        if isArchive {
+            data = [
+                "is_archive": isArchive
+            ]
+        } else {
+            data = [
+                "is_archive": isArchive,
+                "date_created": Date()
+            ]
+        }
         
         try await articleDocument(id: id).updateData(data)
     }
@@ -127,7 +136,8 @@ final class ArticlesManager {
             "is_archive": isArchive,
             "date_created": Date(),
             "is_short_post": isShortPost,
-            "media_count": mediaCount
+            "media_count": mediaCount,
+            "media_version": 2
         ]
         
         try await ref.setData(data)

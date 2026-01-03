@@ -12,7 +12,6 @@ import PopupView
 
 struct SubscribesView: View {
     @Binding var user: DBUser?
-    @Binding var isNotificationPopupPrenseted: Bool
     
     @StateObject private var viewModel = SubscribesViewModel()
     
@@ -114,7 +113,7 @@ struct SubscribesView: View {
                         .padding(.vertical, 16)
                         .foregroundStyle(Color.white)
                         .background(Color.red)
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                        .clipShape(RoundedRectangle(cornerRadius: 20))
                         .padding(.top, 20)
                 } customize: {
                     $0
@@ -123,13 +122,13 @@ struct SubscribesView: View {
                         .animation(.bouncy)
                         .dragToDismiss(true)
                         .autohideIn(5)
-                }               
+                        .displayMode(.overlay)
+                }
                 .fullScreenCover(isPresented: $viewModel.isChannelViewPresented) {
                     let channel = viewModel.selectedChannel
                     
                     ChannelView(
                         user: $user,
-                        isNotificationPopupPrenseted: $isNotificationPopupPrenseted,
                         authorId: channel?.authorId ?? "",
                         authorName: channel?.authorName ?? NSLocalizedString("notFoundLabel", comment: ""),
                         isCheckmark: channel?.isCheckmark ?? false
@@ -178,7 +177,7 @@ struct ChannelListItem: View {
             RoundedRectangle(cornerRadius: 20)
                 .frame(width: UIScreen.main.bounds.width - 32)
                 .foregroundStyle(Color(.secondarySystemBackground))
-                .shadow(radius: 2)
+                .shadow(radius: 1)
             
             HStack {
                 if isShimmering {

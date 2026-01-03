@@ -10,6 +10,14 @@ import FirebaseStorage
 import PopupView
 import UserNotifications
 
+final class SessionManager: ObservableObject {
+    @Published var sessionId: String = UUID().uuidString
+}
+
+final class ChangedPostsManager: ObservableObject {
+    @Published var changedPostsIDs: [String] = []
+}
+
 struct RootView: View {
     private enum TabType {
         case feed
@@ -35,7 +43,14 @@ struct RootView: View {
     @State private var selectedTab = TabType.feed
     @State private var bottomPaddingForHUD: CGFloat = 60
     
+    @State private var isVersionPopupPresented = false
+    @State private var relevantVersion: AppVersion? = nil
+    @State private var isUpdatePopupDidPresented = false
+    @State private var isUpdateBlur = false
+    
     @StateObject var hudService = HUDService()
+    @StateObject var sessionManager = SessionManager()
+    @StateObject var changedPostsManager = ChangedPostsManager()
     
     @Environment(\.dismiss) var dismiss
     
@@ -46,8 +61,7 @@ struct RootView: View {
             if let _ = try? AuthenticationManager.shared.getAuthenticatedUser() {
                 TabView(selection: $selectedTab) {
                     FeedView(
-                        isWelcomeViewPresented: $isWelcomeViewPresented,
-                        isNotificationPopupPresented: $isNotificationPopupPresented,
+                        isWelcomeViewPresented: $isWelcomeViewPresented
                     )
                     .tag(TabType.feed)
                     .tabItem {
@@ -55,8 +69,7 @@ struct RootView: View {
                     }
                     
                     LikedPostsView(
-                        isWelcomeViewPresented: $isWelcomeViewPresented,
-                        isNotificationPopupPresented: $isNotificationPopupPresented,
+                        isWelcomeViewPresented: $isWelcomeViewPresented
                     )
                     .tag(TabType.favourites)
                     .tabItem {
@@ -70,14 +83,15 @@ struct RootView: View {
                     }
                     
                     ProfileView(
-                        isWelcomeViewPresented: $isWelcomeViewPresented,
-                        isNotificationPopupPrenseted: $isNotificationPopupPresented
+                        isWelcomeViewPresented: $isWelcomeViewPresented
                     )
                     .tag(TabType.profile)
                     .tabItem {
                         Label("", systemImage: "person.fill")
                     }
                 }
+                .disabled(isUpdateBlur)
+                .blur(radius: isUpdateBlur ? 5 : 0)
                 .tint(Color(uiColor: .label))
                 .onAppear {
                     isNotificationPopupPresented = !StorageManager.shared.isNotificationsPopupShowed()
@@ -85,35 +99,43 @@ struct RootView: View {
             }
         }
         .environmentObject(hudService)
-        .overlay(
-            hudService.makeLoadingPopup(
-                screenWidth: screenWidth,
-                bottomPadding: bottomPaddingForHUD
-            ).opacity(hudService.isLoading ? 1 : 0),
-            alignment: .bottom
-        )
-        .overlay(
-            hudService.makeSuccessPopup(
-                screenWidth: screenWidth,
-                bottomPadding: bottomPaddingForHUD
-            ).opacity(hudService.isSuccessPopupPresented ? 1 : 0),
-            alignment: .bottom
-        )
-        .overlay(
-            hudService.makeErrorPopup(
-                screenWidth: screenWidth,
-                bottomPadding: bottomPaddingForHUD
-            ).opacity(hudService.isErrorPopupPresented ? 1 : 0),
-            alignment: .bottom
-        )
+        .environmentObject(sessionManager)
+        .environmentObject(changedPostsManager)
+        .overlay(alignment: .bottom) {
+            if hudService.isLoading {
+                hudService.makeLoadingPopup(screenWidth: screenWidth)
+            }
+        }
+        .overlay(alignment: .bottom) {
+            if hudService.isSuccessPopupPresented {
+                hudService.makeSuccessPopup(
+                    screenWidth: screenWidth
+                )
+            }
+        }
+        .overlay(alignment: .bottom) {
+            if hudService.isErrorPopupPresented {
+                hudService.makeErrorPopup(
+                    screenWidth: screenWidth,
+                    bottomPadding: bottomPaddingForHUD
+                )
+            }
+        }
         .onChange(of: selectedTab) {
-            if selectedTab == .create {
+            if selectedTab == .create && !hudService.isLoading {
                 withAnimation {
                     bottomPaddingForHUD = 120
                 }
             } else {
                 withAnimation {
                     bottomPaddingForHUD = 60
+                }
+            }
+        }
+        .onChange(of: isVersionPopupPresented) {
+            if !isVersionPopupPresented {
+                withAnimation {
+                    isUpdateBlur = false
                 }
             }
         }
@@ -182,6 +204,8 @@ struct RootView: View {
                     isWelcomeViewPresented = true
                 }
             }
+            
+            checkAppVersion()
         }
         .onOpenURL { url in
             isLoadingPopupPresented = true
@@ -204,20 +228,23 @@ struct RootView: View {
                         
                         Task {
                             do {
-                                prePost = try? await ArticlesManager.shared.getPrePost(id: index)
-                                postToRead = try? await ArticlesManager.shared.getPostToRead(id: index)
-                                authorName = try? await UserManager.shared.getAuthorName(id: prePost?.authorId ?? "")
-                                isCheckmark = try? await UserManager.shared.getIsCheckmarkStatus(id: prePost?.authorId ?? "")
+                                prePost = try await ArticlesManager.shared.getPrePost(id: index)
+                                postToRead = try await ArticlesManager.shared.getPostToRead(id: index)
+                                authorName = try await UserManager.shared.getAuthorName(id: prePost?.authorId ?? "")
+                                isCheckmark = try await UserManager.shared.getIsCheckmarkStatus(id: prePost?.authorId ?? "")
+                                authorId = prePost?.authorId ?? ""
                                 
                                 isLoadingPopupPresented = false
                                 
                                 let authUser = try AuthenticationManager.shared.getAuthenticatedUser()
                                 user = try? await UserManager.shared.getUser(userId: authUser.uid)
                                 
-                                if user != nil {
-                                    likedPosts = user?.likedPosts ?? []
+                                if let user {
+                                    likedPosts = user.likedPosts ?? []
                                     
-                                    isReadViewPresented = true
+                                    if prePost != nil && postToRead != nil && authorName != nil && authorId != "" {
+                                        isReadViewPresented = true
+                                    }
                                 }
                             }
                         }
@@ -238,7 +265,7 @@ struct RootView: View {
                                 let authUser = try AuthenticationManager.shared.getAuthenticatedUser()
                                 user = try? await UserManager.shared.getUser(userId: authUser.uid)
                                 
-                                if user != nil {
+                                if user != nil && authorName != nil {
                                     isLoadingPopupPresented = false
                                     isChannelViewPresented = true
                                 }
@@ -268,45 +295,95 @@ struct RootView: View {
                 authorName: authorName ?? "",
                 isCheckmark: isCheckmark ?? false,
                 isArchive: prePost?.isArchive ?? true,
-                mediaCount: prePost?.mediaCount ?? 0,
+                mediaCount: prePost?.mediaCount ?? 1,
+                mediaVersion: prePost?.mediaVersion ?? 1,
                 user: $user,
                 isChannelViewPresented: $isChannelViewPresented
             )
             .tint(Color(uiColor: .label))
+            .environmentObject(sessionManager)
+            .environmentObject(changedPostsManager)
         })
         .fullScreenCover(isPresented: $isChannelViewPresented, content: {
             ChannelView(
                 user: $user,
-                isNotificationPopupPrenseted: $isNotificationPopupPresented,
-                authorId: prePost?.authorId ?? "",
+                authorId: authorId,
                 authorName: authorName ?? "",
                 isCheckmark: isCheckmark ?? false
             )
             .tint(Color(uiColor: .label))
+            .environmentObject(sessionManager)
+            .environmentObject(changedPostsManager)
         })
         .fullScreenCover(isPresented: $isWelcomeViewPresented, content: {
             WelcomeView(isSignInViewPreseted: $isWelcomeViewPresented)
         })
         .popup(isPresented: $isLoadingPopupPresented) {
             LoadingPopup()
-                .shadow(radius: 3)
         } customize: {
             $0
                 .type(.toast)
                 .appearFrom(.bottomSlide)
+                .displayMode(.overlay)
         }
         .popup(isPresented: $isNotificationPopupPresented) {
             NotificationPermissionView(
-                isPopupPresented: $isNotificationPopupPresented
+                isPopupPresented: $isNotificationPopupPresented,
+                route: .requestSystemPrompt
             )
-            .shadow(radius: 3)
+            .shadow(radius: 2)
         } customize: {
             $0
                 .type(.toast)
                 .appearFrom(.bottomSlide)
+                .dragToDismiss(true)
+                .displayMode(.overlay)
         }
-        
+        .popup(isPresented: $isVersionPopupPresented) {
+            VersionPopupView(isCritical: relevantVersion?.isCritical ?? false)
+                .shadow(radius: 2)
+        } customize: {
+            $0
+                .type(.toast)
+                .appearFrom(.bottomSlide)
+                .dragToDismiss(!(relevantVersion?.isCritical ?? true))
+                .displayMode(.overlay)  
+        }
     }
+}
+
+private extension RootView {
+    func checkAppVersion() {
+        Task {
+            let version = try? await VersionManager.shared.getRelevantVersion()
+            
+            await MainActor.run {
+                self.relevantVersion = version
+                
+                guard let version = version,
+                      let currentVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String
+                else {
+                    self.isUpdateBlur = false
+                    return
+                }
+                
+                if version.appVersion != currentVersion && !self.isUpdatePopupDidPresented {
+                    self.isVersionPopupPresented = true
+                    self.isUpdatePopupDidPresented = true
+                    
+                    let isCritical = version.isCritical ?? false
+                    withAnimation {
+                        self.isUpdateBlur = isCritical
+                    }
+                } else {
+                    withAnimation {
+                        self.isUpdateBlur = false
+                    }
+                }
+            }
+        }
+    }
+
 }
 
 #Preview {

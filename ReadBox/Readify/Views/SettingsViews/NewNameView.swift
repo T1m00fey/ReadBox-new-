@@ -120,7 +120,7 @@ struct NewNameView: View {
                     .padding(.vertical, 16)
                     .foregroundStyle(Color.white)
                     .background(Color.red)
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                    .clipShape(RoundedRectangle(cornerRadius: 20))
                     .padding(.top, 20)
             } customize: {
                 $0
@@ -129,6 +129,7 @@ struct NewNameView: View {
                     .animation(.bouncy)
                     .dragToDismiss(true)
                     .autohideIn(5)
+                    .displayMode(.overlay)
             }
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {

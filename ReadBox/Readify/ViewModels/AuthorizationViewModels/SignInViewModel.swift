@@ -52,6 +52,11 @@ final class SignInViewModel: ObservableObject {
         }
         
         try await AuthenticationManager.shared.signInUser(withEmail: emailText, andPassword: passwordText)
+        let id = try? AuthenticationManager.shared.getAuthenticatedUser().uid
+        
+        if let id {
+            try await UserManager.shared.set(fcmToken: StorageManager.shared.getFcmToken(), to: id)
+        }
     }
 }
 
