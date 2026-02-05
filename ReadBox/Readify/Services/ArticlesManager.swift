@@ -77,14 +77,16 @@ final class ArticlesManager {
         text: String,
         isArchive: Bool,
         uploadingLanguage: String,
-        mediaCount: Int
+        mediaCount: Int,
+        mediaPosition: Int
     ) async throws {
         let data: [String: Any] = [
             "title": title,
             "text": text,
             "is_archive": isArchive,
             "original_language": uploadingLanguage,
-            "media_count": mediaCount
+            "media_count": mediaCount,
+            "media_position": mediaPosition
         ]
         
         try await articlesCollection.document(id).updateData(data)
@@ -117,7 +119,8 @@ final class ArticlesManager {
         isArchive: Bool,
         uploadingLanguage: String,
         mediaCount: Int,
-        isShortPost: Bool
+        isShortPost: Bool,
+        mediaPosition: Int
     ) async throws -> String {
 //        guard let maxIndex = try await getMaxIndex() else { return }
 //        let newMaxIndex = String((Int(maxIndex) ?? -2) + 1)
@@ -137,7 +140,8 @@ final class ArticlesManager {
             "date_created": Date(),
             "is_short_post": isShortPost,
             "media_count": mediaCount,
-            "media_version": 2
+            "media_version": 2,
+            "media_position": mediaPosition
         ]
         
         try await ref.setData(data)

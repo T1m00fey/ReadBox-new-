@@ -44,13 +44,7 @@ final class StorageManager {
     }
     
     func getFontSize() -> Int {
-        let fontSize = userDefaults.integer(forKey: "fontSize")
-        
-        if fontSize == 0 {
-            return 18
-        }
-        
-        return fontSize
+        return userDefaults.integer(forKey: "fontSize")
     }
     
     func getViewedPosts() -> [String] {

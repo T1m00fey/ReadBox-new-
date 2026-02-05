@@ -34,14 +34,11 @@ final class CreatedPostsViewModel: ObservableObject {
     @Published var postsNeedToLoad: [String] = []
     @Published var postOption: PostOptions = .nothing
     @Published var isNewPublicationButtonPresented = false
-    @Published var authorNameText = ""
     @Published var isButtonEnabled = false
     @Published var isChannelViewPresented = false
-    @Published var descriptionText = ""
     @Published var isSettingViewPresented = false
     @Published var isNeedToReload = false
-    @Published var postsCount = 0
-    @Published var isLoading = false
+    @Published var isLoading = true
     @Published var isLoadingShowing = true
     @Published var isLoadingPopupPresented = false
     @Published var lastPostSnapshot: DocumentSnapshot? = nil
@@ -57,13 +54,22 @@ final class CreatedPostsViewModel: ObservableObject {
     @Published var isConfirmationPopupPresented = false
     @Published var isPostCreateViewPresented = false
     @Published var mediaKind: [MediaKind?] = []
-    @Published var isPublicationsLabelVisisble = true
+    @Published var isPublicationsLabelVisible = true
+    
+    @Published var avatarVersion = 0
+    @Published var postsCount = 0
+    @Published var subscribersCount = 0
+    @Published var name = NSLocalizedString("notFoundLabel", comment: "")
+    @Published var description = ""
+    @Published var isCheckmark = false
     
     @Published var user: DBUser? = nil
     
     @Published var id = ""
     
     let vibrationsService = VibrationsService.shared
+    let subscribersCountLabel = NSLocalizedString("subscribersCountLabel", comment: "")
+    let postsCountLabel = NSLocalizedString("publicationsCountLabel", comment: "")
 
     var title = ""
     var image: UIImage? = nil
@@ -74,34 +80,9 @@ final class CreatedPostsViewModel: ObservableObject {
     var postId = ""
     var mediaCount = 0
     var mediaVersion = 0
+    var mediaPosition = 0
     
     var alertText = ""
-    
-    func getAvatar() {
-        DispatchQueue.main.async {
-            let storage = Storage.storage()
-            let storageRef = storage.reference()
-            
-            if let userId = self.user?.userId {
-                if let image = StorageManager.shared.getImage(id: userId) {
-                    withAnimation {
-                        self.avatarImage = image
-                    }
-                } else {
-                    let islandRef = storageRef.child("avatars/\(userId).jpg")
-                    
-                    islandRef.getData(maxSize: 1 * 5012 * 5012) { data, error in
-                        if let data, let image = UIImage(data: data) {
-                            withAnimation {
-                                self.avatarImage = image
-                            }
-                            StorageManager.shared.saveImage(id: userId, image: image)
-                        }
-                    }
-                }
-            }
-        }
-    }
     
     func clearData() {
         postOption = .nothing
@@ -113,7 +94,7 @@ final class CreatedPostsViewModel: ObservableObject {
     
     func isButtonEnable() {
         withAnimation {
-            if authorNameText.count > 0 && !isLoading {
+            if name.count > 0 && !isLoading {
                 isButtonEnabled = true
             } else {
                 isButtonEnabled = false
@@ -134,20 +115,17 @@ final class CreatedPostsViewModel: ObservableObject {
         let user = try await UserManager.shared.getUser(userId: authDataResult.uid)
         
         postsCount = user?.postsCount ?? 0
+        subscribersCount = user?.subscribersCount ?? 0
+        name = user?.name ?? NSLocalizedString("notFoundLabel", comment: "")
+        description = user?.authorDescription ?? ""
+        isCheckmark = user?.isCheckmark ?? false
+        avatarVersion = user?.avatarVersion ?? 0
         
         self.user = user
     }
     
     func getAuthorIsCheckmarkStatus(id: String) async throws -> Bool {
         try await UserManager.shared.getIsCheckmarkStatus(id: id) ?? false
-    }
-    
-    func changeAuthorName(to name: String, description: String) async throws {
-        try await UserManager.shared.changeAuthorName(userId: user?.userId ?? "", to: name, description: description)
-    }
-    
-    func removeCheckmarkStatus() async throws {
-        try await UserManager.shared.removeCheckmarkStatus(userId: user?.userId ?? "")
     }
     
     func getPrePost(id: String) async throws -> PrePost {
@@ -186,7 +164,13 @@ final class CreatedPostsViewModel: ObservableObject {
             
             try? await loadUser()
             
-            getAvatar()
+            if let id = user?.userId {
+                let ava = await MediaManager.shared.getAvatar(authorId: id, lastVersion: user?.avatarVersion ?? 0)
+                
+                withAnimation {
+                    avatarImage = ava
+                }
+            }
         }
     }
     
@@ -355,6 +339,7 @@ final class CreatedPostsViewModel: ObservableObject {
         id = post.id
         mediaCount = post.mediaCount ?? 1
         mediaVersion = post.mediaVersion ?? 1
+        mediaPosition = post.mediaPosition ?? 0
         
         if post.isArchive ?? true {
             image = UIImage()

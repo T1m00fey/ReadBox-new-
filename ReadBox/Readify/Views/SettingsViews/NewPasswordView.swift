@@ -35,20 +35,20 @@ struct NewPasswordView: View {
                         RoundedRectangle(cornerRadius: 30)
                             .foregroundStyle(Color(uiColor: .secondarySystemBackground))
                             .frame(width: UIScreen.main.bounds.width - 60, height: 250)
-                            .shadow(radius: 2)
+                            .shadow(radius: 1)
                         
                         VStack {
                             Text(LocalizedStringKey("passwordChangeLabel"))
                                 .fontDesign(.rounded)
                                 .fontWeight(.light)
-                                .font(.title)
-                                .padding(.top, 30)
+                                .font(.system(size: 26))
+                                .padding(.top, 20)
                             
                             VStack(spacing: 40) {
                                 VStack {
                                     SecureField(LocalizedStringKey("oldPasswordTFP"), text: $viewModel.oldPassword)
                                         .frame(width: UIScreen.main.bounds.width - 92)
-                                        .font(.title2)
+                                        .font(.system(size: 20))
                                         .focused($isFirstTFFocused)
                                         .textInputAutocapitalization(.never)
                                         .onChange(of: viewModel.oldPassword) {
@@ -65,7 +65,7 @@ struct NewPasswordView: View {
                                 VStack {
                                     SecureField(LocalizedStringKey("newPasswordTFP"), text: $viewModel.newPassword)
                                         .frame(width: UIScreen.main.bounds.width - 92)
-                                        .font(.title2)
+                                        .font(.system(size: 20))
                                         .focused($isSecondTFFocused)
                                         .textInputAutocapitalization(.never)
                                         .onChange(of: viewModel.newPassword) {

@@ -27,28 +27,6 @@ final class ReadViewModel: ObservableObject {
     
     let vibrationsService = VibrationsService.shared
     
-    func getAvatar(_ authorId: String) {
-        let storage = Storage.storage()
-        let storageRef = storage.reference()
-        
-        if let image = StorageManager.shared.getImage(id: authorId) {
-            withAnimation {
-                self.avatarImage = image
-            }
-        } else {
-            let islandRef = storageRef.child("avatars/\(authorId).jpg")
-            
-            islandRef.getData(maxSize: 1 * 5012 * 5012) { data, error in
-                if let data, let image = UIImage(data: data) {
-                    withAnimation {
-                        self.avatarImage = image
-                    }
-                    StorageManager.shared.saveImage(id: authorId, image: image)
-                }
-            }
-        }
-    }
-    
     func addLikedPost(userId: String, articleId: String) async throws {
         try await UserManager.shared.addLikedPost(id: userId, likedPost: articleId)
     }

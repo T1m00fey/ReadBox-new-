@@ -10,12 +10,16 @@ import PhotosUI
 import PopupView
 import AVFoundation
 import SwiftfulLoadingIndicators
+import FirebaseStorage
 
 struct PostCreateView: View {
     let postId: String
     let title: String
     let authorId: String
+    let authorName: String
+    let isCheckmark: Bool
     let isArchived: Bool
+    let lastVersionOfAvatar: Int
     
     @Binding var media: [MediaKind?]
     @Binding var posts: [PrePost]
@@ -28,6 +32,7 @@ struct PostCreateView: View {
     
     @EnvironmentObject var hudService: HUDService
     @EnvironmentObject var changedPostsManager: ChangedPostsManager
+    @EnvironmentObject var sessionManager: SessionManager
     
     @Environment(\.dismiss) var dismiss
 
@@ -35,7 +40,10 @@ struct PostCreateView: View {
         postId: String = "",
         title: String = "",
         authorId: String,
+        authorName: String,
+        isCheckmark: Bool,
         isArchived: Bool,
+        lastVersionOfAvatar: Int,
         media: Binding<[MediaKind?]>,
         posts: Binding<[PrePost]>,
         archivedPosts: Binding<[PrePost]>,
@@ -44,7 +52,10 @@ struct PostCreateView: View {
         self.postId = postId
         self.title = title
         self.authorId = authorId
+        self.authorName = authorName
+        self.isCheckmark = isCheckmark
         self.isArchived = isArchived
+        self.lastVersionOfAvatar = lastVersionOfAvatar
         self._media = media
         self._posts = posts
         self._archivedPosts = archivedPosts
@@ -64,6 +75,7 @@ struct PostCreateView: View {
         let author = authorId
         let oldCount = postsCount
         let wasArchived = isArchived
+        let mediaPosition = viewModel.selectedMediaPosition
 
         dismiss()
 
@@ -73,8 +85,9 @@ struct PostCreateView: View {
                     _ = try await viewModel.uploadPost(
                         title: titleText,
                         isArchive: isArchive,
-                        uploadingLanguage: selectedLanguage,
-                        items: items
+                        uploadingLanguage: selectedLanguage == 0 ? "en" : "ru",
+                        items: items,
+                        mediaPosition: mediaPosition
                     )
 
                     if !isArchive {
@@ -86,8 +99,9 @@ struct PostCreateView: View {
                         postId: currentPostId,
                         title: titleText,
                         isArchive: isArchive,
-                        uploadingLanguage: selectedLanguage,
-                        items: items
+                        uploadingLanguage: selectedLanguage == 0 ? "en" : "ru",
+                        items: items,
+                        mediaPosition: mediaPosition
                     )
 
                     if isArchive != wasArchived {
@@ -123,16 +137,50 @@ struct PostCreateView: View {
                 
                 ScrollView(showsIndicators: false) {
                     
-                    VStack(spacing: 20) {
-                        VStack(spacing: 10) {
-                            Text(NSLocalizedString("whichFeedUploadingToLabel", comment: ""))
-                                .font(.system(size: 17))
-                                .foregroundStyle(.gray)
-                                .frame(width: UIScreen.main.bounds.width - 36, alignment: .leading)
+                    VStack(spacing: 5) {
+                        HStack {
+                            if let avatarImage = viewModel.avatarImage {
+                                Image(uiImage: avatarImage)
+                                    .resizable()
+                                    .scaledToFill()
+                                    .frame(width: 40, height: 40)
+                                    .clipShape(Circle())
+                                    .overlay(
+                                        Circle()
+                                            .stroke(
+                                                Color(.label),
+                                                lineWidth: 0.1
+                                            )
+                                    )
+                            }
                             
-                            CustomSegmentedControl(selectedLanguage: $viewModel.selectedLanguage)
+                            HStack(spacing: 0) {
+                                Text(authorName)
+                                    .font(.system(size: 19))
+                                    .lineLimit(1)
+                                    .underline()
+                                    
+                                if isCheckmark {
+                                    Image(systemName: "checkmark.seal.fill")
+                                        .foregroundStyle(Color.blue)
+                                        .font(.system(size: 14))
+                                        .padding(.top, 1)
+                                }
+                            }
                         }
-                        .padding(.top, 25)
+                        .frame(width: UIScreen.main.bounds.width - 32, alignment: .leading)
+                        
+                        
+                        
+//                        VStack(spacing: 10) {
+//                            Text(NSLocalizedString("whichFeedUploadingToLabel", comment: ""))
+//                                .font(.system(size: 17))
+//                                .foregroundStyle(.gray)
+//                                .frame(width: UIScreen.main.bounds.width - 36, alignment: .leading)
+//                            
+//                            CustomSegmentedControl(selectedLanguage: $viewModel.selectedLanguage)
+//                        }
+//                        .padding(.top, 25)
                         
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 20) {
@@ -145,7 +193,7 @@ struct PostCreateView: View {
                                                 Image(uiImage: image)
                                                     .resizable()
                                                     .scaledToFit()
-                                                    .frame(width: 100)
+                                                    .frame(width: 200)
                                                     .clipShape(RoundedRectangle(cornerRadius: 20))
                                                 
                                                 Image(systemName: "xmark")
@@ -268,7 +316,7 @@ struct PostCreateView: View {
                         ZStack {
                             TextEditor(text: $viewModel.text)
                                 .focused($isTEFocused)
-                                .font(.system(size: 20))
+                                .font(.system(size: 18))
                                 .fontDesign(.rounded)
                                 .frame(
                                     width: UIScreen.main.bounds.width - 32,
@@ -278,7 +326,7 @@ struct PostCreateView: View {
                                 .padding(.bottom, 5)
                             
                             Text(NSLocalizedString("whatsNewLabel", comment: ""))
-                                .font(.system(size: 20))
+                                .font(.system(size: 18))
                                 .foregroundStyle(Color.gray)
                                 .fontDesign(.rounded)
                                 .frame(width: UIScreen.main.bounds.width - 32, height: 300, alignment: .topLeading)
@@ -296,19 +344,50 @@ struct PostCreateView: View {
                     viewModel.text = title
                     viewModel.oldMediaCount = media.compactMap { $0 }.count
                 }
-                .popup(isPresented: $viewModel.isConfirmationPopupPresented) {
+//                .popup(isPresented: $viewModel.isConfirmationPopupPresented) {
+//                    ConfirmationView(
+//                        addingMode: $viewModel.addingMode,
+//                        popupType: .publishType
+//                    )
+//                    .shadow(radius: 1)
+//                } customize: {
+//                    $0
+//                        .type(.toast)
+//                        .appearFrom(.bottomSlide)
+//                        .dragToDismiss(true)
+//                        .displayMode(.sheet)
+//                }
+                .sheet(isPresented: $viewModel.isConfirmationPopupPresented, content: {
                     ConfirmationView(
                         addingMode: $viewModel.addingMode,
                         popupType: .publishType
                     )
-                    .shadow(radius: 3)
-                } customize: {
-                    $0
-                        .type(.toast)
-                        .appearFrom(.bottomSlide)
-                        .dragToDismiss(true)
-                        .displayMode(.sheet)
-                }
+                    .presentationDetents([.height(250)])
+                    .presentationDragIndicator(.visible)
+                    .presentationCornerRadius(30)
+                })
+//                .popup(isPresented: $viewModel.isPostSettingsPopupPresented) {
+//                    PostCreateSettingsView(
+//                        selectedLanguage: $viewModel.selectedLanguage,
+//                        selectedMediaPosition: $viewModel.selectedMediaPosition
+//                    )
+//                    .shadow(radius: 1)
+//                } customize: {
+//                    $0
+//                        .type(.toast)
+//                        .appearFrom(.bottomSlide)
+//                        .dragToDismiss(true)
+//                        .displayMode(.sheet)
+//                }
+                .sheet(isPresented: $viewModel.isPostSettingsPopupPresented, content: {
+                    PostCreateSettingsView(
+                        selectedLanguage: $viewModel.selectedLanguage,
+                        selectedMediaPosition: $viewModel.selectedMediaPosition
+                    )
+                    .presentationDetents([.height(300)])
+                    .presentationDragIndicator(.visible)
+                    .presentationCornerRadius(30)
+                })
                 .popup(isPresented: $viewModel.isErrorPopupPresented) {
                     Text(viewModel.errorText)
                         .frame(width: UIScreen.main.bounds.width - 72, alignment: .leading)
@@ -395,6 +474,29 @@ struct PostCreateView: View {
                     Spacer()
                     
                     HStack {
+                        if #available(iOS 26, *) {
+                            Image(systemName: "gearshape.fill")
+                                .foregroundStyle(Color(.label))
+                                .font(.system(size: 20))
+                                .padding()
+                                .glassEffect(.regular)
+                                .opacity(isTEFocused ? 1 : 0)
+                                .padding(.bottom, 10)
+                                .onTapGesture {
+                                    viewModel.isPostSettingsPopupPresented = true
+                                }
+                        } else {
+                            Image(systemName: "gearshape.fill")
+                                .foregroundStyle(Color(.label))
+                                .font(.system(size: 20))
+                                .padding()
+                                .opacity(isTEFocused ? 1 : 0)
+                                .padding(.bottom, 10)
+                                .onTapGesture {
+                                    viewModel.isPostSettingsPopupPresented = true
+                                }
+                        }
+                        
                         Spacer()
                         
                         PhotosPicker(selection: $viewModel.imageItem, matching: .any(of: [.images, .videos])) {
@@ -496,6 +598,13 @@ struct PostCreateView: View {
                         }
                     }
                     .frame(width: UIScreen.main.bounds.width - 32)
+                }
+                .task {
+                    let ava = await MediaManager.shared.getAvatar(authorId: authorId, lastVersion: lastVersionOfAvatar)
+                    
+                    withAnimation {
+                        viewModel.avatarImage = ava
+                    }
                 }
                 
             }

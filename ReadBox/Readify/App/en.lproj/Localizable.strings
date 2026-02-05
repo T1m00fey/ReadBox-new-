@@ -131,3 +131,6 @@
 "postSuccessfullyUploadedHUDLabel" = "Post successfully uploaded";
 "postSuccessfullyDeletedHUDLabel" = "Post successfully deleted";
 "pleaseDontCloseAppHUDLabel" = "Please, don't close the app";
+"whatWePostingLabel" = "What are we posting?";
+"postLabel" = "Post";
+"articleLabel" = "Article";

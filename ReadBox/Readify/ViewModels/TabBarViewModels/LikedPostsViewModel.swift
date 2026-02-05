@@ -18,8 +18,7 @@ final class LikedPostsViewModel: ObservableObject {
     @Published var user: DBUser? = nil
     @Published var likedPosts: [String] = []
     @Published var fromIndex = ""
-    @Published var authorsNames: [String: String] = [:]
-    @Published var authorsCheckmarks: [String: Bool] = [:]
+    @Published var authorsInfo: [String: PostAuthorInfo] = [:]
     @Published var indexesNeedToLoad: [String] = []
     @Published var isLoading = true
     @Published var isChannelViewPresented = false
@@ -42,6 +41,7 @@ final class LikedPostsViewModel: ObservableObject {
     var isArchive = false
     var mediaCount = 0
     var mediaVersion = 0
+    var mediaPosition = 0
     
     private var db = Firestore.firestore()
     
@@ -92,56 +92,80 @@ final class LikedPostsViewModel: ObservableObject {
             likedPosts = []
             articles = []
             user = nil
-            authorsNames = [:]
-            authorsCheckmarks = [:]
+            authorsInfo = [:]
         }
         
         Task {
             try? await loadUser()
         }
     }
-    
-    func getArticles() async throws {
-        var query = db.collection("articles")
-            .whereField("id", in: indexesNeedToLoad)
-            .whereField("is_archive", isEqualTo: false)
-            .order(by: "date_created", descending: true)
-            .limit(to: 20)
-        
-        if let last = lastDocument {
-            query = query.start(afterDocument: last)
+
+    private func chunked<T>(_ array: [T], size: Int) -> [[T]] {
+        guard size > 0 else { return [] }
+        return stride(from: 0, to: array.count, by: size).map {
+            Array(array[$0..<min($0 + size, array.count)])
         }
-        
-        do {
-            let snapshot = try await query.getDocuments()
-            let newPosts = snapshot.documents.compactMap { PrePost(document: $0) }
-            
+    }
+
+    func getArticles() async throws {
+        guard !indexesNeedToLoad.isEmpty else {
             withAnimation {
-                self.articles.append(contentsOf: newPosts)
-                self.lastDocument = snapshot.documents.count == 20 ? snapshot.documents.last : nil
+                self.articles = []
                 self.isLoading = false
                 self.isLoadingShowed = false
             }
+            return
+        }
+
+        let chunks = chunked(indexesNeedToLoad, size: 30)
+
+        do {
+            var all: [PrePost] = []
+
+            for ids in chunks {
+                let snapshot = try await db.collection("articles")
+                    .whereField("id", in: ids)
+                    .whereField("is_archive", isEqualTo: false)
+                    .getDocuments()
+
+                let posts = snapshot.documents.compactMap { PrePost(document: $0) }
+                all.append(contentsOf: posts)
+            }
+
+            let order: [String: Int] = Dictionary(
+                uniqueKeysWithValues: indexesNeedToLoad.enumerated().map { ($0.element, $0.offset) }
+            )
+
+            all.sort { (a: PrePost, b: PrePost) -> Bool in
+                let ia = order[a.id] ?? Int.max
+                let ib = order[b.id] ?? Int.max
+                return ia < ib
+            }
+
+            withAnimation {
+                self.articles = all
+                self.isLoading = false
+                self.isLoadingShowed = false
+                self.lastDocument = nil
+            }
         } catch {
             withAnimation {
-                errorText = error.localizedDescription
+                self.errorText = error.localizedDescription
                 self.isErrorPopupPresented = true
                 self.isLoading = false
                 self.isLoadingShowed = false
             }
         }
     }
-    
+
     func onPostAppearing(_ post: PrePost) {
-        if !authorsNames.keys.contains(post.authorId ?? "") && post.authorId != nil {
+        if !authorsInfo.keys.contains(post.authorId ?? "") && post.authorId != nil {
             Task {
                 do {
-                    let authorName = try await getAuthorName(id: post.authorId ?? "")
-                    let isCheckmark = try await getAuthorIsCheckmarkStatus(id: post.authorId ?? "")
+                    let info = try await UserManager.shared.getPostAuthorInfo(for: post.authorId ?? "")
                     
                     withAnimation {
-                        authorsNames[post.authorId ?? ""] = authorName
-                        authorsCheckmarks[post.authorId ?? ""] = isCheckmark
+                        authorsInfo[post.authorId ?? ""] = info
                     }
                 } catch {
 //                                            withAnimation {
@@ -168,6 +192,7 @@ final class LikedPostsViewModel: ObservableObject {
         isArchive = post.isArchive ?? true
         mediaCount = post.mediaCount ?? 1
         mediaVersion = post.mediaVersion ?? 1
+        mediaPosition = post.mediaPosition ?? 0
         
         if user != nil {
             if likedPosts == [] {

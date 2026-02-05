@@ -39,30 +39,7 @@ final class ChannelViewModel: ObservableObject {
     @Published var isSubscribeLoading = false
     @Published var pushRoute: NotificationPushRoute? = nil
     @Published var isNotificationPopupPresented = false
-    
-    func getAvatar() {
-        DispatchQueue.main.async {
-            let storage = Storage.storage()
-            let storageRef = storage.reference()
-            
-            if let image = StorageManager.shared.getImage(id: self.authorId) {
-                withAnimation {
-                    self.avatarImage = image
-                }
-            } else {
-                let islandRef = storageRef.child("avatars/\(self.authorId).jpg")
-                
-                islandRef.getData(maxSize: 1 * 5012 * 5012) { data, error in
-                    if let data, let image = UIImage(data: data) {
-                        withAnimation {
-                            self.avatarImage = image
-                        }
-                        StorageManager.shared.saveImage(id: self.authorId, image: image)
-                    }
-                }
-            }
-        }
-    }
+    @Published var isPublicationsLabelVisible = true
     
     @ViewBuilder
     func buildSubscribeButtonView(_ isSubscribed: Bool) -> some View {
@@ -75,7 +52,7 @@ final class ChannelViewModel: ObservableObject {
                 size: .small,
                 speed: .fast
             )
-            .padding(.vertical, 5)
+            .padding(.vertical, 2)
             .frame(maxWidth: .infinity)
         } else {
             Text(
@@ -88,9 +65,9 @@ final class ChannelViewModel: ObservableObject {
                 ? Color(.label)
                 : Color(.systemBackground)
             )
-            .font(.system(size: 20))
+            .font(.system(size: 18))
             .fontDesign(.rounded)
-            .padding(.vertical, 5)
+            .padding(.vertical, 2)
             .frame(maxWidth: .infinity)
         }
     }

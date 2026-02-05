@@ -29,15 +29,10 @@ struct ConfirmationView: View {
     
     var body: some View {
         VStack {
-            Capsule()
-                .frame(width: 25, height: 5)
-                .foregroundStyle(Color.gray)
-                .padding(.top, 5)
-            
             Text(
                 popupType == .publishType
                 ? LocalizedStringKey("publishItLabel")
-                : "Что публикуем?"
+                : LocalizedStringKey("whatWePostingLabel")
             )
                 .font(.system(size: 27))
                 .fontWeight(.light)
@@ -61,7 +56,7 @@ struct ConfirmationView: View {
                         Text(
                             popupType == .publishType
                             ? LocalizedStringKey("publishLabel")
-                            : "Пост"
+                            : LocalizedStringKey("postLabel")
                         )
                             .font(.system(size: 21))
                             .fontWeight(.light)
@@ -74,9 +69,7 @@ struct ConfirmationView: View {
             .frame(width: UIScreen.main.bounds.width - 32, height: 60)
             
             Button {
-                if popupType == .postType {
-                    vibrationsService.lightImpact()
-                }
+                vibrationsService.softImpact()
                 
                 addingMode = 2
             } label: {
@@ -93,7 +86,7 @@ struct ConfirmationView: View {
                         Text(
                             popupType == .publishType
                             ? LocalizedStringKey("saveToArchiveLabel")
-                            : "Статью"
+                            : LocalizedStringKey("articleLabel")
                         )
                             .font(.system(size: 21))
                             .fontWeight(.light)
@@ -104,13 +97,7 @@ struct ConfirmationView: View {
                 }
             }
             .frame(width: UIScreen.main.bounds.width - 32, height: 60)
-            .padding(.bottom, 100)
-            
         }
-        .frame(width: UIScreen.main.bounds.width)
-        .frame(minHeight: 100)
-        .background(Color(uiColor: .secondarySystemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 30))
     }
 }
 

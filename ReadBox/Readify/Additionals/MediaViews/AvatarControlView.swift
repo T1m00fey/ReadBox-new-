@@ -48,7 +48,8 @@ struct AvatarControlView: View {
                 Image(systemName: "plus.circle")
                     .resizable()
                     .frame(width: 80, height: 80)
-                    .foregroundStyle(Color.gray)
+                    .foregroundStyle(Color(.label))
+                    .fontWeight(.light)
             }
         }
         .onChange(of: pickerItem) {

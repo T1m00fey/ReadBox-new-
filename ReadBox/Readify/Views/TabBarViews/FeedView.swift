@@ -14,6 +14,8 @@ import PopupView
 
 struct FeedView: View {
     @Binding var isWelcomeViewPresented: Bool
+    @Binding var selectedTab: TabType
+    @Binding var isConfirmationViewPresented: Bool
     
     @StateObject var viewModel = FeedViewModel()
     
@@ -26,7 +28,8 @@ struct FeedView: View {
                     
                     LazyVStack {
                         
-                        Color.clear.frame(height: 60)
+                        Text("")
+                        VisibilityTracker(id: "headerTracker")
                         
                         TabView {
                             
@@ -57,9 +60,10 @@ struct FeedView: View {
                         }
                         .tabViewStyle(.page)
                         .frame(height: 270)
+                        .padding(.top, 30)
                         
                         if viewModel.isLoadingShowing {
-                            ForEach(0..<2) { num in
+                            ForEach(0..<7) { num in
                                 ArticleView(
                                     id: String(num),
                                     title: "Hello, World! Hello, World! Hello, World!",
@@ -70,6 +74,8 @@ struct FeedView: View {
                                     isShortPost: false,
                                     mediaCount: 0,
                                     mediaVersion: 2,
+                                    mediaPosition: 0,
+                                    lastVersionOfAvatar: 0,
                                     user: .constant(nil),
                                     isZoomableViewPresented: .constant(false),
                                     zoomableImage: .constant(nil),
@@ -77,7 +83,7 @@ struct FeedView: View {
                                     isChannelViewPresented: .constant(false)
                                 )
                                 .redacted(reason: .placeholder)
-                                .padding(.top, 20)
+                                .padding(.top, 15)
                                 .shimmering()
                             }
                         } else {
@@ -86,12 +92,14 @@ struct FeedView: View {
                                     id: post.id,
                                     title: post.title ?? "",
                                     authorId: post.authorId ?? "",
-                                    authorName: viewModel.authorsNames[post.authorId ?? ""] ?? "",
-                                    isCheckmark: viewModel.authorsCheckmarks[post.authorId ?? ""] ?? false,
+                                    authorName: viewModel.authorsInfo[post.authorId ?? ""]?.name ?? "",
+                                    isCheckmark: viewModel.authorsInfo[post.authorId ?? ""]?.isCheckmark ?? false,
                                     isArchive: post.isArchive ?? true,
                                     isShortPost: post.isShortPost ?? false,
                                     mediaCount: post.mediaCount ?? 1,
                                     mediaVersion: post.mediaVersion ?? 1,
+                                    mediaPosition: post.mediaPosition ?? 0,
+                                    lastVersionOfAvatar: viewModel.authorsInfo[post.authorId ?? ""]?.avatarVersion ?? 0,
                                     user: $viewModel.user,
                                     isZoomableViewPresented: $viewModel.isZoomableImageViewPresented,
                                     zoomableImage: $viewModel.zoomableImage,
@@ -110,49 +118,8 @@ struct FeedView: View {
                             }
                         }
                         
-//                        if let _ = viewModel.lastDocument {
-//                            if viewModel.articles != [] && !viewModel.isLoading {
-//                                Button {
-//                                    Task {
-//                                        do {
-//                                            try await viewModel.getArticles()
-//                                            return
-//                                        } catch {
-//                                            withAnimation {
-//                                                viewModel.errorText = error.localizedDescription
-//                                            }
-//                                        }
-//                                        
-//                                        viewModel.isErrorPopupPresented = true
-//                                    }
-//                                } label: {
-//                                    HStack {
-//                                        Image(systemName: "arrow.down")
-//                                            .foregroundStyle(Color(uiColor: .label))
-//                                            .font(.title3)
-//                                            .fontWeight(.light)
-//                                        
-//                                        Text(LocalizedStringKey("loadMore"))
-//                                            .font(.title3)
-//                                            .fontDesign(.rounded)
-//                                            .fontWeight(.light)
-//                                    }
-//                                    .padding(.horizontal, 16)
-//                                    .padding(.vertical, 10)
-//                                    .background(Color(uiColor: .secondarySystemBackground))
-//                                    .clipShape(RoundedRectangle(cornerRadius: 10))
-//                                    .shadow(radius: 2)
-//                                    .padding(.top, 20)
-//                                }
-//                                .padding(.bottom, 10)
-//                                
-//                            }
-//                        }
-                        
                     }
                 }
-//                .disabled(viewModel.isBlur ? true : false)
-//                .blur(radius: viewModel.isBlur ? 5 : 0)
                 .refreshable {
                     if !viewModel.isReadViewPresented {
                         viewModel.refresh()
@@ -183,6 +150,18 @@ struct FeedView: View {
             .task {
                 try? Tips.configure()
             }
+            .onPreferenceChange(VisibilityPreferenceKey.self) { values in
+                if let minY = values["headerTracker"] {
+                    let isVisible = minY > 60
+                    print("TRECCECEC: \(minY)")
+
+                    if viewModel.isLargeHeaderVisible != isVisible {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            viewModel.isLargeHeaderVisible = isVisible
+                        }
+                    }
+                }
+            }
             .onAppear {
                 if viewModel.isLoading {
                     viewModel.isLoading = false
@@ -210,21 +189,25 @@ struct FeedView: View {
                     dateCreated: viewModel.dateCreated,
                     likesCount: viewModel.likesCount,
                     authorId: viewModel.authorId,
-                    authorName: viewModel.authorsNames[viewModel.authorId] ?? "",
-                    isCheckmark: viewModel.authorsCheckmarks[viewModel.authorId] ?? false,
+                    authorName: viewModel.authorsInfo[viewModel.authorId]?.name ?? "",
+                    isCheckmark: viewModel.authorsInfo[viewModel.authorId]?.isCheckmark ?? false,
                     isArchive: viewModel.isArchive,
                     mediaCount: viewModel.mediaCount,
                     mediaVersion: viewModel.mediaVersion,
+                    mediaPosition: viewModel.mediaPosition,
+                    lastVersionOfAvatar: viewModel.authorsInfo[viewModel.authorId]?.avatarVersion ?? 0,
                     user: $viewModel.user,
-                    isChannelViewPresented: $viewModel.isChannelViewPresented
+                    isChannelViewPresented: $viewModel.isChannelViewPresented,
+                    isPresented: $viewModel.isReadViewPresented
                 )
             })
-            .fullScreenCover(isPresented: $viewModel.isChannelViewPresented, content: {
+            .navigationDestination(isPresented: $viewModel.isChannelViewPresented, destination: {
                 ChannelView(
                     user: $viewModel.user,
                     authorId: viewModel.authorId as String,
-                    authorName: viewModel.authorsNames[viewModel.authorId] ?? NSLocalizedString("notFoundLabel", comment: ""),
-                    isCheckmark: viewModel.authorsCheckmarks[viewModel.authorId] ?? false
+                    authorName: viewModel.authorsInfo[viewModel.authorId]?.name ?? NSLocalizedString("notFoundLabel", comment: ""),
+                    isCheckmark: viewModel.authorsInfo[viewModel.authorId]?.isCheckmark ?? false,
+                    lastVersionOfAvatar: viewModel.authorsInfo[viewModel.authorId]?.avatarVersion ?? 0,
                 )
             })
             .fullScreenCover(isPresented: $viewModel.isZoomableImageViewPresented, content: {
@@ -239,55 +222,70 @@ struct FeedView: View {
 
 private extension FeedView {
     var headerView: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 15)
-                .frame(width: UIScreen.main.bounds.width, height: 120)
-//                .foregroundStyle(Color(uiColor: .secondarySystemBackground))
-                .foregroundStyle(.thinMaterial)
-                .shadow(radius: 3)
-        
-            HStack {
-                HStack(spacing: 1) {
-                    Text("ReadBox")
-                        .font(.system(size: 32))
-                        .fontWeight(.light)
-                        .popoverTip(LanguageSwitchTip())
-                    
-                    Text(viewModel.primaryLanguage.uppercased())
-                        .foregroundStyle(Color.gray)
-                        .font(.system(size: 14))
-                        .fontDesign(.rounded)
-                        .offset(y: -7)
-                }
-                .onTapGesture {
-                    withAnimation {
-                        if !viewModel.isLoading {
-                            StorageManager.shared.setLanguage(
-                                to: viewModel.primaryLanguage == "en"
-                                    ? "ru"
-                                    : "en"
-                            )
-                            
-                            viewModel.refresh()
-                        }
-                    }
+        VStack(spacing: 0) {
+            ZStack {
+                if viewModel.isLargeHeaderVisible {
+                    RoundedRectangle(cornerRadius: 15)
+                        .frame(width: UIScreen.main.bounds.width, height: 120)
+                        .foregroundStyle(Color.clear)
+                } else {
+                    RoundedRectangle(cornerRadius: 15)
+                        .frame(width: UIScreen.main.bounds.width, height: 120)
+                        .foregroundStyle(.thinMaterial)
                 }
                 
-                if viewModel.isLoading {
-                    LoadingIndicator(
-                        animation: .circleRunner,
-                        color: Color(uiColor: .label),
-                        size: .small, speed: .fast
-                    )
+                HStack {
+                    HStack(spacing: 1) {
+                        Text("ReadBox")
+                            .font(.system(size: 32))
+                            .fontWeight(.light)
+                            .popoverTip(LanguageSwitchTip())
+                        
+                        Text(viewModel.primaryLanguage.uppercased())
+                            .foregroundStyle(Color.gray)
+                            .font(.system(size: 14))
+                            .fontDesign(.rounded)
+                            .offset(y: -7)
+                    }
+                    .onTapGesture {
+                        withAnimation {
+                            if !viewModel.isLoading {
+                                StorageManager.shared.setLanguage(
+                                    to: viewModel.primaryLanguage == "en"
+                                    ? "ru"
+                                    : "en"
+                                )
+                                
+                                viewModel.refresh()
+                            }
+                        }
+                    }
+                    
+                    if viewModel.isLoading {
+                        LoadingIndicator(
+                            animation: .circleRunner,
+                            color: Color(uiColor: .label),
+                            size: .small, speed: .fast
+                        )
+                    }
+                    
+                    Spacer()
+                    
+                    Image(systemName: "plus")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 20)
+                        .onTapGesture {
+                            VibrationsService.shared.lightImpact()
+                            
+                            selectedTab = .create
+                            isConfirmationViewPresented = true
+                        }
                 }
+                .frame(width: UIScreen.main.bounds.width - 32, alignment: .leading)
+                .padding(.top, 30)
+                
             }
-            .frame(width: UIScreen.main.bounds.width - 32, alignment: .leading)
-            .padding(.top, 30)
-            
         }
     }
 }
-
-
-
-

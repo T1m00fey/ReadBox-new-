@@ -34,20 +34,20 @@ struct SignInView: View {
                         RoundedRectangle(cornerRadius: 30)
                             .foregroundStyle(Color(uiColor: .secondarySystemBackground))
                             .frame(width: UIScreen.main.bounds.width - 60, height: 250)
-                            .shadow(radius: 2)
+                            .shadow(radius: 1)
                         
                         VStack {
                             Text(LocalizedStringKey("signInLabel"))
                                 .fontDesign(.rounded)
                                 .fontWeight(.light)
-                                .font(.title)
+                                .font(.system(size: 26))
                                 .padding(.top, 30)
                             
                             VStack(spacing: 40) {
                                 VStack {
                                     TextField("Email", text: $viewModel.emailText)
                                         .frame(width: UIScreen.main.bounds.width - 92)
-                                        .font(.title2)
+                                        .font(.system(size: 20))
                                         .focused($isSecondTFFocused)
                                         .textInputAutocapitalization(.never)
                                         .onChange(of: viewModel.emailText) {
@@ -65,7 +65,7 @@ struct SignInView: View {
                                 VStack {
                                     SecureField(LocalizedStringKey("passwordTFPlaceholder"), text: $viewModel.passwordText)
                                         .frame(width: UIScreen.main.bounds.width - 92)
-                                        .font(.title2)
+                                        .font(.system(size: 20))
                                         .focused($isThirdTFFocused)
                                         .textInputAutocapitalization(.never)
                                         .onChange(of: viewModel.passwordText) {
@@ -136,8 +136,8 @@ struct SignInView: View {
                         .frame(width: UIScreen.main.bounds.width - 60, height: 50)
                         .background(Color(uiColor: .secondarySystemBackground))
                         .clipShape(RoundedRectangle(cornerRadius: 20))
-                        .font(.title2)
-                        .shadow(radius: viewModel.isButtonEnable ? 2 : 0)
+                        .font(.system(size: 20))
+                        .shadow(radius: viewModel.isButtonEnable ? 1 : 0)
                     }
                     .disabled(!viewModel.isButtonEnable)
                     .padding(.top, 10)
@@ -246,4 +246,8 @@ struct SignInView: View {
             }
         }
     }
+}
+
+#Preview {
+    SignInView(isWelcomeViewPresented: .constant(false))
 }

@@ -31,6 +31,12 @@ extension View {
                     .appearFrom(.bottomSlide)
                     .displayMode(.overlay)
             }
+            .sheet(isPresented: isLoadingPopupPresented, content: {
+                LoadingPopup()
+                    .presentationDetents([.height(150)])
+                    .presentationCornerRadius(30)
+                    .presentationDragIndicator(.visible)
+            })
             .popup(isPresented: isErrorPopupPresented) {
                 Text(viewModel.errorText)
                     .frame(width: UIScreen.main.bounds.width - 72, alignment: .leading)
@@ -162,14 +168,12 @@ extension View {
                     .autohideIn(5)
                     .displayMode(.overlay)
             }
-            .popup(isPresented: isLoadingPopupPresented) {
+            .sheet(isPresented: isLoadingPopupPresented, content: {
                 LoadingPopup()
-            } customize: {
-                $0
-                    .type(.toast)
-                    .appearFrom(.bottomSlide)
-                    .displayMode(.sheet)
-            }
+                    .presentationDetents([.height(150)])
+                    .presentationCornerRadius(30)
+                    .presentationDragIndicator(.visible)
+            })
     }
     
     func trackChangesOnLikedPosts(
@@ -289,16 +293,21 @@ extension View {
                     viewModel.mediaURLs = []
                     viewModel.mediaCount = 0
                     viewModel.mediaVersion = 0
+                    viewModel.mediaPosition = 0
                 }
             }
             .onChange(of: viewModel.isCreateViewPresented) {
                 if !viewModel.isCreateViewPresented {
                     viewModel.clearData()
+                } else {
+                    viewModel.isConfirmationPopupPresented = false
                 }
             }
             .onChange(of: viewModel.isPostCreateViewPresented) {
                 if !viewModel.isPostCreateViewPresented {
                     viewModel.clearData()
+                } else {
+                    viewModel.isConfirmationPopupPresented = false
                 }
             }
             .onChange(of: viewModel.id) {
@@ -475,27 +484,31 @@ extension View {
                     .autohideIn(5)
                     .displayMode(.overlay)
             }
-            .popup(isPresented: isLoadingPopupPresented) {
+            .sheet(isPresented: isLoadingPopupPresented, content: {
                 LoadingPopup()
-            } customize: {
-                $0
-                    .type(.toast)
-                    .appearFrom(.bottomSlide)
-                    .displayMode(.sheet)
-            }
-            .popup(isPresented: isConfirmationPopupPresented) {
-                ConfirmationView(
-                    addingMode: addingMode,
-                    popupType: .postType
-                )
-                .shadow(radius: 2)
-            } customize: {
-                $0
-                    .type(.toast)
-                    .appearFrom(.bottomSlide)
-                    .dragToDismiss(true)
-                    .displayMode(.sheet)
-            }
+                    .presentationDetents([.height(150)])
+                    .presentationCornerRadius(30)
+                    .presentationDragIndicator(.visible)
+            })
+//            .popup(isPresented: isConfirmationPopupPresented) {
+//                ConfirmationView(
+//                    addingMode: addingMode,
+//                    popupType: .postType
+//                )
+//                .shadow(radius: 2)
+//            } customize: {
+//                $0
+//                    .type(.toast)
+//                    .appearFrom(.bottomSlide)
+//                    .dragToDismiss(true)
+//                    .displayMode(.sheet)
+//            }
+            .sheet(isPresented: isConfirmationPopupPresented, content: {
+                ConfirmationView(addingMode: addingMode, popupType: .postType)
+                    .presentationDetents([.height(250)])
+                    .presentationCornerRadius(30)
+                    .presentationDragIndicator(.visible)
+            })
     }
 }
 

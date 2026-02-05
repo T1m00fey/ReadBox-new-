@@ -78,6 +78,7 @@ struct DBUser: Codable, Equatable {
     let fcmToken: String?
     let appVersion: String?
     let originalLanguage: String?
+    let avatarVersion: Int?
     
     init(auth: AuthDataResultModel) {
         self.userId = auth.uid
@@ -93,6 +94,7 @@ struct DBUser: Codable, Equatable {
         self.fcmToken = ""
         self.appVersion = ""
         self.originalLanguage = ""
+        self.avatarVersion = 0
     }
     
     init(
@@ -109,7 +111,8 @@ struct DBUser: Codable, Equatable {
         postsCount: Int? = nil,
         fcmToken: String? = nil,
         appVersion: String? = nil,
-        originalLanguage: String? = nil
+        originalLanguage: String? = nil,
+        avatarVersion: Int? = 0
     ) {
         self.userId = userId
         self.name = name
@@ -124,6 +127,7 @@ struct DBUser: Codable, Equatable {
         self.fcmToken = fcmToken
         self.appVersion = appVersion
         self.originalLanguage = originalLanguage
+        self.avatarVersion = avatarVersion
     }
     
     enum CodingKeys: String, CodingKey {
@@ -140,6 +144,38 @@ struct DBUser: Codable, Equatable {
         case fcmToken = "fcm_token"
         case appVersion = "app_version"
         case originalLanguage = "original_language"
+        case avatarVersion = "avatar_version"
+    }
+}
+
+struct ChannelInfo: Codable {
+    let id: String
+    let name: String?
+    let isCheckmark: Bool?
+    let avatarVersion: Int?
+    
+    init?(document: DocumentSnapshot) {
+        let data = document.data()
+        
+        guard
+            let id = data?["id"] as? String,
+            let name = data?["name"] as? String,
+            let isCheckmark = data?["is_checkmark"] as? Bool
+        else {
+            return nil
+        }
+        
+        self.id = id
+        self.name = name
+        self.isCheckmark = isCheckmark
+        self.avatarVersion = data?["avatarVersion"] as? Int
+    }
+    
+    enum CodingKeys: String, CodingKey {
+        case id = "id"
+        case name = "name"
+        case isCheckmark = "is_checkmark"
+        case avatarVersion = "avatar_version"
     }
 }
 
@@ -159,6 +195,7 @@ struct PrePost: Identifiable, Codable, Equatable, Hashable {
     var isShortPost: Bool?
     let mediaCount: Int?
     let mediaVersion: Int?
+    let mediaPosition: Int?
     
     init?(document: DocumentSnapshot) {
         let data = document.data()
@@ -183,6 +220,7 @@ struct PrePost: Identifiable, Codable, Equatable, Hashable {
         self.isShortPost = data?["is_short_post"] as? Bool
         self.mediaCount = data?["media_count"] as? Int
         self.mediaVersion = data?["media_version"] as? Int
+        self.mediaPosition = data?["media_position"] as? Int
     }
     
     init(
@@ -194,7 +232,8 @@ struct PrePost: Identifiable, Codable, Equatable, Hashable {
         isArchive: Bool? = nil,
         isShortPost: Bool?,
         mediaCount: Int?,
-        mediaVersion: Int?
+        mediaVersion: Int?,
+        mediaPosition: Int?
     ) {
         self.id = id
         self.title = title
@@ -205,6 +244,7 @@ struct PrePost: Identifiable, Codable, Equatable, Hashable {
         self.isShortPost = isShortPost
         self.mediaCount = mediaCount
         self.mediaVersion = mediaVersion
+        self.mediaPosition = mediaPosition
     }
     
     enum CodingKeys: String, CodingKey {
@@ -217,6 +257,7 @@ struct PrePost: Identifiable, Codable, Equatable, Hashable {
         case isShortPost = "is_short_post"
         case mediaCount = "media_count"
         case mediaVersion = "media_version"
+        case mediaPosition = "media_position"
     }
 }
 
@@ -229,6 +270,18 @@ struct PostToRead: Codable {
         case dateCreated = "date_created"
         case text = "text"
         case mediaURLs = "media_URLs"
+    }
+}
+
+struct PostAuthorInfo: Codable {
+    let name: String?
+    let isCheckmark: Bool?
+    let avatarVersion: Int?
+    
+    enum CodingKeys: String, CodingKey {
+        case name = "name"
+        case isCheckmark = "is_checkmark"
+        case avatarVersion = "avatar_version"
     }
 }
 
@@ -303,6 +356,14 @@ struct AppVersion: Codable {
     enum CodingKeys: String, CodingKey {
         case appVersion = "app_version"
         case isCritical = "is_critical"
+    }
+}
+
+struct AvatarVersion: Codable {
+    let avatarVersion: Int
+    
+    enum CodingKeys: String, CodingKey {
+        case avatarVersion = "avatar_version"
     }
 }
 

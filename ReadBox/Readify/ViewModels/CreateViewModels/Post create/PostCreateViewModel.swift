@@ -13,17 +13,20 @@ final class PostCreateViewModel: ObservableObject {
     @Published var text = ""
     @Published var isArchive = false
     @Published var imageItem: PhotosPickerItem? = nil
-    @Published var selectedLanguage: String = StorageManager.shared.getLanguage() ?? "en"
+    @Published var selectedLanguage = (StorageManager.shared.getLanguage() ?? "en") == "en" ? 0 : 1
+    @Published var selectedMediaPosition = 0
     @Published var addingMode = 0
     @Published var isLoading = false
     @Published var oldMediaCount = 0
     @Published var isCoverLoading = false
     @Published var imagePickerTask: Task<Void, Never>? = nil
+    @Published var avatarImage: UIImage? = nil
     
     @Published var errorText = ""
     @Published var isErrorPopupPresented = false
     
     @Published var isConfirmationPopupPresented = false
+    @Published var isPostSettingsPopupPresented = false
     
     // MARK: - Helpers for full delete (если где-то пригодится)
     
@@ -97,7 +100,8 @@ final class PostCreateViewModel: ObservableObject {
         title: String,
         isArchive: Bool,
         uploadingLanguage: String,
-        items: [MediaKind]
+        items: [MediaKind],
+        mediaPosition: Int
     ) async throws -> String {
         let id = try await ArticlesManager.shared.addNewPost(
             title: title,
@@ -105,7 +109,8 @@ final class PostCreateViewModel: ObservableObject {
             isArchive: isArchive,
             uploadingLanguage: uploadingLanguage,
             mediaCount: items.count,
-            isShortPost: true
+            isShortPost: true,
+            mediaPosition: mediaPosition
         )
         
         for i in 0..<items.count {
@@ -121,7 +126,8 @@ final class PostCreateViewModel: ObservableObject {
         title: String,
         isArchive: Bool,
         uploadingLanguage: String,
-        items: [MediaKind]
+        items: [MediaKind],
+        mediaPosition: Int
     ) async throws {
         StorageManager.shared.deleteCacheForPost(
             id: postId,
@@ -147,14 +153,14 @@ final class PostCreateViewModel: ObservableObject {
             try await uploadCover(media: media, postId: postId, index: i)
         }
 
-        // Обновляем метаданные поста
         try await ArticlesManager.shared.updatePost(
             id: postId,
             title: title,
             text: "",
             isArchive: isArchive,
             uploadingLanguage: uploadingLanguage,
-            mediaCount: items.count
+            mediaCount: items.count,
+            mediaPosition: mediaPosition
         )
 
         if oldMediaCount > items.count {

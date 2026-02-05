@@ -22,8 +22,10 @@ final class FeedViewModel: ObservableObject {
     @Published var likedPosts: [String] = []
     @Published var primaryLanguage = ""
     @Published var loadCount = 0
-    @Published var authorsNames: [String: String] = [:]
-    @Published var authorsCheckmarks: [String: Bool] = [:]
+//    @Published var authorsNames: [String: String] = [:]
+//    @Published var authorsCheckmarks: [String: Bool] = [:]
+//    @Published var authorsAvaVersion: [String: Int] = [:]
+    @Published var authorsInfo: [String: PostAuthorInfo] = [:]
     @Published var isChannelViewPresented = false
     @Published var isLoading = true
     @Published var height: CGFloat = 0.0
@@ -36,6 +38,8 @@ final class FeedViewModel: ObservableObject {
     @Published var lastDocument: DocumentSnapshot? = nil
     @Published var isZoomableImageViewPresented = false
     @Published var zoomableImage: UIImage? = nil
+    
+    @Published var isLargeHeaderVisible = true
 //    @Published var isUpdatePopupDidPresneted = false
     @Published var authorId = ""
     
@@ -51,6 +55,7 @@ final class FeedViewModel: ObservableObject {
     var isArchive = false
     var mediaCount = 0
     var mediaVersion = 0
+    var mediaPosition = 0
     
     private var db = Firestore.firestore()
     
@@ -110,8 +115,7 @@ final class FeedViewModel: ObservableObject {
             topArticlesIndexes = []
             topArticles = []
             articles = []
-            authorsNames = [:]
-            authorsCheckmarks = [:]
+            authorsInfo = [:]
             lastDocument = nil
             user = nil
         }                
@@ -160,7 +164,8 @@ final class FeedViewModel: ObservableObject {
                                     likesCount: 0,
                                     isShortPost: false,
                                     mediaCount: 0,
-                                    mediaVersion: 2
+                                    mediaVersion: 2,
+                                    mediaPosition: 0
                                 )
                             )
                         }
@@ -184,7 +189,8 @@ final class FeedViewModel: ObservableObject {
                                 likesCount: 0,
                                 isShortPost: false,
                                 mediaCount: 0,
-                                mediaVersion: 2
+                                mediaVersion: 2,
+                                mediaPosition: 0
                             )
                         )
                         
@@ -201,7 +207,8 @@ final class FeedViewModel: ObservableObject {
                             likesCount: 0,
                             isShortPost: false,
                             mediaCount: 0,
-                            mediaVersion: 2
+                            mediaVersion: 2,
+                            mediaPosition: 0
                         )
                     )
                 }
@@ -255,15 +262,13 @@ final class FeedViewModel: ObservableObject {
     }
     
     func onPostAppearing(post: PrePost) {
-        if !authorsNames.keys.contains(post.authorId ?? "") {
+        if !authorsInfo.keys.contains(post.authorId ?? "") {
             Task {
                 do {
-                    let authorName = try await getAuthorName(id: post.authorId ?? "")
-                    let isCheckmark = try await getAuthorIsCheckmarkStatus(id: post.authorId ?? "")
+                    let info = try await UserManager.shared.getPostAuthorInfo(for: post.authorId ?? "")
                     
                     withAnimation {
-                        authorsNames[post.authorId ?? ""] = authorName
-                        authorsCheckmarks[post.authorId ?? ""] = isCheckmark
+                        authorsInfo[post.authorId ?? ""] = info
                     }
                 } catch {
                     //                                                    withAnimation {
@@ -287,14 +292,12 @@ final class FeedViewModel: ObservableObject {
         if let isShort = post.isShortPost {
             if isShort {
                 if user?.userId ?? "" != post.authorId {
-                    if !views.contains(post.id) {
-                        Task {
-                            do {
-                                try await ArticlesManager.shared.updateViews(at: post.id)
-                                
-                                views.append(post.id)
-                                saveViews()
-                            }
+                    Task {
+                        do {
+                            try await ArticlesManager.shared.updateViews(at: post.id)
+                            
+                            views.append(post.id)
+                            saveViews()
                         }
                     }
                 }
@@ -312,6 +315,7 @@ final class FeedViewModel: ObservableObject {
         isArchive = post.isArchive ?? true
         mediaCount = post.mediaCount ?? 1
         mediaVersion = post.mediaVersion ?? 1
+        mediaPosition = post.mediaPosition ?? 0
         
         if post.isArchive ?? true {
             image = UIImage()

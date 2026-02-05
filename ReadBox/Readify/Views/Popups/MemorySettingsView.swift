@@ -48,11 +48,6 @@ struct MemorySettingsView: View {
     
     var body: some View {
         VStack {
-            Capsule()
-                .frame(width: 25, height: 5)
-                .foregroundStyle(Color.gray)
-                .padding(.top, 5)
-            
             Text(LocalizedStringKey("memorySettingsLabel"))
                 .font(.title)
                 .fontWeight(.light)
@@ -62,7 +57,7 @@ struct MemorySettingsView: View {
             ZStack {
                 RoundedRectangle(cornerRadius: 20)
                     .foregroundStyle(Color(uiColor: .systemBackground))
-                    .shadow(radius: 2)
+                    .shadow(radius: 1)
                 
                 HStack {
                     Image(systemName: "archivebox")
@@ -84,7 +79,7 @@ struct MemorySettingsView: View {
                 ZStack {
                     RoundedRectangle(cornerRadius: 20)
                         .foregroundStyle(Color(uiColor: .systemBackground))
-                        .shadow(radius: 2)
+                        .shadow(radius: 1)
                     
                     HStack {
                         Image(systemName: "minus.circle")
@@ -108,13 +103,9 @@ struct MemorySettingsView: View {
                 }
             }
             .frame(width: UIScreen.main.bounds.width - 32, height: 60)
-            .padding(.bottom, 150)
+            .padding(.bottom, 50)
             
         }
-        .frame(width: UIScreen.main.bounds.width)
-        .frame(minHeight: 100)
-        .background(Color(uiColor: .secondarySystemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 30))
     }
 }
 

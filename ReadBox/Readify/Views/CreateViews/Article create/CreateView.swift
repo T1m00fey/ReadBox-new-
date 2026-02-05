@@ -75,7 +75,7 @@ struct CreateView: View {
                                     .foregroundStyle(.gray)
                                     .frame(width: UIScreen.main.bounds.width - 36, alignment: .leading)
                                 
-                                CustomSegmentedControl(selectedLanguage: $viewModel.languageSelection)
+//                                CustomSegmentedControl(selectedLanguage: $viewModel.languageSelection)
                             }
                             .padding(.top, 20)
                         }

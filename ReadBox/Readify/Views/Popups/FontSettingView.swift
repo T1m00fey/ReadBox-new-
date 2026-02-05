@@ -13,14 +13,10 @@ struct FontSettingView: View {
     @Binding var isSuccessPopupPresented: Bool
     
     @State private var fontSize: Double = 0
+    @State private var startFontSize = 0
     
     var body: some View {
         VStack {
-            Capsule()
-                .frame(width: 25, height: 5)
-                .foregroundStyle(Color.gray)
-                .padding(.top, 5)
-            
             Text("\(NSLocalizedString("fontLabel", comment: "")): \(Int(fontSize))")
                 .font(.title)
                 .fontWeight(.light)
@@ -43,29 +39,27 @@ struct FontSettingView: View {
                 .foregroundStyle(Color(uiColor: .label))
                 .frame(width: UIScreen.main.bounds.width - 32, height: 50)
                 .tint(Color(uiColor: .label))
-                .padding(.bottom, 150)
+                .padding(.bottom, 100)
         }
         .onAppear {
-            fontSize = Double(StorageManager.shared.getFontSize())
+            startFontSize = StorageManager.shared.getFontSize()
+            fontSize = Double(startFontSize)
             
-            if fontSize == 0 {
+            if startFontSize == 0 {
                 fontSize = 18
+                startFontSize = 18
                 StorageManager.shared.setFont(size: 18)
             }
         }
-        .onChange(of: isPopupPresented) {
-            if !isPopupPresented {
-                if StorageManager.shared.getFontSize() != Int(fontSize) {
-                    StorageManager.shared.setFont(size: Int(fontSize))
-                    successText = NSLocalizedString("fontSizeChangedAlert", comment: "")
-                    isSuccessPopupPresented = true
-                }
+        .onDisappear {
+            print("FFFFF: \(startFontSize)")
+            print("FFFFF: \(fontSize)")
+            if startFontSize != Int(fontSize) {
+                StorageManager.shared.setFont(size: Int(fontSize))
+                successText = NSLocalizedString("fontSizeChangedAlert", comment: "")
+                isSuccessPopupPresented = true
             }
         }
-        .frame(width: UIScreen.main.bounds.width)
-        .frame(minHeight: 100)
-        .background(Color(uiColor: .secondarySystemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 30))
     }
 }
 

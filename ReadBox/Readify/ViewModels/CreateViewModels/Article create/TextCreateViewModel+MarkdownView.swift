@@ -383,7 +383,8 @@ final class TextCreateViewModel: ObservableObject {
             isArchive: isArchive,
             uploadingLanguage: uploadingLanguage,
             mediaCount: items.count,
-            isShortPost: false
+            isShortPost: false,
+            mediaPosition: 0
         )
         
         for i in 0..<items.count {
@@ -441,15 +442,15 @@ final class TextCreateViewModel: ObservableObject {
 
             try await uploadCover(media: media, postId: id, index: i)
         }
-
-        try await ArticlesManager.shared.updatePost(
-            id: id,
-            title: title,
-            text: textFixed,
-            isArchive: isArchive,
-            uploadingLanguage: uploadingLanguage,
-            mediaCount: items.count
-        )
+//
+//        try await ArticlesManager.shared.updatePost(
+//            id: id,
+//            title: title,
+//            text: textFixed,
+//            isArchive: isArchive,
+//            uploadingLanguage: uploadingLanguage,
+//            mediaCount: items.count
+//        )
         
         // удаляем "хвост" старых медиа, если их стало меньше
         if oldMediaCount > items.count {

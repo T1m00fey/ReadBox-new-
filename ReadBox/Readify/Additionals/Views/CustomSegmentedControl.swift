@@ -7,13 +7,30 @@
 
 import SwiftUI
 
+enum SegmentedTypes {
+    case language
+    case postCreateSettings
+}
+
 struct CustomSegmentedControl: View {
-    @Binding var selectedLanguage: String
+    @Binding var selected: Int
+    let type: SegmentedTypes
     
-    private var titles = ["En", "Ru"]
+    var titles: [String] {
+        switch type {
+        case .language:
+            ["En", "Ru"]
+        case .postCreateSettings:
+            ["Сверху", "Снизу"]
+        }
+    }
     
-    init(selectedLanguage: Binding<String>) {
-        self._selectedLanguage = selectedLanguage
+    init(
+        selected: Binding<Int>,
+        type: SegmentedTypes = .language
+    ) {
+        self._selected = selected
+        self.type = type
     }
     
     var body: some View {
@@ -21,20 +38,20 @@ struct CustomSegmentedControl: View {
             RoundedRectangle(cornerRadius: 16)
                 .frame(width: (UIScreen.main.bounds.width - 32) / 2, height: 45)
                 .foregroundStyle(Color(.label))
-                .offset(x: selectedLanguage == "en" ? -UIScreen.main.bounds.width / 4 + 10 : UIScreen.main.bounds.width / 4 - 10)
+                .offset(x: selected == 0 ? -UIScreen.main.bounds.width / 4 + 10 : UIScreen.main.bounds.width / 4 - 10)
             
             HStack(spacing: 0) {
-                ForEach(titles, id: \.self) { title in
-                    Text(title)
+                ForEach(0..<2, id: \.self) { i in
+                    Text(titles[i])
                         .font(
                             .system(
-                                size: isSelected(title) ? 25 : 18,
+                                size: isSelected(i) ? 25 : 18,
                                 weight: .light,
                                 design: .rounded
                             )
                         )
                         .foregroundStyle(
-                            isSelected(title)
+                            isSelected(i)
                             ? Color(.secondarySystemBackground)
                             : Color(.label)
                         )
@@ -47,7 +64,7 @@ struct CustomSegmentedControl: View {
                         .clipShape(RoundedRectangle(cornerRadius: 16))
                         .onTapGesture {
                             withAnimation {
-                                selectedLanguage = title.lowercased()
+                                selected = i
                             }
                         }
                     
@@ -57,8 +74,8 @@ struct CustomSegmentedControl: View {
         }
     }
     
-    private func isSelected(_ title: String) -> Bool {
-        title.lowercased() == selectedLanguage
+    private func isSelected(_ i: Int) -> Bool {
+        selected == i
         ? true
         : false
     }

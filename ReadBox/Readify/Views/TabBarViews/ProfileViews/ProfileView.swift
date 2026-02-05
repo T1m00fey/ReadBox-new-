@@ -27,40 +27,40 @@ struct ProfileView: View {
                         Color.clear.frame(height: 60)
                         
                         VStack {
-                            if let user = viewModel.user, !((user.subscribes ?? []).isEmpty) {
-                                NavigationLink {
-                                    SubscribesView(
-                                        user: $viewModel.user
-                                    )
-                                } label: {
-                                    ZStack {
-                                        RoundedRectangle(cornerRadius: 20)
-                                            .frame(width: UIScreen.main.bounds.width - 32)
-                                            .foregroundStyle(Color(.secondarySystemBackground))
-                                            .shadow(radius: 1)
-                                        
-                                        HStack {
-                                            Image(systemName: "bookmark.circle")
-                                                .font(.system(size: 35))
-                                                .foregroundStyle(Color.gray)
-                                            
-                                            Text(NSLocalizedString("yourSubscribesLabel", comment: ""))
-                                                .font(.system(size: 23))
-                                                .fontWeight(.light)
-                                                .fontDesign(.rounded)
-                                            
-                                            Spacer()
-                                            
-                                            Image(systemName: "chevron.right")
-                                                .font(.system(size: 25))
-                                                .foregroundStyle(Color.gray)
-                                        }
-                                        .frame(width: UIScreen.main.bounds.width - 64)
-                                        .padding(.vertical, 10)
-                                    }
-                                }
-                                .padding(.top, 10)
-                            }
+//                            if let user = viewModel.user, !((user.subscribes ?? []).isEmpty) {
+//                                NavigationLink {
+//                                    SubscribesView(
+//                                        user: $viewModel.user
+//                                    )
+//                                } label: {
+//                                    ZStack {
+//                                        RoundedRectangle(cornerRadius: 20)
+//                                            .frame(width: UIScreen.main.bounds.width - 32)
+//                                            .foregroundStyle(Color(.secondarySystemBackground))
+//                                            .shadow(radius: 1)
+//                                        
+//                                        HStack {
+//                                            Image(systemName: "bookmark.circle")
+//                                                .font(.system(size: 35))
+//                                                .foregroundStyle(Color.gray)
+//                                            
+//                                            Text(NSLocalizedString("yourSubscribesLabel", comment: ""))
+//                                                .font(.system(size: 23))
+//                                                .fontWeight(.light)
+//                                                .fontDesign(.rounded)
+//                                            
+//                                            Spacer()
+//                                            
+//                                            Image(systemName: "chevron.right")
+//                                                .font(.system(size: 25))
+//                                                .foregroundStyle(Color.gray)
+//                                        }
+//                                        .frame(width: UIScreen.main.bounds.width - 64)
+//                                        .padding(.vertical, 10)
+//                                    }
+//                                }
+//                                .padding(.top, 10)
+//                            }
                             
                             Text(LocalizedStringKey("settingsLabel"))
                                 .font(.system(size: 25))

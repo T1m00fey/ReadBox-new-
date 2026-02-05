@@ -40,25 +40,43 @@ struct VersionPopupView: View {
                     .padding(.bottom, 20)
             }
             
-            Button {
-                openURL(
-                    URL(
-                        string: "https://apps.apple.com/ru/app/readbox-%D1%81%D1%82%D0%B0%D1%82%D1%8C%D0%B8-%D0%B8-%D0%B8%D1%81%D1%82%D0%BE%D1%80%D0%B8%D0%B8/id6745975985"
-                    )!
-                )
-            } label: {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 10)
-                        .frame(width: UIScreen.main.bounds.width - 40, height: 50)
-                        .foregroundStyle(Color(uiColor: .systemBackground))
-                        .shadow(radius: 2)
-                    
+            if #available(iOS 26, *) {
+                Button {
+                    openURL(
+                        URL(
+                            string: "https://apps.apple.com/ru/app/readbox-%D1%81%D1%82%D0%B0%D1%82%D1%8C%D0%B8-%D0%B8-%D0%B8%D1%81%D1%82%D0%BE%D1%80%D0%B8%D0%B8/id6745975985"
+                        )!
+                    )
+                } label: {
                     Text(NSLocalizedString("updateLabel", comment: ""))
-                        .font(.title2)
-                        .foregroundStyle(Color(uiColor: .label))
+                        .font(.system(size: 20))
+                        .foregroundStyle(Color(uiColor: .systemBackground))
+                        .frame(width: UIScreen.main.bounds.width - 80)
                 }
+                .tint(Color(.label))
+                .buttonStyle(.glassProminent)
+                .padding(.bottom, 50)
+            } else {
+                Button {
+                    openURL(
+                        URL(
+                            string: "https://apps.apple.com/ru/app/readbox-%D1%81%D1%82%D0%B0%D1%82%D1%8C%D0%B8-%D0%B8-%D0%B8%D1%81%D1%82%D0%BE%D1%80%D0%B8%D0%B8/id6745975985"
+                        )!
+                    )
+                } label: {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 10)
+                            .frame(width: UIScreen.main.bounds.width - 40, height: 50)
+                            .foregroundStyle(Color(uiColor: .systemBackground))
+                            .shadow(radius: 1)
+                        
+                        Text(NSLocalizedString("updateLabel", comment: ""))
+                            .font(.system(size: 20))
+                            .foregroundStyle(Color(uiColor: .label))
+                    }
+                }
+                .padding(.bottom, 50)
             }
-            .padding(.bottom, 50)
             
         }
         .frame(width: UIScreen.main.bounds.width)

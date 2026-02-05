@@ -294,16 +294,22 @@ struct TextCreateView: View {
                     ZoomableImageView(imageURL: url)
                 }
             }
-            .popup(isPresented: $viewModel.isConfirmationViewPresented) {
+//            .popup(isPresented: $viewModel.isConfirmationViewPresented) {
+//                ConfirmationView(addingMode: $viewModel.addingMode)
+//                .shadow(radius: 3)
+//            } customize: {
+//                $0
+//                    .type(.toast)
+//                    .appearFrom(.bottomSlide)
+//                    .dragToDismiss(true)
+//                    .displayMode(.sheet)
+//            }
+            .sheet(isPresented: $viewModel.isConfirmationViewPresented, content: {
                 ConfirmationView(addingMode: $viewModel.addingMode)
-                .shadow(radius: 3)
-            } customize: {
-                $0
-                    .type(.toast)
-                    .appearFrom(.bottomSlide)
-                    .dragToDismiss(true)
-                    .displayMode(.sheet)
-            }
+                    .presentationDetents([.height(250)])
+                    .presentationCornerRadius(30)
+                    .presentationDragIndicator(.visible)
+            })
             .onChange(of: viewModel.addingMode) {
                 hudService.showLoading()
                 isCreateViewPresented = false

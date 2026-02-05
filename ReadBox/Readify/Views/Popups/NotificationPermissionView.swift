@@ -14,17 +14,6 @@ struct NotificationPermissionView: View {
     
     var body: some View {
         VStack(spacing: 15) {
-            Capsule()
-                .frame(width: 25, height: 5)
-                .foregroundStyle(Color.gray)
-                .padding(.top, 5)
-            
-//            Image(systemName: "bell.badge")
-//                .resizable()
-//                .scaledToFit()
-//                .frame(width: 70)
-//                .foregroundStyle(Color.gray)
-            
             HStack {
                 Text(NSLocalizedString("notificationLabel", comment: ""))
                     .font(.system(size: 27))
@@ -43,7 +32,7 @@ struct NotificationPermissionView: View {
                 .font(.system(size: 19))
                 .fontDesign(.rounded)
                 .fontWeight(.light)
-                .frame(width: UIScreen.main.bounds.width - 32)
+                .frame(width: UIScreen.main.bounds.width - 32, alignment: .leading)
                 .padding(.bottom, 10)
             
             VStack(spacing: 10) {
@@ -90,12 +79,7 @@ struct NotificationPermissionView: View {
                         .foregroundStyle(Color.gray)
                 }
             }
-            .padding(.bottom, 50)
         }
-        .frame(width: UIScreen.main.bounds.width)
-        .frame(minHeight: 100)
-        .background(Color(uiColor: .secondarySystemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 30))        
     }
 }
 

@@ -25,6 +25,32 @@ struct PostView: View {
     
     @EnvironmentObject var hudService: HUDService
     
+    @ViewBuilder
+    private func getMediaCount() -> some View {
+        if #available(iOS 26, *) {
+            Text("\(mediaCount)")
+//                .fontDesign(.rounded)
+//                .fontWeight(.bold)
+                .foregroundStyle(Color.gray)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 5)
+                .glassEffect(.regular, in: Circle())
+                .offset(x: 10)
+                .offset(y: 2)
+                .opacity(mediaCount > 1 ? 1 : 0)
+        } else {
+            Text("\(mediaCount)")
+//                .fontDesign(.rounded)
+                .fontWeight(.bold)
+                .foregroundStyle(Color.gray)
+                .padding(.all, 10)
+                .background(Color(.systemBackground))
+                .clipShape(Circle())
+                .offset(x: 10)
+                .opacity(mediaCount > 1 ? 1 : 0)
+        }
+    }
+    
     private func makeVideoThumbnail(url: URL) async -> UIImage? {
         let asset = AVURLAsset(url: url)
         _ = try? await asset.load(.duration)
@@ -168,7 +194,6 @@ struct PostView: View {
             RoundedRectangle(cornerRadius: 20)
                 .frame(width: UIScreen.main.bounds.width - 10)
                 .foregroundStyle(Color(uiColor: .secondarySystemBackground))
-                .shadow(radius: 1)
             
             HStack {
                 if let image = image {
@@ -180,6 +205,7 @@ struct PostView: View {
                             .clipped()
                             .clipShape(RoundedRectangle(cornerRadius: 20))
                             .padding(.vertical, 10)
+                            .id("\(id)")
                         
                         if isVideo {
                             Image(systemName: "play.fill")
@@ -190,15 +216,7 @@ struct PostView: View {
                         }
                     }
                     .overlay(
-                        Text("\(mediaCount)")
-                            .fontDesign(.rounded)
-                            .fontWeight(.bold)
-                            .foregroundStyle(Color.gray)
-                            .padding(.all, 10)
-                            .background(Color(.systemBackground))
-                            .clipShape(Circle())
-                            .offset(x: 10)
-                            .opacity(mediaCount > 1 ? 1 : 0),
+                        getMediaCount(),
                         alignment: .topTrailing
                     )
                 }
@@ -206,7 +224,7 @@ struct PostView: View {
                 VStack {
                     HStack {
                         Text(title)
-                            .font(.title3)
+                            .font(.system(size: 18))
                             .fontDesign(.rounded)
                             .lineLimit(3)
                         

@@ -35,20 +35,19 @@ struct SignUpView: View {
                         RoundedRectangle(cornerRadius: 30)
                             .foregroundStyle(Color(uiColor: .secondarySystemBackground))
                             .frame(width: UIScreen.main.bounds.width - 60, height: 330)
-                            .shadow(radius: 2)
+                            .shadow(radius: 1)
                         
                         VStack {
                             Text(LocalizedStringKey("signUpLabel"))
-                            
                                 .fontWeight(.light)
-                                .font(.title)
+                                .font(.system(size: 26))
                                 .padding(.top, 30)
                             
                             VStack(spacing: 40) {
                                 VStack {
                                     TextField(LocalizedStringKey("nameTFPlaceholder"), text: $viewModel.nameText)
                                         .frame(width: UIScreen.main.bounds.width - 92)
-                                        .font(.title2)
+                                        .font(.system(size: 20))
                                         .focused($isFirstTFFocused)
                                         .textInputAutocapitalization(.never)
                                         .onChange(of: viewModel.nameText) {
@@ -66,7 +65,7 @@ struct SignUpView: View {
                                 VStack {
                                     TextField("Email", text: $viewModel.emailText)
                                         .frame(width: UIScreen.main.bounds.width - 92)
-                                        .font(.title2)
+                                        .font(.system(size: 20))
                                         .focused($isSecondTFFocused)
                                         .textInputAutocapitalization(.never)
                                         .onChange(of: viewModel.emailText) {
@@ -84,7 +83,7 @@ struct SignUpView: View {
                                 VStack {
                                     SecureField(LocalizedStringKey("passwordTFPlaceholder"), text: $viewModel.passwordText)
                                         .frame(width: UIScreen.main.bounds.width - 92)
-                                        .font(.title2)
+                                        .font(.system(size: 20))
                                         .focused($isThirdTFFocused)
                                         .textInputAutocapitalization(.never)
                                         .onChange(of: viewModel.passwordText) {
@@ -154,8 +153,8 @@ struct SignUpView: View {
                         .frame(width: UIScreen.main.bounds.width - 60, height: 50)
                         .background(Color(uiColor: .secondarySystemBackground))
                         .clipShape(RoundedRectangle(cornerRadius: 20))
-                        .font(.title2)
-                        .shadow(radius: viewModel.isButtonEnable ? 2 : 0)
+                        .font(.system(size: 20))
+                        .shadow(radius: viewModel.isButtonEnable ? 1 : 0)
                     }
                     .disabled(!viewModel.isButtonEnable)
                     

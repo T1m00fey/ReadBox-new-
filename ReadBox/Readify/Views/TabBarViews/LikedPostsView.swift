@@ -38,6 +38,8 @@ struct LikedPostsView: View {
                                     isShortPost: false,
                                     mediaCount: 0,
                                     mediaVersion: 2,
+                                    mediaPosition: 0,
+                                    lastVersionOfAvatar: 0,
                                     user: .constant(nil),
                                     isZoomableViewPresented: .constant(false),
                                     zoomableImage: .constant(nil),
@@ -76,19 +78,21 @@ struct LikedPostsView: View {
                                     id: article.id,
                                     title: article.title ?? "",
                                     authorId: article.authorId ?? "",
-                                    authorName: viewModel.authorsNames[article.authorId ?? ""] ?? "",
-                                    isCheckmark: viewModel.authorsCheckmarks[article.authorId ?? ""] ?? false,
+                                    authorName: viewModel.authorsInfo[article.authorId ?? ""]?.name ?? "",
+                                    isCheckmark: viewModel.authorsInfo[article.authorId ?? ""]?.isCheckmark ?? false,
                                     isArchive: article.isArchive ?? false,
                                     isShortPost: article.isShortPost ?? false,
                                     mediaCount: article.mediaCount ?? 1,
                                     mediaVersion: article.mediaVersion ?? 1,
+                                    mediaPosition: article.mediaPosition ?? 0,
+                                    lastVersionOfAvatar: viewModel.authorsInfo[article.authorId ?? ""]?.avatarVersion ?? 0,
                                     user: $viewModel.user,
                                     isZoomableViewPresented: $viewModel.isZoomableViewPresented,
                                     zoomableImage: $viewModel.zoomableImage,
                                     selectedAuthorId: $viewModel.authorId,
                                     isChannelViewPresented: $viewModel.isChannelViewPresented
                                 )
-                                .padding(.top, 20)
+                                .padding(.top, 12)
                                 .padding(.horizontal)
                                 .onAppear {
                                     viewModel.onPostAppearing(article)
@@ -150,21 +154,25 @@ struct LikedPostsView: View {
                         dateCreated: viewModel.dateCreated,
                         likesCount: viewModel.likesCount,
                         authorId: viewModel.authorId,
-                        authorName: viewModel.authorsNames[viewModel.authorId] ?? "",
-                        isCheckmark: viewModel.authorsCheckmarks[viewModel.authorId] ?? false,
+                        authorName: viewModel.authorsInfo[viewModel.authorId]?.name ?? "",
+                        isCheckmark: viewModel.authorsInfo[viewModel.authorId]?.isCheckmark ?? false,
                         isArchive: viewModel.isArchive,
                         mediaCount: viewModel.mediaCount,
                         mediaVersion: viewModel.mediaVersion,
+                        mediaPosition: viewModel.mediaPosition,
+                        lastVersionOfAvatar: viewModel.authorsInfo[viewModel.authorId]?.avatarVersion ?? 0,
                         user: $viewModel.user,
-                        isChannelViewPresented: $viewModel.isChannelViewPresented
+                        isChannelViewPresented: $viewModel.isChannelViewPresented,
+                        isPresented: $viewModel.isReadViewPresented
                     )
                 })
-                .fullScreenCover(isPresented: $viewModel.isChannelViewPresented, content: {
+                .navigationDestination(isPresented: $viewModel.isChannelViewPresented, destination: {
                     ChannelView(
                         user: $viewModel.user,
                         authorId: viewModel.authorId,
-                        authorName: viewModel.authorsNames[viewModel.authorId] ?? NSLocalizedString("notFoundLabel", comment: ""),
-                        isCheckmark: viewModel.authorsCheckmarks[viewModel.authorId] ?? false
+                        authorName: viewModel.authorsInfo[viewModel.authorId]?.name ?? NSLocalizedString("notFoundLabel", comment: ""),
+                        isCheckmark: viewModel.authorsInfo[viewModel.authorId]?.isCheckmark ?? false,
+                        lastVersionOfAvatar: viewModel.authorsInfo[viewModel.authorId]?.avatarVersion ?? 0
                     )
                 })
                 .fullScreenCover(isPresented: $viewModel.isZoomableViewPresented, content: {

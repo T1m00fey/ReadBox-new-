@@ -81,6 +81,24 @@ final class UserManager {
         try await userDocument(userId: userId)?.updateData(data)
     }
     
+    func getAvatarVersion(id: String) async throws -> Int? {
+        if id != "" {
+            return try await userDocument(userId: id)?.getDocument(as: AvatarVersion.self).avatarVersion ?? 0
+        } else { return nil }
+    }
+    
+    func setAvatarVersion(id: String, lastVersion: Int) async throws {
+        let data: [String: Any] = [
+            "avatar_version": lastVersion + 1
+        ]
+        
+        try await userDocument(userId: id)?.updateData(data)
+    }
+    
+    func getPostAuthorInfo(for id: String) async throws -> PostAuthorInfo? {
+        try await userDocument(userId: id)?.getDocument(as: PostAuthorInfo.self)
+    }
+    
     func getAuthorName(id: String) async throws -> String? {
         if id != "" {
             return try await userDocument(userId: id)?.getDocument(as: AuthorName.self).name

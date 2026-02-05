@@ -20,6 +20,8 @@ struct ArticleView: View {
     let isShortPost: Bool
     let mediaCount: Int
     let mediaVersion: Int
+    let mediaPosition: Int
+    let lastVersionOfAvatar: Int
     
     @Binding var user: DBUser?
     @Binding var isZoomableViewPresented: Bool
@@ -50,6 +52,8 @@ struct ArticleView: View {
         isShortPost: Bool,
         mediaCount: Int,
         mediaVersion: Int,
+        mediaPosition: Int,
+        lastVersionOfAvatar: Int,
         user: Binding<DBUser?>,
         isZoomableViewPresented: Binding<Bool>,
         zoomableImage: Binding<UIImage?>,
@@ -65,116 +69,14 @@ struct ArticleView: View {
         self.isShortPost = isShortPost
         self.mediaCount = mediaCount
         self.mediaVersion = mediaVersion
+        self.mediaPosition = mediaPosition
+        self.lastVersionOfAvatar = lastVersionOfAvatar
         self._user = user
         self._isZoomableViewPresented = isZoomableViewPresented
         self._zoomableImage = zoomableImage
         self._selectedAuthorId = selectedAuthorId
         self._isChannelViewPresented = isChannelViewPresented
     }
-    
-    private func getAvatar() {
-        let cacheKey = "avatar_\(authorId)"
-        let storageRef = Storage.storage().reference()
-
-        let currentSessionId = sessionManager.sessionId
-        let lastSessionId = StorageManager.shared.getSessionId()
-        let isSameSession = (lastSessionId == currentSessionId)
-
-        if let cached = StorageManager.shared.getImage(id: cacheKey) {
-            withAnimation {
-                avatarImage = cached
-            }
-        }
-
-        if isSameSession, avatarImage != nil {
-            return
-        }
-
-        let islandRef = storageRef.child("avatars/\(authorId).jpg")
-
-        islandRef.getData(maxSize: 1 * 5012 * 5012) { data, error in
-            guard let data, let image = UIImage(data: data) else { return }
-
-            DispatchQueue.main.async {
-                withAnimation {
-                    avatarImage = image
-                }
-                StorageManager.shared.saveImage(id: cacheKey, image: image)
-
-                if !isSameSession {
-                    StorageManager.shared.setSessionId(currentSessionId)
-                }
-            }
-        }
-    }
-
-    
-//    private func fetchImages() {
-//        let storageRef = Storage.storage().reference()
-//        
-//        images = Array(repeating: nil, count: mediaCount)
-//        
-//        for i in 0..<mediaCount {
-//            let cachedImage = StorageManager.shared.getImage(id: "\(id)_\(i)")
-//            
-//            if let cachedImage {
-//                withAnimation {
-////                    images.append(MediaKind(image: cachedImage))
-//                    images[i] = MediaKind(image: cachedImage)
-//                }
-//            } else {
-//                let islandRef = storageRef.child("images/\(id)_\(i).jpg")
-//                
-//                islandRef.getData(maxSize: 1 * 5012 * 5012) { data, error in
-//                    if let data, let image = UIImage(data: data) {
-//                        DispatchQueue.main.async {
-//                            withAnimation {
-//                                //                            images.append(MediaKind(image: image))
-//                                images[i] = MediaKind(image: image)
-//                                StorageManager.shared.saveImage(id: "\(id)_\(i)", image: image)
-//                            }
-//                        }
-//                    } else {
-//                        let videoRef = storageRef.child("images/\(id)_\(i).mp4")
-//                        
-//                        videoRef.downloadURL { url, error in
-//                            if let url {
-//                                DispatchQueue.main.async {
-//                                    withAnimation {
-////                                        images.append(MediaKind(videoURL: url))
-//                                        images[i] = MediaKind(videoURL: url)
-//                                    }
-//                                }
-//                            }
-//                        }
-//                    }
-//                }
-//            }
-//        }
-//        
-//        if let image = StorageManager.shared.getImage(id: authorId) {
-//            withAnimation {
-//                avatarImage = image
-//            }
-//        } else {
-//            DispatchQueue.main.async {
-//                let islandRef = storageRef.child("avatars/\(authorId).jpg")
-//                
-//                islandRef.getData(maxSize: 1 * 5012 * 5012) { data, error in
-//                    if let data, let image = UIImage(data: data) {
-//                        withAnimation {
-//                            avatarImage = image
-//                        }
-//                        StorageManager.shared.saveImage(id: authorId, image: image)
-//                    }
-//                }
-//            }
-//        }
-//        
-//        if images.isEmpty {
-//            fetchImage()
-//        }
-//    }
     
     private func updateLike() async throws {
         let likesCount = try await ArticlesManager.shared.getLikesCount(byPostId: id)
@@ -231,12 +133,13 @@ struct ArticleView: View {
                                 isZoomableViewPresented = true
                             }
                         }
+                        .id("\(id)")
                 }
                 
                 HStack(spacing: 5) {
                     HStack(spacing: 0) {
                         Text(authorName)
-                            .font(.system(size: 20))
+                            .font(.system(size: 18))
                             .lineLimit(1)
                             .underline()
                             .onTapGesture {
@@ -268,6 +171,10 @@ struct ArticleView: View {
             .padding(.top, 7)
             .padding(.vertical, 5)
             
+            if mediaPosition == 1 && isShortPost {
+                titleView
+            }
+            
             if mediaCount > 0 {
                 MediaViews(
                     id: id,
@@ -280,24 +187,34 @@ struct ArticleView: View {
                     currentIndex: $currentIndex
                 )
                 .id("\(id)-\(effectiveMediaCount)")
+//                .padding(.top, isChannelViewPresented ? 9 : 0)
+                .padding(.bottom, title == "" || (mediaPosition == 1 && isShortPost) ? 10 : 0)
+                
             }
             
             ZStack {
                 VStack(spacing: 0) {
-                    Text(title)
-                        .font(.system(size: 19))
-                        .lineLimit(!isExpanded && title.count >= maxTitleLen ? 4 : nil)
-                        .fontDesign(.rounded)
-                        .frame(width: UIScreen.main.bounds.width - 42, alignment: .leading)
-                        .padding(.bottom, isShortPost ? 10 : 20)                    
+//                    Text(title)
+//                        .font(.system(size: 18))
+//                        .lineLimit(!isExpanded && title.count >= maxTitleLen ? 4 : nil)
+//                        .fontDesign(.rounded)
+//                        .frame(width: UIScreen.main.bounds.width - 42, alignment: .leading)
+//                        .padding(.bottom, isShortPost ? 10 : 20)
+//                        .padding(.top, mediaCount == 0 && isChannelViewPresented ? 16 : 0)
 //                        .padding(.bottom, !isExpanded && title.count >= maxTitleLen && isShortPost ? 10 : 0)
 //                        .padding(.bottom, !isExpanded && title.count >= maxTitleLen ? 17 : 0)
+                    
+                    if mediaPosition == 0 || !isShortPost {
+                        titleView
+                            .padding(.bottom, isShortPost ? 10 : 20)
+                            .padding(.top, mediaCount > 0 ? 3 : 0)
+                    }
                     
                     if isShortPost {
                         HStack(spacing: 12) {
                             Image(systemName: isLiked ? "hand.thumbsup.fill" : "hand.thumbsup")
                                 .foregroundStyle(Color.gray)
-                                .font(.system(size: 20))
+                                .font(.system(size: 21))
                                 .onTapGesture {
                                     Task {
                                         do {
@@ -309,7 +226,7 @@ struct ArticleView: View {
                             ShareLink(item: URL(string: "https://readbox-links.online/posts/?index=\(id)")!) {
                                 Image(systemName: "arrowshape.turn.up.right")
                                     .foregroundStyle(Color.gray)
-                                    .font(.system(size: 20))
+                                    .font(.system(size: 21))
                             }
                         }
                         .padding(.top, title.count > maxTitleLen && !isExpanded ? 12 : 0)
@@ -363,7 +280,7 @@ struct ArticleView: View {
         .background(
             RoundedRectangle(cornerRadius: 20)
                 .foregroundStyle(Color(.secondarySystemBackground))
-                .shadow(radius: 1)
+//                .shadow(radius: 1)
         )
         .onAppear {
             if let user, let likedPosts = user.likedPosts {
@@ -372,7 +289,23 @@ struct ArticleView: View {
         }
         .onAppear {
             effectiveMediaCount = mediaCount
-            getAvatar()
         }
+        .task {
+            let ava = await MediaManager.shared.getAvatar(authorId: authorId, lastVersion: lastVersionOfAvatar)
+            
+            withAnimation {
+                avatarImage = ava
+            }
+        }
+    }
+}
+
+private extension ArticleView {
+    var titleView: some View {
+        Text(title)
+            .font(.system(size: 18))
+            .lineLimit(!isExpanded && title.count >= maxTitleLen ? 4 : nil)
+            .fontDesign(.rounded)
+            .frame(width: UIScreen.main.bounds.width - 42, alignment: .leading)
     }
 }

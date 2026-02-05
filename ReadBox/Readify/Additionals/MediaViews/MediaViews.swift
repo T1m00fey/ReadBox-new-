@@ -309,9 +309,9 @@ struct MediaViews: View {
                             Image(uiImage: image)
                                 .resizable()
                                 .scaledToFit()
-                                .frame(width: feedW)
                                 .clipped()
                                 .clipShape(RoundedRectangle(cornerRadius: 20))
+                                .frame(maxWidth: feedW, maxHeight: 400, alignment: .leading)
                                 .onTapGesture {
                                     withAnimation {
                                         zoomableImage = image
@@ -320,7 +320,8 @@ struct MediaViews: View {
                                 }
                                 
                         } else if let url = images.first??.videoURL {
-                            let h = itemHeight(for: 0, width: feedW)
+                            let rawH = itemHeight(for: 0, width: feedW)
+                            let h = min(rawH, 400)
                             
                             TappableVideoPreview(
                                 url: url,
@@ -333,20 +334,12 @@ struct MediaViews: View {
                             .frame(width: feedW, height: h)
                         }
                     } else {
-                        VStack {
-                            Text("\(currentIndex + 1)/\(mediaCount)")
-                                .font(.system(size: 18))
-                                .fontDesign(.rounded)
-                                .foregroundStyle(Color.gray)
-                                .frame(width: UIScreen.main.bounds.width - 32,
-                                       alignment: .trailing)
-                                .padding(.top, -10)
-                            
-                            TabView(selection: $currentIndex) {
-                                ForEach(0..<mediaCount, id: \.self) { i in
-                                    ZStack {
-                                        if images.count > i {
-                                            if let image = images[i]?.image {
+                        TabView(selection: $currentIndex) {
+                            ForEach(0..<mediaCount, id: \.self) { i in
+                                ZStack {
+                                    if images.count > i {
+                                        if let image = images[i]?.image {
+                                            ZStack(alignment: .top) {
                                                 Image(uiImage: image)
                                                     .resizable()
                                                     .scaledToFill()
@@ -361,7 +354,11 @@ struct MediaViews: View {
                                                         }
                                                     }
                                                 
-                                            } else if let videoURL = images[i]?.videoURL {
+                                                makeIndicatorView()
+                                            }
+                                            
+                                        } else if let videoURL = images[i]?.videoURL {
+                                            ZStack(alignment: .top) {
                                                 TappableVideoPreview(
                                                     url: videoURL,
                                                     cornerRadius: 20,
@@ -372,13 +369,10 @@ struct MediaViews: View {
                                                 .id(videoURL.absoluteString)
                                                 .frame(width: feedW, height: ph)
                                                 
-                                            } else {
-                                                makePlaceholderView(
-                                                    feedW: feedW,
-                                                    height: ph,
-                                                    preview: videoPreviews[i]
-                                                )
+                                                makeIndicatorView(isVideo: true)
+                                                
                                             }
+                                            
                                         } else {
                                             makePlaceholderView(
                                                 feedW: feedW,
@@ -386,16 +380,22 @@ struct MediaViews: View {
                                                 preview: videoPreviews[i]
                                             )
                                         }
+                                    } else {
+                                        makePlaceholderView(
+                                            feedW: feedW,
+                                            height: ph,
+                                            preview: videoPreviews[i]
+                                        )
                                     }
-                                    .frame(width: feedW, height: ph)
-                                    .tag(i)
                                 }
+                                .frame(width: feedW, height: ph)
+                                .tag(i)
                             }
-                            .id(redrawTick)
-                            .tabViewStyle(.page(indexDisplayMode: .never))
-                            .contentMargins(.horizontal, 0, for: .scrollContent)
-                            .frame(width: feedW, height: ph)
                         }
+                        .id(redrawTick)
+                        .tabViewStyle(.page(indexDisplayMode: .never))
+                        .contentMargins(.horizontal, 0, for: .scrollContent)
+                        .frame(width: feedW, height: ph)
                     }
                 }
                 .transition(.opacity)
@@ -511,6 +511,30 @@ private extension MediaViews {
                 .redacted(reason: .placeholder)
                 .shimmering()
                 .frame(width: feedW, height: height)
+        }
+    }
+}
+
+private extension MediaViews {
+    @ViewBuilder
+    func makeIndicatorView(isVideo: Bool = false) -> some View {
+        if #available(iOS 26, *) {
+            Text("\(currentIndex + 1)/\(mediaCount)")
+                .font(.system(size: 14))
+                .padding(.all, 10)
+                .glassEffect(.regular, in: Capsule())
+                .frame(maxWidth: .infinity, alignment: .trailing)
+                .padding(.top, 10)
+                .padding(.horizontal, 10)
+                .padding(.trailing, isVideo ? 50 : 0)
+        } else{
+            Text("\(currentIndex + 1)/\(mediaCount)")
+            .font(.system(size: 17))
+            .fontDesign(.rounded)
+            .foregroundStyle(Color.gray)
+            .frame(width: UIScreen.main.bounds.width - 32,
+                   alignment: .trailing)
+            .padding(.top, -10)
         }
     }
 }

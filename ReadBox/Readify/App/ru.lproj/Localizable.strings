@@ -131,3 +131,6 @@
 "postSuccessfullyUploadedHUDLabel" = "Пост успешно загружен";
 "postSuccessfullyDeletedHUDLabel" = "Пост успешно удалён";
 "pleaseDontCloseAppHUDLabel" = "Пожалуйста, не закрывайте приложение";
+"whatWePostingLabel" = "Что публикуем?";
+"postLabel" = "Пост";
+"articleLabel" = "Статья";

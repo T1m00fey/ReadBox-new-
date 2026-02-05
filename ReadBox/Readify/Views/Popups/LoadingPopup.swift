@@ -20,14 +20,8 @@ struct LoadingPopup: View {
                 LoadingIndicator(animation: .circleRunner, color: Color(uiColor: .label), size: .small, speed: .fast)
                     
             }
-            .padding(.top, 20)
             .frame(width: UIScreen.main.bounds.width - 32, alignment: .leading)
-            .padding(.bottom, 100)
         }
-        .frame(width: UIScreen.main.bounds.width)
-//        .background(Color(uiColor: .secondarySystemBackground))
-        .background(.thinMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 30))
     }
 }
 
