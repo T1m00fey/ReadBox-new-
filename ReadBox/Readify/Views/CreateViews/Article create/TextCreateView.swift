@@ -21,6 +21,10 @@ struct TextCreateView: View {
     let isEditing: Bool
     let uploadingLanguage: String
     let oldMediaCount: Int
+    let isLocalizing: Bool
+    let localizationCount: Int
+    let rootId: String
+    let isPremiumPost: Bool
     @Binding var media: [MediaKind?]
     @Binding var mediaURLs: [URL]
     @Binding var postsCount: Int
@@ -328,7 +332,8 @@ struct TextCreateView: View {
                                     mediaURLs: mediaURLs,
                                     uploadingLanguage: uploadingLanguage,
                                     items: items,
-                                    oldMediaCount: oldMediaCount
+                                    oldMediaCount: oldMediaCount,
+                                    isPremiumPost: isPremiumPost
                                 )
 
                                 try await applyPostsCountDelta(forNewPost: newIsArchive)
@@ -350,7 +355,11 @@ struct TextCreateView: View {
                                     isArchive: newIsArchive,
                                     uploadingLanguage: uploadingLanguage,
                                     mediaURLs: mediaURLs,
-                                    items: items
+                                    items: items,
+                                    isLocalizing: isLocalizing,
+                                    rootId: rootId,
+                                    localizationCount: localizationCount,
+                                    isPremiumPost: isPremiumPost
                                 )
 
                                 try await applyPostsCountDelta(forNewPost: newIsArchive)

@@ -27,6 +27,8 @@
 "passwordChangedAlert" = "Your password has been successfully changed";
 "passwordsMustMuchAlert" = "Passwords must match";
 "settingsLabel" = "Settings";
+"signOutAlertTitle" = "Sign Out";
+"signOutAlertMessage" = "Are you sure you want to sign out?";
 "nameLabel" = "Name";
 "signOutLabel" = "Sign Out";
 "deleteLabel" = "Delete";
@@ -91,6 +93,8 @@
 "youSubscribedLabel" = "Subscribed ✓";
 "publicationsLabel" = "Publications";
 "archiveLabel" = "Archive";
+"localizedPostsLabel" = "Localized";
+"localizedArchivePostsLabel" = "Localized (Archive)";
 "privacyPolicy" = "Privacy policy";
 "termsOfUse" = "Terms of use";
 "updateLabel" = "Update 🔁";
@@ -134,3 +138,8 @@
 "whatWePostingLabel" = "What are we posting?";
 "postLabel" = "Post";
 "articleLabel" = "Article";
+"mediaPositionLabel" = "Media Position";
+"accessLabel" = "Access";
+"settingsPostCreateLabel" = "Settings";
+"localizationLabel" = "localization";
+"toLocalizeMenuActionLabel" = "Localize";

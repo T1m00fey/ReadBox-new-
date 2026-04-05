@@ -24,6 +24,7 @@ final class ReadViewModel: ObservableObject {
     @Published var isZoomableViewPresented = false    
     @Published var selectedImageURL: URL? = nil
     @Published var isSubscribeLoading = false
+    @Published var isOriginalArticleLoading = false
     
     let vibrationsService = VibrationsService.shared
     

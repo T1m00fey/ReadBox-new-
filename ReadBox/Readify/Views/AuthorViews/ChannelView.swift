@@ -24,6 +24,8 @@ struct ChannelView: View {
     let lastVersionOfAvatar: Int
     
     @EnvironmentObject var sessionManager: SessionManager
+    @EnvironmentObject var changedPostsManager: ChangedPostsManager
+    @EnvironmentObject var subManager: SubscriptionManager
     
     private func un_subscribe(isSubscribed: Bool) {
         if !viewModel.isSubscribeLoading {
@@ -83,167 +85,7 @@ struct ChannelView: View {
             ScrollView(showsIndicators: false) {
                 LazyVStack(spacing: 10) {
                     headerView
-            
-                    if viewModel.isLoading {
-//                            Text("HelloWorldHelloWorld HelloWorld HelloWorld HelloWorldHelloWorld HelloWorld HelloWorld")
-//                                .padding(.vertical, 20)
-//                                .padding(.horizontal, 16)
-//                                .frame(width: UIScreen.main.bounds.width, alignment: .leading)
-//                                .background(Color(uiColor: .secondarySystemBackground))
-//                                .clipShape(RoundedRectangle(cornerRadius: 20))
-//                                .padding(.top, 50)
-//                                .redacted(reason: .placeholder)
-//                                .shimmering()
-                        
-//                        Text(NSLocalizedString("publicationsLabel", comment: ""))
-//                            .font(.system(size: 24))
-//                            .fontWeight(.light)
-//                            .fontDesign(.rounded)
-//                            .frame(width: UIScreen.main.bounds.width - 20, alignment: .leading)
-//                            .redacted(reason: .placeholder)
-//                            .shimmering()
-                        
-                        ForEach(0..<3) { num in
-                            ArticleView(
-                                id: "-1",
-                                title: "Hello, World!",
-                                authorId: "",
-                                authorName: "",
-                                isCheckmark: true,
-                                isArchive: true,
-                                isShortPost: false,
-                                mediaCount: 0,
-                                mediaVersion: 2,
-                                mediaPosition: 0,
-                                lastVersionOfAvatar: 0,
-                                user: .constant(nil),
-                                isZoomableViewPresented: .constant(false),
-                                zoomableImage: .constant(nil),
-                                selectedAuthorId: .constant(""),
-                                isChannelViewPresented: .constant(false)
-                            )
-                            .redacted(reason: .placeholder)
-                            .padding(.top, num == 0 ? 10 : 0)
-                            .padding(.bottom, num == 6 ? 100 : 0)
-                            .shimmering()
-                        }
-                    } else if !viewModel.posts.isEmpty {
-                        
-//                        VisibilityTracker(id: "publicationsLabel")
-////
-//                        Text(NSLocalizedString("publicationsLabel", comment: ""))
-//                            .font(.system(size: 24))
-//                            .fontWeight(.light)
-//                            .fontDesign(.rounded)
-//                            .frame(width: UIScreen.main.bounds.width - 20, alignment: .leading)
-                        
-                        ForEach(viewModel.posts) { post in
-                            ArticleView(
-                                id: post.id,
-                                title: post.title ?? NSLocalizedString("notFoundLabel", comment: ""),
-                                authorId: post.authorId ?? "",
-                                authorName: authorName,
-                                isCheckmark: isCheckmark,
-                                isArchive: false,
-                                isShortPost: post.isShortPost ?? false,
-                                mediaCount: post.mediaCount ?? 1,
-                                mediaVersion: post.mediaVersion ?? 1,
-                                mediaPosition: post.mediaPosition ?? 0,
-                                lastVersionOfAvatar: lastVersionOfAvatar,
-                                user: $user,
-                                isZoomableViewPresented: $viewModel.isZoomableImageViewPresented,
-                                zoomableImage: $viewModel.zoomableImage,
-                                selectedAuthorId: .constant(""),
-                                isChannelViewPresented: .constant(true)
-                            )
-//                            .padding(.top, post.id == viewModel.posts[0].id ? 10 : 0)
-                            .padding(.bottom, post.id == viewModel.posts[viewModel.posts.count - 1].id ? 100 : 0)
-                            .padding(.top, 10)
-                            .onAppear {
-                                if post == viewModel.posts.last, viewModel.posts.count >= 20 {
-                                    Task {
-                                        try? await viewModel.loadPosts(by: authorId)
-                                    }
-                                }
-                            }
-                            .onTapGesture {
-                                viewModel.isLoadingPopupPresented = true
-                                
-                                Task {
-                                    do {
-                                        let postToread = try await ArticlesManager.shared.getPostToRead(id: post.id)
-                                        
-                                        viewModel.isLoadingPopupPresented = false
-                                        
-                                        viewModel.postToView = PrePost(
-                                            id: post.id,
-                                            title: post.title,
-                                            authorId: post.authorId,
-                                            viewsCount: post.viewsCount,
-                                            likesCount: post.likesCount,
-                                            isArchive: post.isArchive,
-                                            isShortPost: post.isShortPost,
-                                            mediaCount: post.mediaCount,
-                                            mediaVersion: post.mediaVersion,
-                                            mediaPosition: post.mediaPosition ?? 0
-                                        )
-                                        
-                                        viewModel.postToRead = PostToRead(
-                                            dateCreated: postToread.dateCreated,
-                                            text: postToread.text,
-                                            mediaURLs: postToread.mediaURLs
-                                        )
-                                        
-                                        viewModel.isReadViewPresented = true
-                                        
-                                    } catch {
-                                        withAnimation {
-                                            viewModel.errorText = error.localizedDescription
-                                            viewModel.isErrorPopupPresented = true
-                                        }
-                                    }
-                                }
-                                
-                                viewModel.isLoadingPopupPresented = false
-                                
-                                let userId = try? AuthenticationManager.shared.getAuthenticatedUser().uid
-                                
-                                if userId != authorId {
-                                    if !viewModel.views.contains(post.id) {
-                                        Task {
-                                            do {
-                                                try await ArticlesManager.shared.updateViews(at: post.id)
-                                                
-                                                viewModel.views.append(post.id)
-                                                viewModel.saveViews()
-                                            }
-                                        }
-                                    }
-                                }
-                                
-                            }
-                            
-                        }
-                    } else {
-                        VStack(spacing: 20) {
-                            
-                            Image(systemName: "pencil.and.scribble")
-                                .resizable()
-                                .scaledToFit()
-                                .frame(width: 100, alignment: .center)
-                                .foregroundStyle(Color.gray)
-                            
-                            Text(LocalizedStringKey("noArticlesAddedLabel"))
-                                .font(.title)
-                                .bold()
-                                .fontDesign(.rounded)
-                                .foregroundStyle(Color.gray)
-                                .multilineTextAlignment(.center)
-                                .frame(width: UIScreen.main.bounds.width - 32)
-                        }
-                        .frame(height: UIScreen.main.bounds.height - 200, alignment: .center)
-                        .padding(.top, -150)
-                    }
+                    publicationsSection
                     
                     //                        if !viewModel.isLoading && !viewModel.isAllLoading && viewModel.posts.count >= 20 {
                     //                            Button {
@@ -366,13 +208,20 @@ struct ChannelView: View {
                     lastVersionOfAvatar: lastVersionOfAvatar,
                     user: $user,
                     isChannelViewPresented: .constant(false),
-                    isPresented: $viewModel.isReadViewPresented
+                    isPresented: $viewModel.isReadViewPresented,
+                    isLocalizedVersion: viewModel.postToView?.isLocalizedVersion ?? false,
+                    rootId: viewModel.postToView?.rootId ?? "",
+                    originalPrePost: originalPost(for: viewModel.postToView)
                 )
+                .environmentObject(sessionManager)
+                .environmentObject(changedPostsManager)
+                .environmentObject(subManager)
             })
             .onAppear(perform: {
                 if !viewModel.isDataLoaded {
                     viewModel.isLoading = false
                     viewModel.authorId = authorId
+                    viewModel.updatePrimaryLanguage(user: user)
                     
                     viewModel.isSubscribed = viewModel.isSubscribed(user, on: authorId)
                     
@@ -420,37 +269,7 @@ struct ChannelView: View {
                 }
                 
                 ToolbarItem(placement: .principal) {
-                    if !viewModel.isPublicationsLabelVisible {
-                        if #available(iOS 26, *) {
-//                            HStack(spacing: 0) {
-//                                Text(authorName)
-//                                
-//                                if isCheckmark {
-//                                    Image(systemName: "checkmark.seal.fill")
-//                                        .foregroundStyle(Color.blue)
-//                                        .font(.system(size: 12))
-//                                }
-//                            }
-//                            .padding()
-//                            .glassEffect(.regular)
-                            
-                            Text(NSLocalizedString("publicationsLabel", comment: ""))
-                                .padding()
-                                .glassEffect(.regular)
-                        } else {
-//                            HStack(spacing: 0) {
-//                                Text(authorName)
-//                                
-//                                if isCheckmark {
-//                                    Image(systemName: "checkmark.seal.fill")
-//                                        .foregroundStyle(Color.blue)
-//                                        .font(.system(size: 12))
-//                                }
-//                            }
-                            
-                            Text(NSLocalizedString("publicationsLabel", comment: ""))
-                        }
-                    }
+                    toolbarTitleView
                 }
                 
                 ToolbarItem(placement: .topBarTrailing) {
@@ -460,12 +279,19 @@ struct ChannelView: View {
                 }
             }
             .refreshable {
-                withAnimation {
-                    viewModel.isLoading = true
-                    viewModel.isLoadingShowing = true
+                if !viewModel.isLoading {
+                    withAnimation {
+                        viewModel.isLoading = true
+                        viewModel.isLoadingShowing = true
+                        viewModel.isDataLoaded = false
+                        viewModel.lastDocument = nil
+                        
+                        viewModel.allPosts = []
+                        viewModel.posts = []
+                    }
                     
-                    viewModel.posts = []
-                    
+                    viewModel.updatePrimaryLanguage(user: user)
+                        
                     Task {
                         let ava = await MediaManager.shared.getAvatar(authorId: authorId, lastVersion: lastVersionOfAvatar)
                         
@@ -488,6 +314,7 @@ struct ChannelView: View {
                     Task {
                         do {
                             try await viewModel.loadPosts(by: authorId)
+                            viewModel.isDataLoaded = true
                         } catch {
                             withAnimation {
                                 viewModel.errorText = NSLocalizedString("loadDataErrorText", comment: "")
@@ -495,91 +322,11 @@ struct ChannelView: View {
                             }
                         }
                     }
-                    
                 }
             }
             
             if let isSubscribed = viewModel.isSubscribed {
-                VStack {
-                    Spacer()
-                    
-                    if #available(iOS 26.0, *) {
-                        if !viewModel.isLoading {
-                            if isSubscribed {
-                                Button {
-                                    un_subscribe(isSubscribed: isSubscribed)
-                                } label: {
-                                    viewModel.buildSubscribeButtonView(isSubscribed)
-                                }
-                                .buttonStyle(.glass)
-                                .padding(.horizontal, 22.5)
-                                .padding(.bottom, 10)
-                            } else {
-                                Button {
-                                    un_subscribe(isSubscribed: isSubscribed)
-                                } label: {
-                                    viewModel.buildSubscribeButtonView(isSubscribed)
-                                }
-                                .tint(Color(.label))
-                                .buttonStyle(.borderedProminent)
-                                .padding(.horizontal, 22.5)
-                                .padding(.bottom, 10)
-                            }
-                        }
-                    } else {
-                        ZStack {
-                            RoundedRectangle(cornerRadius: 20)
-                                .frame(width: UIScreen.main.bounds.width, height: 120)
-                            //                                .foregroundStyle(Color(uiColor: .secondarySystemBackground))
-                                .foregroundStyle(.thinMaterial)
-                                .shadow(radius: 1)
-                                .offset(y: 40)
-                            
-                            if !viewModel.isLoading {
-                                HStack {
-                                    if viewModel.isSubscribeLoading {
-                                        LoadingIndicator(
-                                            animation: .circleRunner,
-                                            color: Color(
-                                                isSubscribed
-                                                ? .label
-                                                : .systemBackground
-                                            ),
-                                            size: .small,
-                                            speed: .fast
-                                        )
-                                    } else {
-                                        Text(
-                                            isSubscribed
-                                            ? NSLocalizedString("youSubscribedLabel", comment: "")
-                                            : NSLocalizedString("subscribeLabel", comment: "")
-                                        )
-                                        .font(.system(size: 20))
-                                        .foregroundColor(
-                                            isSubscribed
-                                            ? Color(.label)
-                                            : Color(uiColor: .systemBackground)
-                                        )
-                                    }
-                                }
-                                .frame(width: UIScreen.main.bounds.width - 10, height: 50, alignment: .center)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 15)
-                                        .foregroundStyle(
-                                            isSubscribed
-                                            ? Color(.systemBackground)
-                                            : Color(uiColor: .label)
-                                        )
-                                        .shadow(radius: 1)
-                                )
-                                .offset(y: 20)
-                                .onTapGesture {
-                                    un_subscribe(isSubscribed: isSubscribed)
-                                }
-                            }
-                        }
-                    }
-                }
+                subscribeButtonView(isSubscribed: isSubscribed)
             }
             
             
@@ -600,6 +347,221 @@ struct ChannelView: View {
 
 
 private extension ChannelView {
+    @ViewBuilder
+    var publicationsSection: some View {
+        if viewModel.isLoading {
+            ForEach(0..<3, id: \.self) { num in
+                loadingPostPlaceholder(index: num)
+            }
+        } else if !viewModel.posts.isEmpty {
+            ForEach(viewModel.posts) { post in
+                postRow(post)
+            }
+        } else {
+            noPostsView
+        }
+    }
+    
+    func loadingPostPlaceholder(index: Int) -> some View {
+        ArticleView(
+            id: "-1",
+            title: "Hello, World!",
+            authorId: "",
+            authorName: "",
+            isCheckmark: true,
+            isArchive: true,
+            isShortPost: false,
+            mediaCount: 0,
+            mediaVersion: 2,
+            mediaPosition: 0,
+            lastVersionOfAvatar: 0,
+            locCount: 0,
+            isLocalizedVersion: false,
+            isPremiumPost: false,
+            user: .constant(nil),
+            isZoomableViewPresented: .constant(false),
+            zoomableImage: .constant(nil),
+            selectedAuthorId: .constant(""),
+            isChannelViewPresented: .constant(false)
+        )
+        .redacted(reason: .placeholder)
+        .padding(.top, index == 0 ? 10 : 0)
+        .padding(.bottom, index == 6 ? 100 : 0)
+        .shimmering()
+    }
+    
+    func postRow(_ post: PrePost) -> some View {
+        ArticleView(
+            id: post.id,
+            title: post.title ?? NSLocalizedString("notFoundLabel", comment: ""),
+            authorId: post.authorId ?? "",
+            authorName: authorName,
+            isCheckmark: isCheckmark,
+            isArchive: false,
+            isShortPost: post.isShortPost ?? false,
+            mediaCount: post.mediaCount ?? 1,
+            mediaVersion: post.mediaVersion ?? 1,
+            mediaPosition: post.mediaPosition ?? 0,
+            lastVersionOfAvatar: lastVersionOfAvatar,
+            locCount: post.localizationCount ?? 0,
+            isLocalizedVersion: post.isLocalizedVersion ?? false,
+            isPremiumPost: post.isPremiumPost ?? false,
+            user: $user,
+            isZoomableViewPresented: $viewModel.isZoomableImageViewPresented,
+            zoomableImage: $viewModel.zoomableImage,
+            selectedAuthorId: .constant(""),
+            isChannelViewPresented: .constant(true)
+        )
+        .padding(.bottom, post.id == viewModel.posts[viewModel.posts.count - 1].id ? 100 : 0)
+        .padding(.top, 10)
+        .onAppear {
+            if post == viewModel.posts.last, viewModel.posts.count >= 20 {
+                Task {
+                    try? await viewModel.loadPosts(by: authorId)
+                }
+            }
+        }
+        .onTapGesture {
+            handlePostTap(post)
+        }
+    }
+    
+    var noPostsView: some View {
+        VStack(spacing: 20) {
+            Image(systemName: "pencil.and.scribble")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 100, alignment: .center)
+                .foregroundStyle(Color.gray)
+            
+            Text(LocalizedStringKey("noArticlesAddedLabel"))
+                .font(.title)
+                .bold()
+                .fontDesign(.rounded)
+                .foregroundStyle(Color.gray)
+                .multilineTextAlignment(.center)
+                .frame(width: UIScreen.main.bounds.width - 32)
+        }
+        .frame(height: UIScreen.main.bounds.height - 200, alignment: .center)
+        .padding(.top, -150)
+    }
+    
+    @ViewBuilder
+    var toolbarTitleView: some View {
+        if !viewModel.isPublicationsLabelVisible {
+            if #available(iOS 26, *) {
+                Text(NSLocalizedString("publicationsLabel", comment: ""))
+                    .padding()
+                    .glassEffect(.regular)
+            } else {
+                Text(NSLocalizedString("publicationsLabel", comment: ""))
+            }
+        }
+    }
+    
+    func subscribeButtonView(isSubscribed: Bool) -> some View {
+        VStack {
+            Spacer()
+            
+            if !viewModel.isLoading {
+                HStack {
+                    if viewModel.isSubscribeLoading {
+                        LoadingIndicator(
+                            animation: .circleRunner,
+                            color: Color(
+                                isSubscribed
+                                ? .label
+                                : .systemBackground
+                            ),
+                            size: .small,
+                            speed: .fast
+                        )
+                    } else {
+                        Text(
+                            isSubscribed
+                            ? NSLocalizedString("youSubscribedLabel", comment: "")
+                            : NSLocalizedString("subscribeLabel", comment: "")
+                        )
+                        .font(.system(size: 19))
+                        .fontDesign(.rounded)
+                        .foregroundStyle(
+                            isSubscribed
+                            ? Color(.label)
+                            : Color(uiColor: .systemBackground)
+                        )
+                    }
+                }
+                .frame(width: UIScreen.main.bounds.width - 45, height: 40, alignment: .center)
+                .background(
+                    Capsule()
+                        .foregroundStyle(
+                            isSubscribed
+                            ? AnyShapeStyle(.ultraThinMaterial)
+                            : AnyShapeStyle(Color(.label))
+                        )
+                        
+                )
+                .padding(.bottom, 10)
+                .onTapGesture {
+                    un_subscribe(isSubscribed: isSubscribed)
+                }
+            }
+        }
+    }
+    
+    func handlePostTap(_ post: PrePost) {
+        viewModel.isLoadingPopupPresented = true
+        
+        Task {
+            do {
+                let postToRead = try await ArticlesManager.shared.getPostToRead(id: post.id)
+                
+                viewModel.isLoadingPopupPresented = false
+                
+                viewModel.postToView = post
+                
+                viewModel.postToRead = PostToRead(
+                    dateCreated: postToRead.dateCreated,
+                    text: postToRead.text,
+                    mediaURLs: postToRead.mediaURLs
+                )
+                
+                viewModel.isReadViewPresented = true
+            } catch {
+                withAnimation {
+                    viewModel.errorText = error.localizedDescription
+                    viewModel.isErrorPopupPresented = true
+                }
+            }
+        }
+        
+        viewModel.isLoadingPopupPresented = false
+        
+        let userId = try? AuthenticationManager.shared.getAuthenticatedUser().uid
+        
+        if userId != authorId {
+            if !viewModel.views.contains(post.id) {
+                Task {
+                    try? await ArticlesManager.shared.updateViews(at: post.id)
+                    viewModel.views.append(post.id)
+                    viewModel.saveViews()
+                }
+            }
+        }
+    }
+    
+    func originalPost(for post: PrePost?) -> PrePost? {
+        guard
+            let post,
+            post.isLocalizedVersion ?? false,
+            let rootId = post.rootId
+        else {
+            return nil
+        }
+        
+        return viewModel.allPosts.first { $0.id == rootId }
+    }
+    
     var headerView: some View {
         VStack(spacing: -3) {
             VStack {

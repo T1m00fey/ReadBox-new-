@@ -71,8 +71,7 @@ struct TopArticleView: View {
                 TappableVideoPreview(
                     url: videoURL,
                     cornerRadius: 20,
-                    width: UIScreen.main.bounds.width - 10,
-                    height: 260
+                    width: UIScreen.main.bounds.width - 10
                 )
                     .frame(width: UIScreen.main.bounds.width - 10)
                     .shadow(radius: 1)

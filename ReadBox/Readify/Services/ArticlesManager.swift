@@ -71,6 +71,18 @@ final class ArticlesManager {
         try await articleDocument(id: id).getDocument(as: AuthorId.self).authorId ?? ""
     }
     
+    func getLocalizationCount(for id: String) async throws -> Int {
+        try await articleDocument(id: id).getDocument(as: LocalizationCount.self).localizationCount
+    }
+    
+    func setLocalizationCount(for id: String, count: Int) async throws {
+        let data: [String: Any] = [
+            "localization_count": count
+        ]
+        
+        try await articleDocument(id: id).updateData(data)
+    }
+    
     func updatePost(
         id: String,
         title: String,
@@ -78,7 +90,8 @@ final class ArticlesManager {
         isArchive: Bool,
         uploadingLanguage: String,
         mediaCount: Int,
-        mediaPosition: Int
+        mediaPosition: Int,
+        isPremiumPost: Bool
     ) async throws {
         let data: [String: Any] = [
             "title": title,
@@ -86,8 +99,10 @@ final class ArticlesManager {
             "is_archive": isArchive,
             "original_language": uploadingLanguage,
             "media_count": mediaCount,
-            "media_position": mediaPosition
+            "media_position": mediaPosition,
+            "is_premium_post": isPremiumPost
         ]
+    
         
         try await articlesCollection.document(id).updateData(data)
     }
@@ -120,15 +135,15 @@ final class ArticlesManager {
         uploadingLanguage: String,
         mediaCount: Int,
         isShortPost: Bool,
-        mediaPosition: Int
+        mediaPosition: Int,
+        isLocalizing: Bool = false,
+        rootId: String = "",
+        isPremiumPost: Bool
     ) async throws -> String {
-//        guard let maxIndex = try await getMaxIndex() else { return }
-//        let newMaxIndex = String((Int(maxIndex) ?? -2) + 1)
-        
         let ref = articlesCollection.document()
         let newId = ref.documentID
         
-        let data: [String: Any] = [
+        var data: [String: Any] = [
             "id": newId,
             "likes_count": 0,
             "views_count": 0,
@@ -141,8 +156,14 @@ final class ArticlesManager {
             "is_short_post": isShortPost,
             "media_count": mediaCount,
             "media_version": 2,
-            "media_position": mediaPosition
+            "media_position": mediaPosition,
+            "is_premium_post": isPremiumPost
         ]
+        
+        if isLocalizing {
+            data["is_localized_version"] = isLocalizing
+            data["root_id"] = rootId
+        }
         
         try await ref.setData(data)
         

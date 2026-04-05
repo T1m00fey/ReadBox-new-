@@ -18,6 +18,11 @@ struct FeedView: View {
     @Binding var isConfirmationViewPresented: Bool
     
     @StateObject var viewModel = FeedViewModel()
+    @State private var isPremiumViewPresented = false
+    
+    @EnvironmentObject var subManager: SubscriptionManager
+    @EnvironmentObject var sessionManager: SessionManager
+    @EnvironmentObject var changedPostsManager: ChangedPostsManager
     
     var body: some View {
         NavigationStack {
@@ -63,7 +68,7 @@ struct FeedView: View {
                         .padding(.top, 30)
                         
                         if viewModel.isLoadingShowing {
-                            ForEach(0..<7) { num in
+                            ForEach(0..<2) { num in
                                 ArticleView(
                                     id: String(num),
                                     title: "Hello, World! Hello, World! Hello, World!",
@@ -76,6 +81,9 @@ struct FeedView: View {
                                     mediaVersion: 2,
                                     mediaPosition: 0,
                                     lastVersionOfAvatar: 0,
+                                    locCount: 0,
+                                    isLocalizedVersion: false,
+                                    isPremiumPost: false,
                                     user: .constant(nil),
                                     isZoomableViewPresented: .constant(false),
                                     zoomableImage: .constant(nil),
@@ -83,7 +91,7 @@ struct FeedView: View {
                                     isChannelViewPresented: .constant(false)
                                 )
                                 .redacted(reason: .placeholder)
-                                .padding(.top, 15)
+                                .padding(.top, 10)
                                 .shimmering()
                             }
                         } else {
@@ -100,6 +108,9 @@ struct FeedView: View {
                                     mediaVersion: post.mediaVersion ?? 1,
                                     mediaPosition: post.mediaPosition ?? 0,
                                     lastVersionOfAvatar: viewModel.authorsInfo[post.authorId ?? ""]?.avatarVersion ?? 0,
+                                    locCount: post.localizationCount ?? 0,
+                                    isLocalizedVersion: post.isLocalizedVersion ?? false,
+                                    isPremiumPost: post.isPremiumPost ?? false,
                                     user: $viewModel.user,
                                     isZoomableViewPresented: $viewModel.isZoomableImageViewPresented,
                                     zoomableImage: $viewModel.zoomableImage,
@@ -111,9 +122,13 @@ struct FeedView: View {
                                     viewModel.onPostAppearing(post: post)
                                 }
                                 .onTapGesture {
-                                    viewModel.tapGestureHandler(on: post)
+                                    if let isPremiumPost = post.isPremiumPost, (isPremiumPost && !subManager.hasPremium), (post.authorId != viewModel.user?.userId) {
+                                        isPremiumViewPresented = true
+                                    } else {
+                                        viewModel.tapGestureHandler(on: post)
+                                    }
                                 }
-                                .padding(.top, 20)
+                                .padding(.top, 10)
                                 
                             }
                         }
@@ -200,6 +215,9 @@ struct FeedView: View {
                     isChannelViewPresented: $viewModel.isChannelViewPresented,
                     isPresented: $viewModel.isReadViewPresented
                 )
+                .environmentObject(sessionManager)
+                .environmentObject(changedPostsManager)
+                .environmentObject(subManager)
             })
             .navigationDestination(isPresented: $viewModel.isChannelViewPresented, destination: {
                 ChannelView(
@@ -209,6 +227,13 @@ struct FeedView: View {
                     isCheckmark: viewModel.authorsInfo[viewModel.authorId]?.isCheckmark ?? false,
                     lastVersionOfAvatar: viewModel.authorsInfo[viewModel.authorId]?.avatarVersion ?? 0,
                 )
+                .environmentObject(sessionManager)
+                .environmentObject(changedPostsManager)
+                .environmentObject(subManager)
+            })
+            .fullScreenCover(isPresented: $isPremiumViewPresented, content: {
+                PremiumView()
+                    .environmentObject(subManager)
             })
             .fullScreenCover(isPresented: $viewModel.isZoomableImageViewPresented, content: {
                 if let image = viewModel.zoomableImage {

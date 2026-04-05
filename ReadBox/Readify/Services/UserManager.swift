@@ -221,4 +221,8 @@ final class UserManager {
             try await userDocument(userId: id)?.updateData(["subscribers_count": subsCount - 1])
         }
     }
+    
+    func getIsPremiumAuthorStatus(for id: String) async throws -> Bool {
+        try await userDocument(userId: id)?.getDocument(as: IsPremiumAuthor.self).isPremiumAuthor ?? false
+    }
 }

@@ -371,7 +371,11 @@ final class TextCreateViewModel: ObservableObject {
         isArchive: Bool,
         uploadingLanguage: String,
         mediaURLs: [URL],
-        items: [MediaKind]
+        items: [MediaKind],
+        isLocalizing: Bool,
+        rootId: String,
+        localizationCount: Int,
+        isPremiumPost: Bool
     ) async throws -> String {
         let text = text
             .replacingOccurrences(of: "readbox-links.online", with: "firebasestorage.googleapis.com")
@@ -384,8 +388,15 @@ final class TextCreateViewModel: ObservableObject {
             uploadingLanguage: uploadingLanguage,
             mediaCount: items.count,
             isShortPost: false,
-            mediaPosition: 0
+            mediaPosition: 0,
+            isLocalizing: isLocalizing,
+            rootId: rootId,
+            isPremiumPost: isPremiumPost
         )
+        
+        if isLocalizing {
+            try await ArticlesManager.shared.setLocalizationCount(for: rootId, count: localizationCount + 1)
+        }
         
         for i in 0..<items.count {
             try await uploadCover(
@@ -409,7 +420,8 @@ final class TextCreateViewModel: ObservableObject {
         mediaURLs: [URL],
         uploadingLanguage: String,
         items: [MediaKind],
-        oldMediaCount: Int
+        oldMediaCount: Int,
+        isPremiumPost: Bool
     ) async throws {
         let textFixed = text
             .replacingOccurrences(of: "readbox-links.online", with: "firebasestorage.googleapis.com")
@@ -442,15 +454,17 @@ final class TextCreateViewModel: ObservableObject {
 
             try await uploadCover(media: media, postId: id, index: i)
         }
-//
-//        try await ArticlesManager.shared.updatePost(
-//            id: id,
-//            title: title,
-//            text: textFixed,
-//            isArchive: isArchive,
-//            uploadingLanguage: uploadingLanguage,
-//            mediaCount: items.count
-//        )
+
+        try await ArticlesManager.shared.updatePost(
+            id: id,
+            title: title,
+            text: textFixed,
+            isArchive: isArchive,
+            uploadingLanguage: uploadingLanguage,
+            mediaCount: items.count,
+            mediaPosition: 0,
+            isPremiumPost: isPremiumPost
+        )
         
         // удаляем "хвост" старых медиа, если их стало меньше
         if oldMediaCount > items.count {

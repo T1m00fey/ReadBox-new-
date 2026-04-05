@@ -30,7 +30,9 @@ struct MemorySettingsView: View {
         
         SDImageCache.shared.clear(with: .all)
         
-        VideoCacheManager.shared.clear()
+        Task {
+            await VideoCacheManager.shared.clearAll()
+        }
             
         let tmp = FileManager.default.temporaryDirectory
         let fileURLs = try? FileManager.default.contentsOfDirectory(at: tmp, includingPropertiesForKeys: nil)

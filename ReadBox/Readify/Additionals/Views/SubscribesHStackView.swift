@@ -11,6 +11,9 @@ import Shimmer
 struct SubscribesHStackView: View {
     @Binding var isLoading: Bool
     @Binding var channels: [ChannelInfo]
+    @Binding var selectedAuthorId: String
+    @Binding var authorsInfo: [String: PostAuthorInfo]
+    @Binding var isChannelViewPresented: Bool
     
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
@@ -22,6 +25,15 @@ struct SubscribesHStackView: View {
                 } else {
                     ForEach(0..<channels.count, id: \.self) { id in
                         SubscribeRow(channelInfo: channels[id], isLoading: false)
+                            .onTapGesture {
+                                selectedAuthorId = channels[id].id
+                                authorsInfo[channels[id].id] = PostAuthorInfo(
+                                    name: channels[id].name,
+                                    isCheckmark: channels[id].isCheckmark,
+                                    avatarVersion: channels[id].avatarVersion
+                                )
+                                isChannelViewPresented = true
+                            }
                     }
                 }
             }

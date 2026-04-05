@@ -27,6 +27,8 @@
 "passwordChangedAlert" = "Ваш пароль успешно изменен";
 "passwordsMustMuchAlert" = "Пароли должны совпадать";
 "settingsLabel" = "Настройки";
+"signOutAlertTitle" = "Выход";
+"signOutAlertMessage" = "Вы действительно хотите выйти?";
 "nameLabel" = "Имя";
 "signOutLabel" = "Выйти";
 "deleteLabel" = "Удалить";
@@ -91,6 +93,8 @@
 "youSubscribedLabel" = "Вы подписаны ✓";
 "publicationsLabel" = "Публикации";
 "archiveLabel" = "Архив";
+"localizedPostsLabel" = "Локализованные";
+"localizedArchivePostsLabel" = "Локализованные (архив)";
 "privacyPolicy" = "Политика конфиденциальности";
 "termsOfUse" = "Правила использования";
 "updateLabel" = "Обновить 🔁";
@@ -134,3 +138,8 @@
 "whatWePostingLabel" = "Что публикуем?";
 "postLabel" = "Пост";
 "articleLabel" = "Статья";
+"mediaPositionLabel" = "Расположение медиа";
+"accessLabel" = "Доступность";
+"settingsPostCreateLabel" = "Настройки";
+"localizationLabel" = "локализация";
+"toLocalizeMenuActionLabel" = "Локализовать";

@@ -28,6 +28,7 @@ final class LikedPostsViewModel: ObservableObject {
     @Published var isZoomableViewPresented = false
     @Published var zoomableImage: UIImage? = nil
     @Published var authorId = ""
+    @Published var isLargeHeaderVisible = true
     
     @Published var lastDocument: DocumentSnapshot? = nil
     

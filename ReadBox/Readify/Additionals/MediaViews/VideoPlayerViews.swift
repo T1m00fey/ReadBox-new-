@@ -9,59 +9,50 @@ import SwiftUI
 import AVFoundation
 import AVKit
 import SwiftfulLoadingIndicators
+import UIKit
+
+// MARK: - UIKit player layer wrapper
 
 struct CustomVideoPlayerView: UIViewRepresentable {
     let player: AVPlayer
     let cornerRadius: CGFloat
     var isLooping: Bool = true
+    var videoGravity: AVLayerVideoGravity = .resizeAspectFill
     
     func makeUIView(context: Context) -> PlayerUIView {
         let view = PlayerUIView()
-        view.setup(player: player, cornerRadius: cornerRadius, isLooping: isLooping)
+        view.setup(
+            player: player,
+            cornerRadius: cornerRadius,
+            isLooping: isLooping,
+            videoGravity: videoGravity
+        )
         return view
     }
 
-    func updateUIView(_ uiView: PlayerUIView, context: Context) {
-        // You could react to external changes here if needed
-    }
+    func updateUIView(_ uiView: PlayerUIView, context: Context) {}
 
     class PlayerUIView: UIView {
         private var playerLayer = AVPlayerLayer()
         private var playbackEndedObserver: Any?
         private var storedCornerRadius: CGFloat = 0
 
-        override init(frame: CGRect) {
-            super.init(frame: frame)
-            self.backgroundColor = .clear
-        }
+        func setup(player: AVPlayer, cornerRadius: CGFloat, isLooping: Bool, videoGravity: AVLayerVideoGravity) {
+            layer.sublayers?.forEach { $0.removeFromSuperlayer() }
 
-        required init?(coder: NSCoder) {
-            super.init(coder: coder)
-        }
-
-        func setup(player: AVPlayer, cornerRadius: CGFloat, isLooping: Bool) {
-            // Сначала чистим
-            self.layer.sublayers?.forEach { $0.removeFromSuperlayer() }
-
-            // Настраиваем контейнер-вью (а не сам playerLayer)
-            self.backgroundColor = .clear
-            self.layer.cornerRadius = cornerRadius
-            self.layer.cornerCurve = .continuous
-            self.layer.masksToBounds = true
-            self.clipsToBounds = true
-            
+            backgroundColor = .clear
+            layer.cornerRadius = cornerRadius
+            layer.cornerCurve = .continuous
+            layer.masksToBounds = true
+            clipsToBounds = true
             storedCornerRadius = cornerRadius
 
-            // Настраиваем слой плеера
             playerLayer = AVPlayerLayer()
             playerLayer.player = player
-            playerLayer.videoGravity = .resizeAspectFill
+            playerLayer.videoGravity = videoGravity     // ✅ важно
             playerLayer.needsDisplayOnBoundsChange = true
+            layer.addSublayer(playerLayer)
 
-            // ВАЖНО: добавляем один раз
-            self.layer.addSublayer(playerLayer)
-
-            // петля
             if isLooping {
                 if let observer = playbackEndedObserver {
                     NotificationCenter.default.removeObserver(observer)
@@ -82,29 +73,24 @@ struct CustomVideoPlayerView: UIViewRepresentable {
         override func layoutSubviews() {
             super.layoutSubviews()
             playerLayer.frame = bounds
-            
-            let rect = playerLayer.videoRect
-            if rect.isEmpty == false, rect.isNull == false {
-                let mask = CAShapeLayer()
-                mask.path = UIBezierPath(
-                    roundedRect: rect,
-                    cornerRadius: storedCornerRadius
-                ).cgPath
-                playerLayer.mask = mask
-            } else {
-                playerLayer.mask = nil
-            }
+
+            // ✅ Скругляем и клипаем по bounds (работает стабильно и с .resizeAspectFill)
+            playerLayer.cornerRadius = storedCornerRadius
+            playerLayer.masksToBounds = true
+
+            // ❌ НЕ ставим mask по videoRect — именно он ломает скругления на fill
+            playerLayer.mask = nil
         }
 
         deinit {
-            NotificationCenter.default.removeObserver(self)
-            
             if let observer = playbackEndedObserver {
                 NotificationCenter.default.removeObserver(observer)
             }
         }
     }
 }
+
+// MARK: - Fullscreen presenter
 
 struct VideoFullscreenPresenter {
     private static var delegateMap = NSMapTable<AVPlayerViewController, FullscreenDelegate>(
@@ -149,7 +135,7 @@ struct VideoFullscreenPresenter {
         return base
     }
 
-    class FullscreenDelegate: NSObject, AVPlayerViewControllerDelegate {
+    final class FullscreenDelegate: NSObject, AVPlayerViewControllerDelegate {
         var onDismiss: (CMTime) -> Void
         weak var player: AVPlayer?
 
@@ -160,66 +146,12 @@ struct VideoFullscreenPresenter {
 
         func playerViewControllerWillEndDismissalTransition(_ controller: AVPlayerViewController) {
             let time = player?.currentTime() ?? .zero
-            print("📤 Dismissed at time:", time.seconds)
             onDismiss(time)
         }
     }
 }
 
-struct AdaptiveVideoPlayerView: View {
-    let url: URL
-    let cornerRadius: CGFloat
-    var externalPlayer: AVPlayer? = nil
-    let width: CGFloat
-    let isReady: Bool
-    let height: CGFloat
-    let showSpinner: Bool   
-    
-    init(
-        url: URL,
-        cornerRadius: CGFloat,
-        externalPlayer: AVPlayer? = nil,
-        width: CGFloat,
-        isReady: Bool,
-        height: CGFloat,
-        showSpinner: Bool = true
-    ) {
-        self.url = url
-        self.cornerRadius = cornerRadius
-        self.externalPlayer = externalPlayer
-        self.width = width
-        self.isReady = isReady
-        self.height = height
-        self.showSpinner = showSpinner
-    }
-
-    var body: some View {
-        Group {
-            if let player = externalPlayer, isReady {
-                CustomVideoPlayerView(
-                    player: player,
-                    cornerRadius: cornerRadius
-                )
-                .frame(width: width, height: height)
-            } else if showSpinner {
-                LoadingIndicator(
-                    animation: .circleRunner,
-                    color: Color(.label),
-                    size: .small,
-                    speed: .fast
-                )
-                .frame(width: width, height: height)
-                .background(Color(.secondarySystemBackground))
-                .clipShape(RoundedRectangle(cornerRadius: 16))
-            } else {
-                Rectangle()
-                    .foregroundColor(.clear)
-                    .frame(width: width, height: height)
-                    .clipShape(RoundedRectangle(cornerRadius: 16))
-            }
-        }
-    }
-}
+// MARK: - Player holder
 
 final class PlayerHolder: ObservableObject {
     let player = AVPlayer()
@@ -245,7 +177,7 @@ final class PlayerHolder: ObservableObject {
         }
 
         currentItemObserver = player.observe(\.currentItem, options: [.initial, .new]) { [weak self] player, _ in
-            guard let self = self else { return }
+            guard let self else { return }
 
             self.statusObserverForItem?.invalidate()
             self.statusObserverForItem = nil
@@ -256,7 +188,7 @@ final class PlayerHolder: ObservableObject {
             }
 
             self.statusObserverForItem = item.observe(\.status, options: [.initial, .new]) { [weak self] item, _ in
-                guard let self = self else { return }
+                guard let self else { return }
                 let ready = (item.status == .readyToPlay)
                 DispatchQueue.main.async {
                     self.isReadyToPlay = ready
@@ -278,60 +210,152 @@ final class PlayerHolder: ObservableObject {
     }
 }
 
+// MARK: - Adaptive view (stable aspect ratio)
+
+struct AdaptiveVideoPlayerView: View {
+    let url: URL
+    let cornerRadius: CGFloat
+    var externalPlayer: AVPlayer? = nil
+    let width: CGFloat
+    let isReady: Bool
+
+    /// Если задано — мы рисуем в фиксированном прямоугольнике width×height (для карусели)
+    let height: CGFloat?
+    /// true = заполняем прямоугольник (как фото в карусели), false = fit (натурально)
+    let fillMode: Bool
+
+    let showSpinner: Bool
+
+    var body: some View {
+        let h = height
+
+        Group {
+            if let player = externalPlayer, isReady {
+                CustomVideoPlayerView(
+                    player: player,
+                    cornerRadius: cornerRadius,
+                    videoGravity: fillMode ? .resizeAspectFill : .resizeAspect
+                )
+                .frame(width: width, height: h)            // ✅ фикс. прямоугольник в карусели
+                .clipped()
+                .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
+            } else if showSpinner {
+                LoadingIndicator(
+                    animation: .circleRunner,
+                    color: Color(.label),
+                    size: .small,
+                    speed: .fast
+                )
+                .frame(width: width, height: h)
+                .background(Color(.secondarySystemBackground))
+                .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
+            } else {
+                Rectangle()
+                    .foregroundColor(.clear)
+                    .frame(width: width, height: h)
+                    .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
+            }
+        }
+    }
+}
+
+// MARK: - Main view
+
 struct TappableVideoPreview: View {
     let url: URL
     let cornerRadius: CGFloat
     let width: CGFloat
-    let height: CGFloat?
     let placeholder: UIImage?
+    let height: CGFloat?
+    let fillMode: Bool
+    let maxHeight: CGFloat?
 
     init(
         url: URL,
         cornerRadius: CGFloat,
         width: CGFloat = UIScreen.main.bounds.width - 32,
         height: CGFloat? = nil,
-        placeholder: UIImage? = nil
+        placeholder: UIImage? = nil,
+        fillMode: Bool = false,
+        maxHeight: CGFloat? = nil
     ) {
         self.url = url
         self.cornerRadius = cornerRadius
         self.width = width
         self.height = height
         self.placeholder = placeholder
+        self.fillMode = fillMode
+        self.maxHeight = maxHeight
     }
-    
+
     @StateObject private var playerHolder = PlayerHolder()
-    
+
     @State private var playerViewId = UUID()
     @State private var resumeAfterFullscreenTime: CMTime? = nil
-    @State private var hasInitialized = false
     @State private var videoSize: CGSize? = nil
     @State private var isManuallyPaused = false
+
     @State private var showPlaceholderOverlay = true
     @State private var overlayOpacity: Double = 1
     @State private var overlayBlur: CGFloat = 8
-    
+
     @State private var initializedURL: URL?
-    
+
+    // ✅ высота фиксируется один раз и больше не меняется → нет "скачков"
+    @State private var lockedHeight: CGFloat? = nil
+
     @Environment(\.scenePhase) private var scenePhase
-    
+
+    private var ratio: CGFloat {
+        if let s = videoSize, s.height > 0 { return s.width / s.height }
+        if let ph = placeholder, ph.size.height > 0 { return ph.size.width / ph.size.height }
+        return 1.0
+    }
+
+    private func clampHeight(_ h: CGFloat) -> CGFloat {
+        if let maxHeight { return min(h, maxHeight) }
+        return h
+    }
+
+    private var cardHeight: CGFloat {
+        if let h = height { return h }                 // карусель — задано снаружи
+        if let h = lockedHeight { return h }           // одиночное — фиксированное
+        return clampHeight(width / max(ratio, 0.01))    // fallback (пока ещё ничего нет)
+    }
+
+    private func lockHeightIfNeeded(usingRatio r: CGFloat) {
+        guard height == nil else { return } // если height задан — это карусель, там фикс снаружи
+        guard lockedHeight == nil else { return }
+        let computed = clampHeight(width / max(r, 0.01))
+        lockedHeight = computed
+    }
+
     private func configurePlayerIfNeeded() {
         if initializedURL == url { return }
-        
         initializedURL = url
-        hasInitialized = true
+
+        // ✅ фиксируем высоту сразу по placeholder (самое раннее и стабильное)
+        if let ph = placeholder, ph.size.height > 0 {
+            lockHeightIfNeeded(usingRatio: ph.size.width / ph.size.height)
+            if videoSize == nil { videoSize = ph.size }
+        } else {
+            // если нет placeholder — хотя бы по текущему ratio (1.0) зафиксируем не будем,
+            // подождём трек (иначе можно зафиксировать неверно)
+        }
+
         showPlaceholderOverlay = true
         overlayOpacity = 1
         overlayBlur = 8
-        
+
         let asset = AVURLAsset(url: url, options: [
             AVURLAssetPreferPreciseDurationAndTimingKey: false
         ])
         let item = AVPlayerItem(asset: asset)
-        
+
         playerHolder.player.replaceCurrentItem(with: item)
         playerHolder.player.automaticallyWaitsToMinimizeStalling = true
         playerHolder.player.isMuted = true
-        
+
         if let t = resumeAfterFullscreenTime {
             playerHolder.player.seek(to: t, toleranceBefore: .zero, toleranceAfter: .zero)
             resumeAfterFullscreenTime = nil
@@ -339,21 +363,13 @@ struct TappableVideoPreview: View {
             try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .moviePlayback)
             try? AVAudioSession.sharedInstance().setActive(true)
         }
-        
+
         loadVideoSize()
     }
 
     var body: some View {
-        let calculatedHeight: CGFloat? = {
-            if let size = videoSize {
-                return width * size.height / size.width
-            } else {
-                return nil
-            }
-        }()
-        
-        let h = height ?? calculatedHeight ?? 250
-        
+        let h = cardHeight
+
         ZStack(alignment: .top) {
             AdaptiveVideoPlayerView(
                 url: url,
@@ -362,19 +378,17 @@ struct TappableVideoPreview: View {
                 width: width,
                 isReady: playerHolder.isReadyToPlay,
                 height: h,
+                fillMode: fillMode,
                 showSpinner: (placeholder == nil)
             )
             .id(playerViewId)
-            .onAppear {
-                    configurePlayerIfNeeded()
-                }
+            .onAppear { configurePlayerIfNeeded() }
             .onChange(of: url) {
                 videoSize = nil
+                lockedHeight = nil
                 configurePlayerIfNeeded()
             }
-            .onDisappear {
-                playerHolder.player.pause()
-            }
+            .onDisappear { playerHolder.player.pause() }
             .onScreenVisibility(threshold: 0.25) { isVisible in
                 if !isVisible {
                     playerHolder.player.pause()
@@ -391,12 +405,11 @@ struct TappableVideoPreview: View {
                 guard playerHolder.isReadyToPlay, showPlaceholderOverlay else { return }
 
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                    withAnimation(.easeInOut(duration: 0.3)) {
+                    withAnimation(.easeInOut(duration: 0.25)) {
                         overlayBlur = 0
                         overlayOpacity = 0
                     }
-
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                         showPlaceholderOverlay = false
                     }
                 }
@@ -415,7 +428,7 @@ struct TappableVideoPreview: View {
                     if !playerHolder.isReadyToPlay {
                         LoadingIndicator(
                             animation: .circleRunner,
-                            color: Color(.label),
+                            color: Color(.white),
                             size: .small,
                             speed: .fast
                         )
@@ -429,14 +442,9 @@ struct TappableVideoPreview: View {
                 .foregroundColor(.clear)
                 .contentShape(Rectangle())
                 .onTapGesture {
-                    let currentTime = playerHolder.player.currentTime()
-                    print("🟢 Tapped preview at time:", currentTime.seconds)
-
                     playerHolder.player.pause()
 
                     VideoFullscreenPresenter.present(player: playerHolder.player) { returnTime in
-                        print("🔻 Fullscreen dismissed at:", returnTime.seconds)
-
                         DispatchQueue.main.async {
                             playerHolder.player.pause()
                             playerHolder.player.seek(to: returnTime, toleranceBefore: .zero, toleranceAfter: .zero)
@@ -447,9 +455,7 @@ struct TappableVideoPreview: View {
                 }
 
             HStack {
-                Button(action: {
-                    playerHolder.player.isMuted.toggle()
-                }) {
+                Button(action: { playerHolder.player.isMuted.toggle() }) {
                     Image(systemName: playerHolder.isMuted ? "speaker.slash.fill" : "speaker.wave.2.fill")
                         .foregroundColor(.white)
                         .padding(8)
@@ -458,7 +464,7 @@ struct TappableVideoPreview: View {
                 }
 
                 Spacer()
-                
+
                 Button(action: {
                     if playerHolder.isPlaying {
                         isManuallyPaused = true
@@ -478,6 +484,8 @@ struct TappableVideoPreview: View {
             .padding(.top, 10)
             .padding(.horizontal, 12)
         }
+        .frame(width: width, height: h)
+        .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
     }
 
     private func loadVideoSize() {
@@ -500,8 +508,11 @@ struct TappableVideoPreview: View {
                 guard w > 0, h > 0 else { return }
 
                 await MainActor.run {
-                    withAnimation {
-                        videoSize = CGSize(width: w, height: h)
+                    videoSize = CGSize(width: w, height: h)
+
+                    // ✅ если placeholder не было — зафиксируем высоту по настоящему размеру один раз
+                    if lockedHeight == nil, height == nil {
+                        lockHeightIfNeeded(usingRatio: w / h)
                     }
                 }
             } catch {

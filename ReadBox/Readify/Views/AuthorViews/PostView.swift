@@ -303,7 +303,9 @@ struct PostView: View {
             .frame(width: UIScreen.main.bounds.width - 30)
         }
         .onAppear {
-            Task(priority: .userInitiated) { await loadPreview() }
+            if image == nil {
+                Task(priority: .userInitiated) { await loadPreview() }
+            }
         }
         .onReceive(NotificationCenter.default.publisher(for: .postMediaDidUpdate)) { note in
             guard let pid = note.userInfo?["postId"] as? String, pid == id else { return }

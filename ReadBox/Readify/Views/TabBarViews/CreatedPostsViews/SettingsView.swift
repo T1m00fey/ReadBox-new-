@@ -27,6 +27,9 @@ final class SettingsViewModel: ObservableObject {
     @Published var isSuccessPopupPresented = false
     @Published var successText = ""
     
+    @Published var isSignOutDialogPresented = false
+//    @Published var isDeleteAccDialogPresented = false
+    
     @Published var isNewPasswordViewPresented = false
     @Published var isFontSettingPopupPresented = false
     @Published var isMemoryPopupPresented = false
@@ -112,6 +115,41 @@ final class SettingsViewModel: ObservableObject {
     func removeCheckmarkStatus(toId id:String) async throws {
         try await UserManager.shared.removeCheckmarkStatus(userId: id)
     }
+    
+    func signOut(userId: String) async throws {
+        try? await UserManager.shared.deleteFcmToken(from: userId)
+        try AuthenticationManager.shared.signOut()
+        
+        let userDefaults = UserDefaults.standard
+        let dictionary = userDefaults.dictionaryRepresentation()
+        
+        for key in dictionary.keys {
+            if key != "language"
+                && key != "fontSize"
+                && key != "isNotificationsApproved"
+                && key != "isNotificationsPopupPresented"
+                && key != "fcmToken" {
+                userDefaults.removeObject(forKey: key)
+            }
+        }
+        
+        await SDImageCache.shared.clear(with: .all)
+        
+        let tmp = FileManager.default.temporaryDirectory
+        let fileURLs = try? FileManager.default.contentsOfDirectory(at: tmp, includingPropertiesForKeys: nil)
+        fileURLs?.forEach { url in
+            if url.pathExtension == "mp4" {
+                try? FileManager.default.removeItem(at: url)
+            }
+        }
+        
+        userDefaults.synchronize()
+    }
+    
+//    func deleteAccount(user: DBUser) async throws {
+//        try await AuthenticationManager.shared.delete()
+//        try await UserManager.shared.deleteUser(user: user)
+//    }
 }
 
 struct SettingsView: View {
@@ -122,6 +160,7 @@ struct SettingsView: View {
     @Binding var nameText: String
     @Binding var descriptionText: String
     @Binding var isScreenPresented: Bool
+    @Binding var isWelcomeViewPresented: Bool
     
     @StateObject private var viewModel = SettingsViewModel()
     
@@ -307,6 +346,15 @@ struct SettingsView: View {
                 }
             }
             
+            ToolbarItem(placement: .topBarLeading) {
+                Button {
+                    viewModel.isSignOutDialogPresented = true
+                } label: {
+                    Image(systemName: "rectangle.portrait.and.arrow.right")
+                        .foregroundStyle(Color.red)
+                }
+            }
+            
             ToolbarItem(placement: .principal) {
                 if !viewModel.isSettingsLabelVisible {
                     if #available(iOS 26, *) {
@@ -343,6 +391,57 @@ struct SettingsView: View {
                 }
             }
         }
+        .alert(
+            LocalizedStringKey("signOutAlertTitle"),
+            isPresented: $viewModel.isSignOutDialogPresented
+        ) {
+            Button(LocalizedStringKey("cancelButton"), role: .cancel) {}
+            
+            Button(LocalizedStringKey("signOutLabel"), role: .destructive) {
+                Task {
+                    do {
+                        try await viewModel.signOut(userId: authorId)
+                        isScreenPresented = false
+                        isWelcomeViewPresented = true
+                    } catch {
+                        withAnimation {
+                            viewModel.errorText = error.localizedDescription
+                            viewModel.isErrorPopupPresented = true
+                        }
+                    }
+                }
+            }
+        } message: {
+            Text(LocalizedStringKey("signOutAlertMessage"))
+        }
+//        .confirmationDialog("", isPresented: $viewModel.isDeleteAccDialogPresented) {
+//            Button(LocalizedStringKey("deleteLabel"), role: .destructive) {
+//                Task {
+//                    do {
+//                        let user = DBUser(
+//                            userId: authorId,
+//                            name: nameText,
+//                            email: email,
+//                            authorDescription: descriptionText,
+//                            avatarVersion: lastVersionOfAvatar
+//                        )
+//
+//                        try await viewModel.deleteAccount(user: user)
+//                        isScreenPresented = false
+//                        isWelcomeViewPresented = true
+//                    } catch {
+//                        withAnimation {
+//                            viewModel.errorText = error.localizedDescription
+//                            viewModel.isErrorPopupPresented = true
+//                        }
+//                    }
+//                }
+//            }
+//
+//            Button(LocalizedStringKey("cancelButton"), role: .cancel) {}
+//        } message: {
+//            Text(LocalizedStringKey("youSureToDeleteAcc"))
+//        }
         .navigationBarBackButtonHidden()
         .overlay(
             EnableSwipeBack().frame(width: 0, height: 0)

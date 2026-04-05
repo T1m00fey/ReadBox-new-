@@ -8,9 +8,75 @@
 import SwiftUI
 import PhotosUI
 import PopupView
-import AVFoundation
+@preconcurrency import AVFoundation
 import SwiftfulLoadingIndicators
 import FirebaseStorage
+
+enum VideoTranscodeError: Error { case exportFailed, cancelled }
+
+final class VideoTranscoder {
+
+    static func transcode720p(inputURL: URL) async throws -> URL {
+        let asset = AVURLAsset(url: inputURL)
+
+        guard let export = AVAssetExportSession(asset: asset,
+                                               presetName: AVAssetExportPreset1280x720) else {
+            throw VideoTranscodeError.exportFailed
+        }
+
+        let outURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString)
+            .appendingPathExtension("mp4")
+
+        try? FileManager.default.removeItem(at: outURL)
+
+        export.outputURL = outURL
+        export.outputFileType = .mp4
+        export.shouldOptimizeForNetworkUse = true
+
+        await withCheckedContinuation { (cont: CheckedContinuation<Void, Never>) in
+            export.exportAsynchronously { cont.resume() }
+        }
+
+        if export.status == .completed { return outURL }
+        if export.status == .cancelled { throw VideoTranscodeError.cancelled }
+        throw export.error ?? VideoTranscodeError.exportFailed
+    }
+
+    static func makeThumbnail(url: URL, maxWidth: CGFloat = 720) async -> Data? {
+        let asset = AVAsset(url: url)
+        let generator = AVAssetImageGenerator(asset: asset)
+        generator.appliesPreferredTrackTransform = true
+
+        return await withCheckedContinuation { cont in
+            DispatchQueue.global(qos: .userInitiated).async {
+                guard let cg = try? generator.copyCGImage(at: .zero, actualTime: nil) else {
+                    cont.resume(returning: nil); return
+                }
+                let img = UIImage(cgImage: cg)
+                let resized = img.resized(maxWidth: maxWidth)
+                let data = resized.jpegData(compressionQuality: 0.8)
+                cont.resume(returning: data)
+            }
+        }
+    }
+}
+
+private extension UIImage {
+    func resized(maxWidth: CGFloat) -> UIImage {
+        let w = size.width
+        let h = size.height
+        guard w > maxWidth else { return self }
+        let scale = maxWidth / w
+        let newSize = CGSize(width: maxWidth, height: h * scale)
+        UIGraphicsBeginImageContextWithOptions(newSize, false, 1)
+        draw(in: CGRect(origin: .zero, size: newSize))
+        let out = UIGraphicsGetImageFromCurrentImageContext()
+        UIGraphicsEndImageContext()
+        return out ?? self
+    }
+}
+
 
 struct PostCreateView: View {
     let postId: String
@@ -20,6 +86,13 @@ struct PostCreateView: View {
     let isCheckmark: Bool
     let isArchived: Bool
     let lastVersionOfAvatar: Int
+    let isLocalizing: Bool
+    let localizationCount: Int
+    let rootId: String
+    let rootLang: String
+    let rootIsPremium: Bool
+    let rootMediaPosition: Int
+    let isPremiumAuthor: Bool
     
     @Binding var media: [MediaKind?]
     @Binding var posts: [PrePost]
@@ -44,6 +117,13 @@ struct PostCreateView: View {
         isCheckmark: Bool,
         isArchived: Bool,
         lastVersionOfAvatar: Int,
+        isLocalizing: Bool,
+        localizationCount: Int,
+        rootId: String,
+        rootLang: String,
+        rootIsPremium: Bool,
+        rootMediaPosition: Int,
+        isPremiumAuthor: Bool,
         media: Binding<[MediaKind?]>,
         posts: Binding<[PrePost]>,
         archivedPosts: Binding<[PrePost]>,
@@ -56,6 +136,13 @@ struct PostCreateView: View {
         self.isCheckmark = isCheckmark
         self.isArchived = isArchived
         self.lastVersionOfAvatar = lastVersionOfAvatar
+        self.isLocalizing = isLocalizing
+        self.localizationCount = localizationCount
+        self.rootId = rootId
+        self.rootLang = rootLang
+        self.rootIsPremium = rootIsPremium
+        self.rootMediaPosition = rootMediaPosition
+        self.isPremiumAuthor = isPremiumAuthor
         self._media = media
         self._posts = posts
         self._archivedPosts = archivedPosts
@@ -87,10 +174,14 @@ struct PostCreateView: View {
                         isArchive: isArchive,
                         uploadingLanguage: selectedLanguage == 0 ? "en" : "ru",
                         items: items,
-                        mediaPosition: mediaPosition
+                        mediaPosition: mediaPosition,
+                        isLocalizing: isLocalizing,
+                        localizationCount: localizationCount,
+                        rootId: rootId,
+                        isPremiumPost: viewModel.isPremiumPost == 0 ? false : true
                     )
 
-                    if !isArchive {
+                    if !isArchive && !isLocalizing {
                         let newCount = oldCount + 1
                         try await UserManager.shared.updatePostsCount(userId: author, postsCount: newCount)
                     }
@@ -101,10 +192,11 @@ struct PostCreateView: View {
                         isArchive: isArchive,
                         uploadingLanguage: selectedLanguage == 0 ? "en" : "ru",
                         items: items,
-                        mediaPosition: mediaPosition
+                        mediaPosition: mediaPosition,
+                        isPremiumPost: viewModel.isPremiumPost == 0 ? false : true
                     )
 
-                    if isArchive != wasArchived {
+                    if isArchive != wasArchived && !isLocalizing {
                         let delta = isArchive ? -1 : +1
                         let newCount = max(0, oldCount + delta)
                         try await UserManager.shared.updatePostsCount(userId: author, postsCount: newCount)
@@ -343,6 +435,13 @@ struct PostCreateView: View {
                 .onAppear {
                     viewModel.text = title
                     viewModel.oldMediaCount = media.compactMap { $0 }.count
+                    viewModel.selectedMediaPosition = rootMediaPosition
+                    
+                    if rootLang != "" {
+                        viewModel.selectedLanguage = rootLang == "en" ? 1 : 0
+                    }
+                    
+                    viewModel.isPremiumPost = rootIsPremium == true ? 1 : 0
                 }
 //                .popup(isPresented: $viewModel.isConfirmationPopupPresented) {
 //                    ConfirmationView(
@@ -381,10 +480,23 @@ struct PostCreateView: View {
 //                }
                 .sheet(isPresented: $viewModel.isPostSettingsPopupPresented, content: {
                     PostCreateSettingsView(
+                        isLocalizing: isLocalizing,
+                        isPremiumAuthor: isPremiumAuthor,
+                        localizationCount: localizationCount,
                         selectedLanguage: $viewModel.selectedLanguage,
-                        selectedMediaPosition: $viewModel.selectedMediaPosition
+                        selectedMediaPosition: $viewModel.selectedMediaPosition,
+                        premiumSetting: $viewModel.isPremiumPost
                     )
-                    .presentationDetents([.height(300)])
+                    .presentationDetents(
+                        [
+                            .height(
+                                viewModel.getHeightOfPopupSettingPopup(
+                                    isLocalizing: isLocalizing,
+                                    isPremiumAuthor: isPremiumAuthor
+                                )
+                            )
+                        ]
+                    )
                     .presentationDragIndicator(.visible)
                     .presentationCornerRadius(30)
                 })
@@ -420,6 +532,12 @@ struct PostCreateView: View {
                             .onTapGesture {
                                 dismiss()
                             }
+                    }
+                    
+                    if isLocalizing {
+                        ToolbarItem(placement: .principal) {
+                            Text((rootLang == "en" ? "RU" : "EN") + " \(NSLocalizedString("localizationLabel", comment: ""))")
+                        }
                     }
                     
                     ToolbarItem(placement: .topBarTrailing) {
@@ -569,17 +687,26 @@ struct PostCreateView: View {
                                         }
                                         
                                         try Task.checkCancellation()
-                                        let generator = AVAssetImageGenerator(asset: asset)
-                                        generator.appliesPreferredTrackTransform = true
-                                        
+
+                                        // 1) Транскодим в 720p (сжатая версия)
+                                        let compressedURL = try await VideoTranscoder.transcode720p(inputURL: tempURL)
+
                                         try Task.checkCancellation()
+
+                                        // 2) Генерим превью уже из сжатого файла (чтобы соответствовало)
+                                        let compressedAsset = AVAsset(url: compressedURL)
+                                        let generator = AVAssetImageGenerator(asset: compressedAsset)
+                                        generator.appliesPreferredTrackTransform = true
+
                                         let cgImage = try? generator.copyCGImage(at: .zero, actualTime: nil)
                                         let thumbnail = cgImage.map { UIImage(cgImage: $0) }
 
                                         withAnimation {
                                             viewModel.isCoverLoading = false
-                                            media.append(MediaKind(videoURL: tempURL, videoPreview: thumbnail))
+                                            media.append(MediaKind(videoURL: compressedURL, videoPreview: thumbnail))
                                         }
+
+                                        try? FileManager.default.removeItem(at: tempURL)
                                     } catch is CancellationError {
                                       print("ЗАДАЧА ОТМЕНЕНА")
                                     } catch {
@@ -605,9 +732,14 @@ struct PostCreateView: View {
                     withAnimation {
                         viewModel.avatarImage = ava
                     }
+                    
+                    if isLocalizing {
+                        viewModel.selectedLanguage = rootLang == "en" ? 1 : 0
+                    }
                 }
                 
             }
+            .navigationBarTitleDisplayMode(.inline)
         }
     }
 }

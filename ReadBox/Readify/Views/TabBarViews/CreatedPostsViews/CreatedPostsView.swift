@@ -23,6 +23,8 @@ struct CreatedPostsView: View {
     
     @EnvironmentObject var hudService: HUDService
     @EnvironmentObject var sessionManager: SessionManager
+    @EnvironmentObject var changedPostsManager: ChangedPostsManager
+    @EnvironmentObject var subManager: SubscriptionManager
     
     var body: some View {
         NavigationStack {
@@ -83,6 +85,12 @@ struct CreatedPostsView: View {
                             text: viewModel.text,
                             isEditing: viewModel.isEditing,
                             mediaURLs: viewModel.mediaURLs,
+                            isLocalizing: viewModel.isLocalizing,
+                            localizationCount: viewModel.localizationCount,
+                            rootId: viewModel.id,
+                            rootLang: viewModel.rootLang,
+                            rootIsPremium: viewModel.rootIsPremiumPost,
+                            isPremiumAuthor: viewModel.isPremiumAuthor,
                             media: $viewModel.mediaKind,
                             postsCount: $viewModel.postsCount,
                             posts: $viewModel.posts,
@@ -108,6 +116,9 @@ struct CreatedPostsView: View {
                             isChannelViewPresented: .constant(false),
                             isPresented: $viewModel.isReadViewPresented
                         )
+                        .environmentObject(sessionManager)
+                        .environmentObject(changedPostsManager)
+                        .environmentObject(subManager)
                     }
                     .navigationDestination(isPresented: $viewModel.isSettingViewPresented) {
                         SettingsView(
@@ -117,7 +128,8 @@ struct CreatedPostsView: View {
                             avatar: $viewModel.avatarImage,
                             nameText: $viewModel.name,
                             descriptionText: $viewModel.description,
-                            isScreenPresented: $viewModel.isSettingViewPresented
+                            isScreenPresented: $viewModel.isSettingViewPresented,
+                            isWelcomeViewPresented: $isWelcomeViewPresented
                         )
                     }
                     .fullScreenCover(isPresented: $viewModel.isZoomableImageViewPresented, content: {
@@ -132,6 +144,13 @@ struct CreatedPostsView: View {
                             isCheckmark: viewModel.user?.isCheckmark ?? false,
                             isArchived: viewModel.isArchivePresented,
                             lastVersionOfAvatar: viewModel.avatarVersion,
+                            isLocalizing: viewModel.isLocalizing,
+                            localizationCount: viewModel.localizationCount,
+                            rootId: viewModel.id,
+                            rootLang: viewModel.rootLang,
+                            rootIsPremium: viewModel.rootIsPremiumPost,
+                            rootMediaPosition: viewModel.rootMediaPosition,
+                            isPremiumAuthor: viewModel.isPremiumAuthor,
                             media: $viewModel.mediaKind,
                             posts: $viewModel.posts,
                             archivedPosts: $viewModel.archivePosts,
@@ -182,9 +201,7 @@ struct CreatedPostsView: View {
                                 }
                                 
                             } else if viewModel.posts.count > 0 ||  viewModel.archivePosts.count > 0 {
-                                
-                                let isArchivePresented = viewModel.isArchivePresented
-                                
+
 //                                if viewModel.user?.authorDescription ?? "" != "" {
 //                                    Text(viewModel.user?.authorDescription ?? NSLocalizedString("notFoundLabel", comment: ""))
 //                                        .font(.system(size: 20))
@@ -196,30 +213,47 @@ struct CreatedPostsView: View {
 //                                        .padding(.top, 50)
 //                                }
                                 
-                                Text(
-                                    isArchivePresented
-                                    ? NSLocalizedString("archiveLabel", comment: "")
-                                    : NSLocalizedString("publicationsLabel", comment: "")
-                                )
+                                Text(viewModel.currentSectionTitle)
                                     .font(.system(size: 26))
                                     .fontWeight(.light)
                                     .fontDesign(.rounded)
                                     .frame(minWidth: UIScreen.main.bounds.width - 20, alignment: .leading)
+                                    .padding(.bottom, 10)
                                 
-                                if (viewModel.isArchivePresented && viewModel.archivePosts.count != 0)
-                                    || (!viewModel.isArchivePresented && viewModel.posts.count != 0) {
-                                    ForEach(
-                                        isArchivePresented
-                                        ? viewModel.archivePosts
-                                        : viewModel.posts
-                                    ) { post in
-                                        PostView(
+                                if !viewModel.currentPosts.isEmpty {
+                                    ForEach(viewModel.currentPosts) { post in
+//                                        PostView(
+//                                            id: post.id,
+//                                            title: post.title ?? NSLocalizedString("noFoundLabel", comment: ""),
+//                                            likesCount: post.likesCount ?? 0,
+//                                            viewsCount: post.viewsCount ?? 0,
+//                                            isArchive: post.isArchive ?? false,
+//                                            mediaCount: post.mediaCount ?? 0,
+//                                            postOption: $viewModel.postOption,
+//                                            selectedId: $viewModel.id
+//                                        )
+                                        
+                                        ArticleView(
                                             id: post.id,
                                             title: post.title ?? NSLocalizedString("noFoundLabel", comment: ""),
-                                            likesCount: post.likesCount ?? 0,
-                                            viewsCount: post.viewsCount ?? 0,
+                                            authorId: post.authorId ?? "",
+                                            authorName: viewModel.user?.name ?? NSLocalizedString("noFoundLabel", comment: ""),
+                                            isCheckmark: viewModel.user?.isCheckmark ?? false,
                                             isArchive: post.isArchive ?? false,
-                                            mediaCount: post.mediaCount ?? 0,
+                                            isShortPost: post.isShortPost ?? false,
+                                            mediaCount: post.mediaCount ?? 1,
+                                            mediaVersion: post.mediaVersion ?? 1,
+                                            mediaPosition: post.mediaPosition ?? 0,
+                                            lastVersionOfAvatar: viewModel.user?.avatarVersion ?? 0,
+                                            locCount: post.localizationCount ?? 0,
+                                            isCreatedView: true,
+                                            isLocalizedVersion: post.isLocalizedVersion ?? false,
+                                            isPremiumPost: post.isPremiumPost ?? false,
+                                            user: $viewModel.user,
+                                            isZoomableViewPresented: .constant(false),
+                                            zoomableImage: .constant(nil),
+                                            selectedAuthorId: .constant(""),
+                                            isChannelViewPresented: .constant(false),
                                             postOption: $viewModel.postOption,
                                             selectedId: $viewModel.id
                                         )
@@ -230,15 +264,12 @@ struct CreatedPostsView: View {
                                             viewModel.tapGestureHandler(on: post)
                                         }
                                         .onAppear {
-                                            let isArchive = viewModel.isArchivePresented
-                                            let lastPost = isArchive
-                                            ? viewModel.archivePosts.last
-                                            : viewModel.posts.last
+                                            let lastPost = viewModel.currentPosts.last
                                             
                                             guard post.id == lastPost?.id else { return }
                                             
                                             Task {
-                                                if isArchive {
+                                                if viewModel.currentSection == .archive {
                                                     guard !viewModel.isAllArchivedLoaded else { return }
                                                     try? await viewModel.getArchivedPost()
                                                 } else {
@@ -248,8 +279,7 @@ struct CreatedPostsView: View {
                                             }
                                         }
                                     }
-                                } else if viewModel.archivePosts.count == 0 || viewModel.posts.count == 0 {
-                                    if viewModel.isArchivePresented {
+                                } else if viewModel.currentSection == .archive {
                                         VStack(spacing: 20) {
                                             Text(LocalizedStringKey("noArticlesAddedLabel"))
                                                 .font(.system(size: 26))
@@ -270,31 +300,58 @@ struct CreatedPostsView: View {
                                                 .padding(.bottom, 10)
                                                 .onTapGesture {
                                                     withAnimation {
-                                                        viewModel.isArchivePresented = false
+                                                        viewModel.showAllPosts()
                                                         VibrationsService.shared.softImpact()
                                                     }
                                                 }
                                                 .frame(width: UIScreen.main.bounds.width - 32)
                                         }
-                                    } else if viewModel.posts.count == 0 {
-                                        VStack(spacing: 20) {
-                                            Image(systemName: "pencil.and.scribble")
-                                                .resizable()
-                                                .scaledToFit()
-                                                .frame(width: 100)
-                                                .foregroundStyle(Color.gray)
-                                            
-                                            Text(LocalizedStringKey("noArticlesAddedLabel"))
-                                                .font(.title)
-                                                .bold()
-                                                .fontDesign(.rounded)
-                                                .foregroundStyle(Color.gray)
-                                                .multilineTextAlignment(.center)
-                                            
-                                        }
-                                        .frame(width: UIScreen.main.bounds.width - 32)
-                                        .padding(.top, 100)
+                                } else if viewModel.currentSection == .localizedPublished
+                                            || viewModel.currentSection == .localizedArchive {
+                                    VStack(spacing: 20) {
+                                        Text(LocalizedStringKey("noArticlesAddedLabel"))
+                                            .font(.system(size: 26))
+                                            .bold()
+                                            .fontDesign(.rounded)
+                                            .foregroundStyle(Color.gray)
+                                            .multilineTextAlignment(.center)
+                                            .frame(width: UIScreen.main.bounds.width - 32)
+                                        
+                                        Text(NSLocalizedString("toPublicationsLabel", comment: ""))
+                                            .frame(width: UIScreen.main.bounds.width - 10, height: 50, alignment: .center)
+                                            .font(.system(size: 22))
+                                            .fontDesign(.rounded)
+                                            .background(Color(uiColor: .secondarySystemBackground))
+                                            .foregroundStyle(Color(uiColor: .label))
+                                            .clipShape(RoundedRectangle(cornerRadius: 15))
+                                            .shadow(radius: 1)
+                                            .padding(.bottom, 10)
+                                            .onTapGesture {
+                                                withAnimation {
+                                                    viewModel.showAllPosts()
+                                                    VibrationsService.shared.softImpact()
+                                                }
+                                            }
+                                            .frame(width: UIScreen.main.bounds.width - 32)
                                     }
+                                } else {
+                                    VStack(spacing: 20) {
+                                        Image(systemName: "pencil.and.scribble")
+                                            .resizable()
+                                            .scaledToFit()
+                                            .frame(width: 100)
+                                            .foregroundStyle(Color.gray)
+                                        
+                                        Text(LocalizedStringKey("noArticlesAddedLabel"))
+                                            .font(.title)
+                                            .bold()
+                                            .fontDesign(.rounded)
+                                            .foregroundStyle(Color.gray)
+                                            .multilineTextAlignment(.center)
+                                        
+                                    }
+                                    .frame(width: UIScreen.main.bounds.width - 32)
+                                    .padding(.top, 100)
                                 }
                                 
                             } else {
@@ -395,37 +452,53 @@ struct CreatedPostsView: View {
                         VStack {
                             Spacer()
                             
-                            if #available(iOS 26.0, *) {
-                                Button {
-                                    isConfirmationPopupPresented = true
-                                } label: {
-                                    Text(NSLocalizedString("newPublicationLabel", comment: ""))
-                                        .font(.system(size: 19))
-                                        .fontDesign(.rounded)
-                                        .foregroundStyle(Color(.systemBackground))
-                                        .popoverTip(AuthorMultiLanguageTip())
-                                        .frame(maxWidth: .infinity, alignment: .center)
-                                        .frame(height: 35)
-                                }
-                                .tint(Color(.label))
-                                .buttonStyle(.glassProminent)
+//                            if #available(iOS 26.0, *) {
+//                                Button {
+//                                    isConfirmationPopupPresented = true
+//                                } label: {
+//                                    Text(NSLocalizedString("newPublicationLabel", comment: ""))
+//                                        .font(.system(size: 19))
+//                                        .fontDesign(.rounded)
+//                                        .foregroundStyle(Color(.systemBackground))
+//                                        .popoverTip(AuthorMultiLanguageTip())
+//                                        .frame(maxWidth: .infinity, alignment: .center)
+//                                        .frame(height: 35)
+//                                }
+//                                .tint(Color(.label))
+//                                .buttonStyle(.glassProminent)
+//                                .padding(.bottom, 10)
+//                                .padding(.horizontal, 22.5)
+//                            } else {
+//                                Text(NSLocalizedString("newPublicationLabel", comment: ""))
+//                                    .frame(width: UIScreen.main.bounds.width - 10, height: 50, alignment: .center)
+//                                    .font(.system(size: 19))
+//                                    .fontDesign(.rounded)
+//                                    .background(Color(uiColor: .label))
+//                                    .foregroundStyle(Color(uiColor: .systemBackground))
+//                                    .clipShape(RoundedRectangle(cornerRadius: 15))
+//                                    .shadow(radius: 3)
+//                                    .padding(.bottom, 10)
+//                                    .popoverTip(AuthorMultiLanguageTip())
+//                                    .onTapGesture {
+//                                        isConfirmationPopupPresented = true
+//                                    }
+//                            }
+                            
+                            Text(NSLocalizedString("newPublicationLabel", comment: ""))
+                                .frame(
+                                    width: UIScreen.main.bounds.width - 45,
+                                    height: 40,
+                                    alignment: .center
+                                )
+                                .font(.system(size: 19))
+                                .fontDesign(.rounded)
+                                .background(Color(.label))
+                                .foregroundStyle(Color(.systemBackground))
+                                .clipShape(Capsule())
                                 .padding(.bottom, 10)
-                                .padding(.horizontal, 22.5)
-                            } else {
-                                Text(NSLocalizedString("newPublicationLabel", comment: ""))
-                                    .frame(width: UIScreen.main.bounds.width - 10, height: 50, alignment: .center)
-                                    .font(.system(size: 19))
-                                    .fontDesign(.rounded)
-                                    .background(Color(uiColor: .label))
-                                    .foregroundStyle(Color(uiColor: .systemBackground))
-                                    .clipShape(RoundedRectangle(cornerRadius: 15))
-                                    .shadow(radius: 3)
-                                    .padding(.bottom, 10)
-                                    .popoverTip(AuthorMultiLanguageTip())
-                                    .onTapGesture {
-                                        isConfirmationPopupPresented = true
-                                    }
-                            }
+                                .onTapGesture {
+                                    isConfirmationPopupPresented = true
+                                }
                         }
                     }
                 }
@@ -434,7 +507,8 @@ struct CreatedPostsView: View {
             .trackChangesOnCreatedPostsView(
                 viewModel: viewModel,
                 isWelcomeViewPresented: isWelcomeViewPresented,
-                hudService: hudService
+                hudService: hudService,
+                isConfirmationPopupPresented: $isConfirmationPopupPresented
             )
             .makePopupsForCreatedPostsView(
                 viewModel: viewModel,
@@ -449,87 +523,144 @@ struct CreatedPostsView: View {
             )
             .toolbar {
                 ToolbarItem(placement: .principal) {
-                    if !viewModel.isPublicationsLabelVisible {
-                        if #available(iOS 26, *) {
-//                            HStack(spacing: 0) {
-//                                Text(authorName)
-//
-//                                if isCheckmark {
-//                                    Image(systemName: "checkmark.seal.fill")
-//                                        .foregroundStyle(Color.blue)
-//                                        .font(.system(size: 12))
-//                                }
-//                            }
-//                            .padding()
-//                            .glassEffect(.regular)
-                            
-                            if viewModel.isArchivePresented {
-                                Text(NSLocalizedString("archiveLabel", comment: ""))
-                                    .padding()
-                                    .glassEffect(.regular)
-                            } else {
-                                Text(NSLocalizedString("publicationsLabel", comment: ""))
-                                    .padding()
-                                    .glassEffect(.regular)
-                            }
-                        } else {
-//                            HStack(spacing: 0) {
-//                                Text(authorName)
-//
-//                                if isCheckmark {
-//                                    Image(systemName: "checkmark.seal.fill")
-//                                        .foregroundStyle(Color.blue)
-//                                        .font(.system(size: 12))
-//                                }
-//                            }
-                            
-                            if viewModel.isArchivePresented {
-                                Text(NSLocalizedString("archiveLabel", comment: ""))
-                            } else {
-                                Text(NSLocalizedString("publicationsLabel", comment: ""))
-                            }
-                        }
-                    }
+                    toolbarTitleView
                 }
                 
                 ToolbarItem(placement: .topBarTrailing) {
-                    HStack {
-                        Button {
-                            withAnimation {
-                                viewModel.isSettingViewPresented.toggle()
-                            }
-                        } label: {
-                            Image(systemName: "gearshape.fill")
-                                .foregroundStyle(Color.gray)
-                                .bold()
-                        }
-                        
-                        if viewModel.archivePosts.count > 0 {
+                    if !viewModel.isLoading {
+                        HStack {
                             Button {
                                 withAnimation {
-                                    viewModel.isArchivePresented.toggle()
+                                    viewModel.isSettingViewPresented.toggle()
                                 }
                             } label: {
-                                if viewModel.isArchivePresented {
-                                    Image(systemName: "rectangle.on.rectangle")
+                                Image(systemName: "gearshape.fill")
+                                    .foregroundStyle(Color.gray)
+                                    .bold()
+                            }
+                            
+                            if viewModel.hasLocalizedPosts {
+                                Menu {
+                                    Button {
+                                        withAnimation {
+                                            viewModel.showAllPosts()
+                                        }
+                                    } label: {
+                                        toolbarMenuLabel(
+                                            title: NSLocalizedString("publicationsLabel", comment: ""),
+                                            systemImage: "doc.text",
+                                            isSelected: viewModel.currentSection == .all
+                                        )
+                                    }
+                                    
+                                    if viewModel.hasRegularArchivePosts {
+                                        Button {
+                                            withAnimation {
+                                                viewModel.showArchivePosts()
+                                            }
+                                        } label: {
+                                            toolbarMenuLabel(
+                                                title: NSLocalizedString("archiveLabel", comment: ""),
+                                                systemImage: "archivebox",
+                                                isSelected: viewModel.currentSection == .archive
+                                            )
+                                        }
+                                    }
+                                    
+                                    Menu {
+                                        if !viewModel.localizedPosts.isEmpty {
+                                            Button {
+                                                withAnimation {
+                                                    viewModel.showLocalizedPosts()
+                                                }
+                                            } label: {
+                                                toolbarMenuLabel(
+                                                    title: NSLocalizedString("publicationsLabel", comment: ""),
+                                                    systemImage: "doc.text",
+                                                    isSelected: viewModel.currentSection == .localizedPublished
+                                                )
+                                            }
+                                        }
+                                        
+                                        if !viewModel.localizedArchivePosts.isEmpty {
+                                            Button {
+                                                withAnimation {
+                                                    viewModel.showLocalizedArchivePosts()
+                                                }
+                                            } label: {
+                                                toolbarMenuLabel(
+                                                    title: NSLocalizedString("archiveLabel", comment: ""),
+                                                    systemImage: "archivebox",
+                                                    isSelected: viewModel.currentSection == .localizedArchive
+                                                )
+                                            }
+                                        }
+                                    } label: {
+                                        toolbarMenuLabel(
+                                            title: NSLocalizedString("localizedPostsLabel", comment: ""),
+                                            systemImage: "globe",
+                                            isSelected: viewModel.currentSection == .localizedPublished
+                                                || viewModel.currentSection == .localizedArchive
+                                        )
+                                    }
+                                } label: {
+                                    Image(systemName: "ellipsis.circle")
                                         .foregroundStyle(Color.gray)
                                         .bold()
-                                } else {
-                                    Image(systemName: "archivebox")
-                                        .foregroundStyle(Color.gray)
-                                        .bold()
+                                }
+                            } else if viewModel.hasRegularArchivePosts {
+                                Button {
+                                    withAnimation {
+                                        viewModel.isLocalizedPostsPresented = false
+                                        viewModel.isArchivePresented.toggle()
+                                    }
+                                } label: {
+                                    if viewModel.isArchivePresented {
+                                        Image(systemName: "rectangle.on.rectangle")
+                                            .foregroundStyle(Color.gray)
+                                            .bold()
+                                    } else {
+                                        Image(systemName: "archivebox")
+                                            .foregroundStyle(Color.gray)
+                                            .bold()
+                                    }
                                 }
                             }
                         }
                     }
                 }
             }
+            .environmentObject(subManager)
         }
-        .navigationBarBackButtonHidden()
     }
 }
 
 private extension CreatedPostsView {
+    @ViewBuilder
+    var toolbarTitleView: some View {
+        if !viewModel.isPublicationsLabelVisible {
+            if #available(iOS 26, *) {
+                Text(viewModel.currentSectionTitle)
+                .padding()
+                .glassEffect(.regular)
+            } else {
+                Text(viewModel.currentSectionTitle)
+            }
+        }
+    }
+    
+    @ViewBuilder
+    func toolbarMenuLabel(title: String, systemImage: String, isSelected: Bool) -> some View {
+        HStack {
+            Image(systemName: systemImage)
+            Text(title)
+            
+            if isSelected {
+                Image(systemName: "checkmark")
+            }
+        }
+    }
+    
     var headerView: some View {
         VStack(spacing: -3) {
             VStack {
@@ -648,4 +779,3 @@ private extension CreatedPostsView {
         .padding(.vertical, 15)
     }
 }
-

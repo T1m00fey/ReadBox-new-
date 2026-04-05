@@ -14,11 +14,6 @@ struct VersionPopupView: View {
     
     var body: some View {
         VStack {
-            Capsule()
-                .frame(width: 25, height: 5)
-                .foregroundStyle(Color.gray)
-                .padding(.top, 5)
-            
             Text(NSLocalizedString("newVersionAlert", comment: ""))
                 .font(.system(size: 25))
                 .fontWeight(.light)
@@ -55,7 +50,6 @@ struct VersionPopupView: View {
                 }
                 .tint(Color(.label))
                 .buttonStyle(.glassProminent)
-                .padding(.bottom, 50)
             } else {
                 Button {
                     openURL(
@@ -75,14 +69,9 @@ struct VersionPopupView: View {
                             .foregroundStyle(Color(uiColor: .label))
                     }
                 }
-                .padding(.bottom, 50)
             }
             
         }
-        .frame(width: UIScreen.main.bounds.width)
-        .frame(minHeight: 100)
-        .background(Color(uiColor: .secondarySystemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 30))
     }
 }
 

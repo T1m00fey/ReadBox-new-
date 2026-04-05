@@ -29,7 +29,8 @@ final class CreateViewModel: ObservableObject {
     
     @Published var isFirstAppear = true
     
-    @Published var languageSelection = StorageManager.shared.getLanguage() ?? "en"
+    @Published var languageSelection = (StorageManager.shared.getLanguage() ?? "en") == "en" ? 0 : 1
+    @Published var isPremiumPostSetting = 0
     
     @Published var mediaURLs: [URL] = []
     
@@ -38,7 +39,10 @@ final class CreateViewModel: ObservableObject {
     @Published var isCoverLoading = false
     @Published var imagePickerTask: Task<Void, Never>? = nil
     
-    func getNavigationTitle(_ isEditing: Bool) -> String {
-        isEditing ? NSLocalizedString("editingLabel", comment: "") : NSLocalizedString("creationLabel", comment: "")
+    func getNavigationTitle(_ isEditing: Bool, isLocalizing: Bool, rootLang: String) -> String {
+        if isLocalizing {
+            return (rootLang == "en" ? "RU" : "EN") + " \(NSLocalizedString("localizationLabel", comment: ""))"
+        }
+        return isEditing ? NSLocalizedString("editingLabel", comment: "") : NSLocalizedString("creationLabel", comment: "")
     }
 }

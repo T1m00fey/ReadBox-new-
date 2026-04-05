@@ -190,7 +190,7 @@ extension View {
                 viewModel.isLoading = true
                 
                 if viewModel.user?.likedPosts != nil {
-                    viewModel.likedPosts = viewModel.user?.likedPosts ?? []
+                    viewModel.likedPosts = Array((viewModel.user?.likedPosts ?? []).reversed())
                     
                     if viewModel.likedPosts.count == 0 {
                         withAnimation {
@@ -235,7 +235,8 @@ extension View {
     func trackChangesOnCreatedPostsView(
         viewModel: CreatedPostsViewModel,
         isWelcomeViewPresented: Bool,
-        hudService: HUDService
+        hudService: HUDService,
+        isConfirmationPopupPresented: Binding<Bool>
     ) -> some View {
         self
             .onChange(of: viewModel.isDescriptionPopupPresented) {
@@ -294,138 +295,187 @@ extension View {
                     viewModel.mediaCount = 0
                     viewModel.mediaVersion = 0
                     viewModel.mediaPosition = 0
+                    viewModel.isLocalizing = false
+                    viewModel.localizationCount = 0
+                    viewModel.rootLang = ""
+                    viewModel.title = ""
+                    viewModel.rootMediaPosition = 0
                 }
             }
             .onChange(of: viewModel.isCreateViewPresented) {
                 if !viewModel.isCreateViewPresented {
                     viewModel.clearData()
                 } else {
-                    viewModel.isConfirmationPopupPresented = false
+                    isConfirmationPopupPresented.wrappedValue = false
                 }
             }
             .onChange(of: viewModel.isPostCreateViewPresented) {
                 if !viewModel.isPostCreateViewPresented {
                     viewModel.clearData()
                 } else {
-                    viewModel.isConfirmationPopupPresented = false
+                    isConfirmationPopupPresented.wrappedValue = false
                 }
             }
             .onChange(of: viewModel.id) {
-                if viewModel.id != "" {
-                    var prePost: PrePost? = nil
-                    
-                    if viewModel.isArchivePresented {
-                        prePost = viewModel.archivePosts.first { $0.id == viewModel.id }
-                    } else {
-                        prePost = viewModel.posts.first { $0.id == viewModel.id }
-                    }
-                    
-                    switch viewModel.postOption {
-                    case .editing:
-                        if let prePost {
-                            let isShortPost = prePost.isShortPost ?? false
-                            
-                            if isShortPost == false {
-                                viewModel.isLoadingPopupPresented = true
-                                
-                                if let title = prePost.title {
-                                    viewModel.title = title
-                                    viewModel.isEditing = true
-                                    
-                                    Task {
-                                        do {
-                                            try await viewModel.getPostToRead(id: viewModel.id)
-                                            await viewModel.getMedia(
-                                                mediaCount: prePost.mediaCount ?? 1,
-                                                postId: prePost.id,
-                                                ignoreCache: true
-                                            )
-                                            
-                                            viewModel.isLoadingPopupPresented = false
-                                            viewModel.isCreateViewPresented = true
-                                        } catch {
-                                            viewModel.isCreateViewPresented = false
-                                            viewModel.isLoadingPopupPresented = false
-                                            viewModel.clearData()
-                                        }
-                                    }
-                                } else {
-                                    viewModel.isLoadingPopupPresented = false
-                                    viewModel.clearData()
-                                }
-                            } else {
-                                viewModel.isLoadingPopupPresented = true
-                                
-                                if let title = prePost.title {
-                                    viewModel.postId = prePost.id
-                                    viewModel.title = title
-                                    
-                                    Task {
-                                        do {
-                                            await viewModel.getMedia(
-                                                mediaCount: prePost.mediaCount ?? 1,
-                                                postId: prePost.id,
-                                                ignoreCache: true
-                                            )
-                                            
-                                            viewModel.isLoadingPopupPresented = false
-                                            viewModel.isPostCreateViewPresented = true
-                                        }
-                                    }
-                                } else {
-                                    viewModel.isLoadingPopupPresented = false
-                                    viewModel.clearData()
-                                }
-                            }
-                        } else {
-                            viewModel.clearData()
-                        }
-                        
-                    case .publish:
-                        viewModel.updateIsArchiveStatus()
-                        viewModel.postOption = .nothing
-                    case .toArchive:
-                        viewModel.updateIsArchiveStatus()
-                        viewModel.postOption = .nothing
-                    case .delete:
-                        
-                        Task {
-                            do {
-                                hudService.showLoading(type: .delete)
-                                try await viewModel.deletePost(id: viewModel.id)
-                                hudService.showSuccessPopup(type: .delete)
-                            } catch {
-                                withAnimation {
-                                    hudService.showErrorPopup(with: error.localizedDescription)
-                                    viewModel.id = ""
-                                }
-                            }
-                        }
-                        
-                        viewModel.postOption = .nothing
-                    default:
-                        print("OK")
-                    }
-                    
-                }
+                handleCreatedPostIdChange(viewModel: viewModel, hudService: hudService)
             }
             .onChange(of: viewModel.addingMode) {
-                if viewModel.addingMode == 1 {
-                    viewModel.postId = ""
-                    viewModel.title = ""
-                    
-                    viewModel.isPostCreateViewPresented = true
-                } else if viewModel.addingMode == 2 {
-                    viewModel.vibrationsService.softImpact()
-                    viewModel.title = NSLocalizedString("titlePlaceholder", comment: "")
-                    viewModel.image = nil
-                    viewModel.isEditing = false
-                    
-                    viewModel.isCreateViewPresented = true
-                }
-                
-                viewModel.addingMode = 0
+                handleCreatedPostAddingModeChange(
+                    viewModel: viewModel,
+                    isConfirmationPopupPresented: isConfirmationPopupPresented
+                )
             }
+    }
+    
+    private func handleCreatedPostIdChange(
+        viewModel: CreatedPostsViewModel,
+        hudService: HUDService
+    ) {
+        
+        guard !viewModel.id.isEmpty else {
+            viewModel.clearData()
+            viewModel.isLoadingPopupPresented = false
+            return
+        }
+        
+        let prePost = viewModel.isArchivePresented
+        ? viewModel.archivePosts.first { $0.id == viewModel.id }
+        : viewModel.posts.first { $0.id == viewModel.id }
+        
+        switch viewModel.postOption {
+        case .localize:
+            guard let prePost, let isShortPost = prePost.isShortPost else {
+                viewModel.clearData()
+                viewModel.isLoadingPopupPresented = false
+                return
+            }
+            viewModel.isLoadingPopupPresented = true
+            viewModel.isLocalizing = true
+            viewModel.localizationCount = prePost.localizationCount ?? 0
+            viewModel.rootMediaPosition = prePost.mediaPosition ?? 0
+            viewModel.rootIsPremiumPost = prePost.isPremiumPost ?? false
+            viewModel.rootLang = prePost.originalLanguage ?? "en"
+            
+            Task {
+                do {
+                    await viewModel.getMedia(
+                        mediaCount: prePost.mediaCount ?? 1,
+                        postId: prePost.id,
+                        ignoreCache: true
+                    )
+                    
+                    if isShortPost {
+                        viewModel.isPostCreateViewPresented = true
+                    } else {
+                        viewModel.isCreateViewPresented = true
+                    }
+                    
+                    viewModel.isLoadingPopupPresented = false
+                }
+            }
+            
+        case .editing:
+            guard let prePost else {
+                viewModel.clearData()
+                return
+            }
+            
+            let isShortPost = prePost.isShortPost ?? false
+            viewModel.isLoadingPopupPresented = true
+            
+            guard let title = prePost.title else {
+                viewModel.isLoadingPopupPresented = false
+                viewModel.clearData()
+                return
+            }
+            
+            if !isShortPost {
+                viewModel.title = title
+                viewModel.isEditing = true
+                viewModel.rootIsPremiumPost = prePost.isPremiumPost ?? false
+                viewModel.rootLang = prePost.originalLanguage ?? "en"
+                
+                Task {
+                    do {
+                        try await viewModel.getPostToRead(id: viewModel.id)
+                        await viewModel.getMedia(
+                            mediaCount: prePost.mediaCount ?? 1,
+                            postId: prePost.id,
+                            ignoreCache: true
+                        )
+                        
+                        viewModel.isLoadingPopupPresented = false
+                        viewModel.isCreateViewPresented = true
+                    } catch {
+                        viewModel.isCreateViewPresented = false
+                        viewModel.isLoadingPopupPresented = false
+                        viewModel.clearData()
+                    }
+                }
+            } else {
+                viewModel.postId = prePost.id
+                viewModel.title = title
+                viewModel.rootMediaPosition = prePost.mediaPosition ?? 0
+                viewModel.rootIsPremiumPost = prePost.isPremiumPost ?? false
+                viewModel.rootLang = prePost.originalLanguage ?? "en"
+                
+                Task {
+                    await viewModel.getMedia(
+                        mediaCount: prePost.mediaCount ?? 1,
+                        postId: prePost.id,
+                        ignoreCache: true
+                    )
+                    
+                    viewModel.isLoadingPopupPresented = false
+                    viewModel.isPostCreateViewPresented = true
+                }
+            }
+            
+        case .publish, .toArchive:
+            viewModel.updateIsArchiveStatus()
+            viewModel.postOption = .nothing
+            
+        case .delete:
+            Task {
+                do {
+                    hudService.showLoading(type: .delete)
+                    try await viewModel.deletePost(id: viewModel.id)
+                    hudService.showSuccessPopup(type: .delete)
+                } catch {
+                    withAnimation {
+                        hudService.showErrorPopup(with: error.localizedDescription)
+                        viewModel.id = ""
+                    }
+                }
+            }
+            
+            viewModel.postOption = .nothing
+            
+        default:
+            break
+        }
+    }
+    
+    private func handleCreatedPostAddingModeChange(
+        viewModel: CreatedPostsViewModel,
+        isConfirmationPopupPresented: Binding<Bool>
+    ) {
+        isConfirmationPopupPresented.wrappedValue = false
+        viewModel.isConfirmationPopupPresented = false
+        
+        if viewModel.addingMode == 1 {
+            viewModel.postId = ""
+            viewModel.title = ""
+            viewModel.isPostCreateViewPresented = true
+        } else if viewModel.addingMode == 2 {
+            viewModel.vibrationsService.softImpact()
+            viewModel.title = NSLocalizedString("titlePlaceholder", comment: "")
+            viewModel.image = nil
+            viewModel.isEditing = false
+            viewModel.isCreateViewPresented = true
+        }
+        
+        viewModel.addingMode = 0
     }
     
     func makePopupsForCreatedPostsView(
@@ -511,4 +561,3 @@ extension View {
             })
     }
 }
-

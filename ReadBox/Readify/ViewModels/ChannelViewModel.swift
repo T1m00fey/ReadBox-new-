@@ -15,6 +15,7 @@ final class ChannelViewModel: ObservableObject {
     @Published var postsNeedToLoad: [String] = []
     @Published var isLoading = true
     @Published var posts: [PrePost] = []
+    @Published var allPosts: [PrePost] = []
     @Published var errorText = ""
     @Published var isErrorPopupPresented = false
     @Published var postOption = PostOptions.nothing
@@ -40,6 +41,7 @@ final class ChannelViewModel: ObservableObject {
     @Published var pushRoute: NotificationPushRoute? = nil
     @Published var isNotificationPopupPresented = false
     @Published var isPublicationsLabelVisible = true
+    @Published var primaryLanguage = "en"
     
     @ViewBuilder
     func buildSubscribeButtonView(_ isSubscribed: Bool) -> some View {
@@ -78,6 +80,16 @@ final class ChannelViewModel: ObservableObject {
     
     func saveViews() {
         StorageManager.shared.save(views: views)
+    }
+    
+    func updatePrimaryLanguage(user: DBUser?) {
+        let fallbackLanguage = Locale.preferredLanguages.first?.components(separatedBy: "-").first == "ru"
+        ? "ru"
+        : "en"
+        
+        let userLanguage = user?.originalLanguage?.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        primaryLanguage = (userLanguage?.isEmpty == false ? userLanguage : nil) ?? fallbackLanguage
     }
     
     func isSubscribed(_ user: DBUser?, on author: String) -> Bool? {
@@ -122,19 +134,51 @@ final class ChannelViewModel: ObservableObject {
             return
         }
         
-        posts.forEach { post in
-            if let post {
-                withAnimation {
-                    self.posts.append(post)
-                    isLoadingShowing = false
-                }
-            }
-        }
+        let newPosts = posts.compactMap { $0 }
         
+        withAnimation {
+            allPosts.append(contentsOf: newPosts)
+            self.posts = localizedPosts(from: allPosts)
+            isLoadingShowing = false
+        }
+
         self.lastDocument = lastDocument
         
         withAnimation {
             isLoading = false
         }
+    }
+    
+    private func localizedPosts(from posts: [PrePost]) -> [PrePost] {
+        var bestPostsByRoot: [String: (post: PrePost, index: Int)] = [:]
+        
+        for (index, post) in posts.enumerated() {
+            let rootKey = post.rootId ?? post.id
+            
+            if let current = bestPostsByRoot[rootKey] {
+                if localizationPriority(for: post) < localizationPriority(for: current.post) {
+                    bestPostsByRoot[rootKey] = (post, index)
+                }
+            } else {
+                bestPostsByRoot[rootKey] = (post, index)
+            }
+        }
+        
+        return bestPostsByRoot
+            .values
+            .sorted { $0.index < $1.index }
+            .map(\.post)
+    }
+    
+    private func localizationPriority(for post: PrePost) -> Int {
+        if post.originalLanguage == primaryLanguage {
+            return 0
+        }
+        
+        if !(post.isLocalizedVersion ?? false) {
+            return 1
+        }
+        
+        return 2
     }
 }

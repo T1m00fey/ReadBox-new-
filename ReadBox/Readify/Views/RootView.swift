@@ -53,320 +53,335 @@ struct RootView: View {
     @StateObject var hudService = HUDService()
     @StateObject var sessionManager = SessionManager()
     @StateObject var changedPostsManager = ChangedPostsManager()
+    @StateObject var sub = SubscriptionManager()
     
     @Environment(\.dismiss) var dismiss
     
     private var screenWidth = UIScreen.main.bounds.width
     
     var body: some View {
-        ZStack(alignment: .bottom) {
-            if let _ = try? AuthenticationManager.shared.getAuthenticatedUser() {
-                TabView(selection: $selectedTab) {
-                    FeedView(
-                        isWelcomeViewPresented: $isWelcomeViewPresented,
-                        selectedTab: $selectedTab,
-                        isConfirmationViewPresented: $isConfirmationPopupPresented
-                    )
-                    .tag(TabType.feed)
-                    .tabItem {
-                        Label("", systemImage: "house.fill")
-                    }
-                    
-                    LikedPostsView(
-                        isWelcomeViewPresented: $isWelcomeViewPresented
-                    )
-                    .tag(TabType.favourites)
-                    .tabItem {
-                        Label("", systemImage: "hand.thumbsup.fill")
-                    }
-                    
-                    SubscribesView()
-                        .tag(TabType.subscribes)
+//        NavigationStack {
+            ZStack(alignment: .bottom) {
+                if let _ = try? AuthenticationManager.shared.getAuthenticatedUser() {
+                    TabView(selection: $selectedTab) {
+                        FeedView(
+                            isWelcomeViewPresented: $isWelcomeViewPresented,
+                            selectedTab: $selectedTab,
+                            isConfirmationViewPresented: $isConfirmationPopupPresented
+                        )
+                        .tag(TabType.feed)
                         .tabItem {
-                            Label("", systemImage: "person.crop.rectangle.stack")
+                            Label("", systemImage: "house.fill")
                         }
-                    
-                    CreatedPostsView(isWelcomeViewPresented: $isWelcomeViewPresented, isConfirmationPopupPresented: $isConfirmationPopupPresented)
+                        
+                        LikedPostsView(
+                            isWelcomeViewPresented: $isWelcomeViewPresented
+                        )
+                        .tag(TabType.favourites)
+                        .tabItem {
+                            Label("", systemImage: "hand.thumbsup.fill")
+                        }
+                        
+                        SubscribesView()
+                            .tag(TabType.subscribes)
+                            .tabItem {
+                                Label("", systemImage: "person.crop.rectangle.stack")
+                            }
+                        
+                        CreatedPostsView(
+                            isWelcomeViewPresented: $isWelcomeViewPresented,
+                            isConfirmationPopupPresented: $isConfirmationPopupPresented
+                        )
                         .tag(TabType.create)
                         .tabItem {
                             Label("", systemImage: "person.fill")
                         }
-                    
-//                    ProfileView(
-//                        isWelcomeViewPresented: $isWelcomeViewPresented
-//                    )
-//                    .tag(TabType.profile)
-//                    .tabItem {
-//                        Label("", systemImage: "person.fill")
-//                    }
-                }
-                .disabled(isUpdateBlur)
-                .blur(radius: isUpdateBlur ? 5 : 0)
-                .tint(Color(uiColor: .label))
-                .onAppear {
-                    isNotificationPopupPresented = !StorageManager.shared.isNotificationsPopupShowed()
-                }
-            }
-        }
-        .environmentObject(hudService)
-        .environmentObject(sessionManager)
-        .environmentObject(changedPostsManager)
-        .overlay(alignment: .bottom) {
-            if hudService.isLoading {
-                hudService.makeLoadingPopup(screenWidth: screenWidth)
-            }
-        }
-        .overlay(alignment: .bottom) {
-            if hudService.isSuccessPopupPresented {
-                hudService.makeSuccessPopup(
-                    screenWidth: screenWidth
-                )
-            }
-        }
-        .overlay(alignment: .bottom) {
-            if hudService.isErrorPopupPresented {
-                hudService.makeErrorPopup(
-                    screenWidth: screenWidth,
-                    bottomPadding: bottomPaddingForHUD
-                )
-            }
-        }
-        .onChange(of: selectedTab) {
-            if selectedTab == .create && !hudService.isLoading {
-                withAnimation {
-                    bottomPaddingForHUD = 120
-                }
-            } else {
-                withAnimation {
-                    bottomPaddingForHUD = 60
-                }
-            }
-        }
-        .onChange(of: isWelcomeViewPresented) {
-            if !isWelcomeViewPresented {
-                Task {
-                    let authUser = try? AuthenticationManager.shared.getAuthenticatedUser()
-                    let user = try? await UserManager.shared.getUser(userId: authUser?.uid ?? "")
-                    
-                    try? await UserManager.shared.set(
-                        fcmToken: StorageManager.shared.getFcmToken(),
-                        to: user?.userId ?? ""
-                    )
-                    
-                    if let appVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String {
-                        try? await UserManager.shared.set(
-                            appVersion: appVersion,
-                            to: user?.userId ?? ""
-                        )
+                        
+                        //                    ProfileView(
+                        //                        isWelcomeViewPresented: $isWelcomeViewPresented
+                        //                    )
+                        //                    .tag(TabType.profile)
+                        //                    .tabItem {
+                        //                        Label("", systemImage: "person.fill")
+                        //                    }
                     }
-                    
-                    try? await UserManager.shared.setOriginalLanguage(to: user?.userId ?? "")
-                    
-                    if StorageManager.shared.getLanguage() == "en" && !(user?.subscribes?.contains (
-                        "qDWmcGOLPGVAzJth2I8G2cwcp9x1"
-                    ) ?? true) {
-                        
-                        try? await UserManager.shared.un_subscribeUser(
-                            on: "qDWmcGOLPGVAzJth2I8G2cwcp9x1",
-                            isNeedToSubscribe: true
-                        )
-                        
-                    } else if StorageManager.shared.getLanguage() == "ru" && !(user?.subscribes?.contains(
-                        "se8Any2drmcQg1sFoLXYXo4ttYt2"
-                    ) ?? true) {
-                        
-                        try? await UserManager.shared.un_subscribeUser(
-                            on: "se8Any2drmcQg1sFoLXYXo4ttYt2",
-                            isNeedToSubscribe: true
-                        )
-                        
+                    .disabled(isUpdateBlur)
+                    .blur(radius: isUpdateBlur ? 5 : 0)
+                    .tint(Color(uiColor: .label))
+                    .onAppear {
+                        isNotificationPopupPresented = !StorageManager.shared.isNotificationsPopupShowed()
                     }
                 }
             }
-        }
-        .onAppear {
-            Task {
-                if let authUser = try? AuthenticationManager.shared.getAuthenticatedUser() {
-                    isWelcomeViewPresented = false
-                    user = try? await UserManager.shared.getUser(userId: authUser.uid)
-                    
-                    try? await UserManager.shared.set(
-                        fcmToken: StorageManager.shared.getFcmToken(),
-                        to: user?.userId ?? ""
+            .environmentObject(sub)
+            .environmentObject(hudService)
+            .environmentObject(sessionManager)
+            .environmentObject(changedPostsManager)
+            .environmentObject(sub)
+            .overlay(alignment: .bottom) {
+                if hudService.isLoading {
+                    hudService.makeLoadingPopup(screenWidth: screenWidth)
+                }
+            }
+            .overlay(alignment: .bottom) {
+                if hudService.isSuccessPopupPresented {
+                    hudService.makeSuccessPopup(
+                        screenWidth: screenWidth
                     )
-                    
-                    try? await UserManager.shared.setOriginalLanguage(to: user?.userId ?? "")
-                    
-                    if let appVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String {
-                        try? await UserManager.shared.set(
-                            appVersion: appVersion,
-                            to: user?.userId ?? ""
-                        )
+                }
+            }
+            .overlay(alignment: .bottom) {
+                if hudService.isErrorPopupPresented {
+                    hudService.makeErrorPopup(
+                        screenWidth: screenWidth,
+                        bottomPadding: bottomPaddingForHUD
+                    )
+                }
+            }
+            .onChange(of: selectedTab) {
+                if selectedTab == .create && !hudService.isLoading {
+                    withAnimation {
+                        bottomPaddingForHUD = 120
                     }
                 } else {
-                    isWelcomeViewPresented = true
+                    withAnimation {
+                        bottomPaddingForHUD = 60
+                    }
                 }
             }
-            
-            checkAppVersion()
-        }
-        .onOpenURL { url in
-            isLoadingPopupPresented = true
-            
-            isReadViewPresented = false
-            isChannelViewPresented = false
-            
-            let type = url.absoluteString.components(separatedBy: "/")[3]
-            var index = ""
-            
-            #if DEBUG
-            print("url: \(url)")
-            print("type: \(type)")
-            #endif
-            
-            if type == "posts" {
-                if let components = URLComponents(url: url, resolvingAgainstBaseURL: false) {
-                    if let indexParam = components.queryItems?.first(where: { $0.name == "index" })?.value {
-                        index = indexParam
+            .onChange(of: isWelcomeViewPresented) {
+                if !isWelcomeViewPresented {
+                    Task {
+                        let authUser = try? AuthenticationManager.shared.getAuthenticatedUser()
+                        let user = try? await UserManager.shared.getUser(userId: authUser?.uid ?? "")
                         
-                        Task {
-                            do {
-                                prePost = try await ArticlesManager.shared.getPrePost(id: index)
-                                postToRead = try await ArticlesManager.shared.getPostToRead(id: index)
-                                authorName = try await UserManager.shared.getAuthorName(id: prePost?.authorId ?? "")
-                                isCheckmark = try await UserManager.shared.getIsCheckmarkStatus(id: prePost?.authorId ?? "")
-                                lastVersionOfAvatar = try await UserManager.shared.getAvatarVersion(id: prePost?.authorId ?? "")
-                                authorId = prePost?.authorId ?? ""
-                                
-                                isLoadingPopupPresented = false
-                                
-                                let authUser = try AuthenticationManager.shared.getAuthenticatedUser()
-                                user = try? await UserManager.shared.getUser(userId: authUser.uid)
-                                
-                                if let user {
-                                    likedPosts = user.likedPosts ?? []
+                        try? await UserManager.shared.set(
+                            fcmToken: StorageManager.shared.getFcmToken(),
+                            to: user?.userId ?? ""
+                        )
+                        
+                        if let appVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String {
+                            try? await UserManager.shared.set(
+                                appVersion: appVersion,
+                                to: user?.userId ?? ""
+                            )
+                        }
+                        
+                        try? await UserManager.shared.setOriginalLanguage(to: user?.userId ?? "")
+                        
+                        if StorageManager.shared.getLanguage() == "en" && !(user?.subscribes?.contains (
+                            "qDWmcGOLPGVAzJth2I8G2cwcp9x1"
+                        ) ?? true) {
+                            
+                            try? await UserManager.shared.un_subscribeUser(
+                                on: "qDWmcGOLPGVAzJth2I8G2cwcp9x1",
+                                isNeedToSubscribe: true
+                            )
+                            
+                        } else if StorageManager.shared.getLanguage() == "ru" && !(user?.subscribes?.contains(
+                            "se8Any2drmcQg1sFoLXYXo4ttYt2"
+                        ) ?? true) {
+                            
+                            try? await UserManager.shared.un_subscribeUser(
+                                on: "se8Any2drmcQg1sFoLXYXo4ttYt2",
+                                isNeedToSubscribe: true
+                            )
+                            
+                        }
+                    }
+                }
+            }
+            .task { sub.start() }
+            .onAppear {
+                Task {
+                    if let authUser = try? AuthenticationManager.shared.getAuthenticatedUser() {
+                        isWelcomeViewPresented = false
+                        user = try? await UserManager.shared.getUser(userId: authUser.uid)
+                        
+                        try? await UserManager.shared.set(
+                            fcmToken: StorageManager.shared.getFcmToken(),
+                            to: user?.userId ?? ""
+                        )
+                        
+                        try? await UserManager.shared.setOriginalLanguage(to: user?.userId ?? "")
+                        
+                        if let appVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String {
+                            try? await UserManager.shared.set(
+                                appVersion: appVersion,
+                                to: user?.userId ?? ""
+                            )
+                        }
+                    } else {
+                        isWelcomeViewPresented = true
+                    }
+                }
+                
+                checkAppVersion()
+            }
+            .onOpenURL { url in
+                isLoadingPopupPresented = true
+                
+                isReadViewPresented = false
+                isChannelViewPresented = false
+                
+                let type = url.absoluteString.components(separatedBy: "/")[3]
+                var index = ""
+                
+#if DEBUG
+                print("url: \(url)")
+                print("type: \(type)")
+#endif
+                
+                if type == "posts" {
+                    if let components = URLComponents(url: url, resolvingAgainstBaseURL: false) {
+                        if let indexParam = components.queryItems?.first(where: { $0.name == "index" })?.value {
+                            index = indexParam
+                            
+                            Task {
+                                do {
+                                    prePost = try await ArticlesManager.shared.getPrePost(id: index)
+                                    postToRead = try await ArticlesManager.shared.getPostToRead(id: index)
+                                    authorName = try await UserManager.shared.getAuthorName(id: prePost?.authorId ?? "")
+                                    isCheckmark = try await UserManager.shared.getIsCheckmarkStatus(id: prePost?.authorId ?? "")
+                                    lastVersionOfAvatar = try? await UserManager.shared.getAvatarVersion(id: prePost?.authorId ?? "")
+                                    authorId = prePost?.authorId ?? ""
                                     
-                                    if prePost != nil && postToRead != nil && authorName != nil && authorId != "" {
-                                        isReadViewPresented = true
-                                    }
-                                }
-                            }
-                        }
-                    } else {
-                        print("Index parameter not found.")
-                    }
-                }
-            } else if type == "authors" {
-                if let components = URLComponents(url: url, resolvingAgainstBaseURL: false) {
-                    if let indexParam = components.queryItems?.first(where: { $0.name == "index" })?.value {
-                        authorId = indexParam
-                        
-                        Task {
-                            do {
-                                authorName = try? await UserManager.shared.getAuthorName(id: authorId)
-                                isCheckmark = try? await UserManager.shared.getIsCheckmarkStatus(id: authorId)
-                                lastVersionOfAvatar = try? await UserManager.shared.getAvatarVersion(id: authorId)
-                                
-                                let authUser = try AuthenticationManager.shared.getAuthenticatedUser()
-                                user = try? await UserManager.shared.getUser(userId: authUser.uid)
-                                
-                                if user != nil && authorName != nil {
                                     isLoadingPopupPresented = false
-                                    isChannelViewPresented = true
+                                    
+                                    let authUser = try AuthenticationManager.shared.getAuthenticatedUser()
+                                    user = try? await UserManager.shared.getUser(userId: authUser.uid)
+                                    
+                                    if let user {
+                                        likedPosts = user.likedPosts ?? []
+                                        
+                                        if prePost != nil && postToRead != nil && authorName != nil && authorId != "" {
+                                            isReadViewPresented = true
+                                        }
+                                    }
+                                } catch {
+                                    print("URL ERROR: \(error.localizedDescription)")
                                 }
                             }
+                        } else {
+                            print("Index parameter not found.")
                         }
-                        
-                    } else {
-                        print("Index parameter not found.")
+                    }
+                } else if type == "authors" {
+                    if let components = URLComponents(url: url, resolvingAgainstBaseURL: false) {
+                        if let indexParam = components.queryItems?.first(where: { $0.name == "index" })?.value {
+                            authorId = indexParam
+                            
+                            Task {
+                                do {
+                                    authorName = try? await UserManager.shared.getAuthorName(id: authorId)
+                                    isCheckmark = try? await UserManager.shared.getIsCheckmarkStatus(id: authorId)
+                                    lastVersionOfAvatar = try? await UserManager.shared.getAvatarVersion(id: authorId)
+                                    
+                                    let authUser = try AuthenticationManager.shared.getAuthenticatedUser()
+                                    user = try? await UserManager.shared.getUser(userId: authUser.uid)
+                                    
+                                    if user != nil && authorName != nil {
+                                        isLoadingPopupPresented = false
+                                        isChannelViewPresented = true
+                                    }
+                                } catch {
+                                    print("URL ERROR: \(error.localizedDescription)")
+                                }
+                            }
+                            
+                        } else {
+                            print("Index parameter not found.")
+                        }
                     }
                 }
+                
             }
-            
-        }
-        .onChange(of: isNotificationPopupPresented) {
-            if !isNotificationPopupPresented {
-                StorageManager.shared.setNotificationsPopupShowed(true)
+            .onChange(of: isNotificationPopupPresented) {
+                if !isNotificationPopupPresented {
+                    StorageManager.shared.setNotificationsPopupShowed(true)
+                }
             }
-        }
-        .fullScreenCover(isPresented: $isReadViewPresented, content: {
-            ReadView(
-                id: prePost?.id ?? "",
-                title: prePost?.title ?? NSLocalizedString("notFoundLabel", comment: ""),
-                text: postToRead?.text ?? NSLocalizedString("notFoundLabel", comment: ""),
-                dateCreated: postToRead?.dateCreated ?? Date(),
-                likesCount: prePost?.likesCount ?? 0,
-                authorId: prePost?.authorId ?? "",
-                authorName: authorName ?? "",
-                isCheckmark: isCheckmark ?? false,
-                isArchive: prePost?.isArchive ?? true,
-                mediaCount: prePost?.mediaCount ?? 1,
-                mediaVersion: prePost?.mediaVersion ?? 1,
-                mediaPosition: prePost?.mediaPosition ?? 0,
-                lastVersionOfAvatar: lastVersionOfAvatar ?? 0,
-                user: $user,
-                isChannelViewPresented: $isChannelViewPresented,
-                isPresented: $isReadViewPresented
-            )
-            .tint(Color(uiColor: .label))
-            .environmentObject(sessionManager)
-            .environmentObject(changedPostsManager)
-        })
-        .navigationDestination(isPresented: $isChannelViewPresented, destination: {
-            ChannelView(
-                user: $user,
-                authorId: authorId,
-                authorName: authorName ?? "",
-                isCheckmark: isCheckmark ?? false,
-                lastVersionOfAvatar: lastVersionOfAvatar ?? 0
-            )
-            .tint(Color(uiColor: .label))
-            .environmentObject(sessionManager)
-            .environmentObject(changedPostsManager)
-        })
-        .fullScreenCover(isPresented: $isWelcomeViewPresented, content: {
-            WelcomeView(isSignInViewPreseted: $isWelcomeViewPresented)
-        })
-        .sheet(isPresented: $isLoadingPopupPresented, content: {
-            LoadingPopup()
-                .presentationDetents([.height(150)])
+            .fullScreenCover(isPresented: $isReadViewPresented, content: {
+                NavigationStack {
+                    ReadView(
+                        id: prePost?.id ?? "",
+                        title: prePost?.title ?? NSLocalizedString("notFoundLabel", comment: ""),
+                        text: postToRead?.text ?? NSLocalizedString("notFoundLabel", comment: ""),
+                        dateCreated: postToRead?.dateCreated ?? Date(),
+                        likesCount: prePost?.likesCount ?? 0,
+                        authorId: prePost?.authorId ?? "",
+                        authorName: authorName ?? "",
+                        isCheckmark: isCheckmark ?? false,
+                        isArchive: prePost?.isArchive ?? true,
+                        mediaCount: prePost?.mediaCount ?? 1,
+                        mediaVersion: prePost?.mediaVersion ?? 1,
+                        mediaPosition: prePost?.mediaPosition ?? 0,
+                        lastVersionOfAvatar: lastVersionOfAvatar ?? 0,
+                        user: $user,
+                        isChannelViewPresented: $isChannelViewPresented,
+                        isPresented: $isReadViewPresented
+                    )
+                    .tint(Color(uiColor: .label))
+                    .environmentObject(sessionManager)
+                    .environmentObject(changedPostsManager)
+                    .environmentObject(sub)
+                }
+            })
+            .fullScreenCover(isPresented: $isChannelViewPresented, content: {
+                NavigationStack {
+                    ChannelView(
+                        user: $user,
+                        authorId: authorId,
+                        authorName: authorName ?? "",
+                        isCheckmark: isCheckmark ?? false,
+                        lastVersionOfAvatar: lastVersionOfAvatar ?? 0
+                    )
+                    .tint(Color(uiColor: .label))
+                    .environmentObject(sessionManager)
+                    .environmentObject(changedPostsManager)
+                    .environmentObject(sub)
+                }
+            })
+            .fullScreenCover(isPresented: $isWelcomeViewPresented, content: {
+                WelcomeView(isSignInViewPreseted: $isWelcomeViewPresented)
+            })
+            .sheet(isPresented: $isLoadingPopupPresented, content: {
+                LoadingPopup()
+                    .presentationDetents([.height(150)])
+                    .presentationCornerRadius(30)
+                    .presentationDragIndicator(.visible)
+            })
+            //        .popup(isPresented: $isNotificationPopupPresented) {
+            //            NotificationPermissionView(
+            //                isPopupPresented: $isNotificationPopupPresented,
+            //                route: .requestSystemPrompt
+            //            )
+            //            .shadow(radius: 2)
+            //        } customize: {
+            //            $0
+            //                .type(.toast)
+            //                .appearFrom(.bottomSlide)
+            //                .dragToDismiss(true)
+            //                .displayMode(.overlay)
+            //        }
+            .sheet(isPresented: $isNotificationPopupPresented, content: {
+                NotificationPermissionView(
+                    isPopupPresented: $isNotificationPopupPresented,
+                    route:.requestSystemPrompt
+                )
+                .presentationDetents([.height(250)])
                 .presentationCornerRadius(30)
                 .presentationDragIndicator(.visible)
-        })
-//        .popup(isPresented: $isNotificationPopupPresented) {
-//            NotificationPermissionView(
-//                isPopupPresented: $isNotificationPopupPresented,
-//                route: .requestSystemPrompt
-//            )
-//            .shadow(radius: 2)
-//        } customize: {
-//            $0
-//                .type(.toast)
-//                .appearFrom(.bottomSlide)
-//                .dragToDismiss(true)
-//                .displayMode(.overlay)
-//        }
-        .sheet(isPresented: $isNotificationPopupPresented, content: {
-            NotificationPermissionView(
-                isPopupPresented: $isNotificationPopupPresented,
-                route:.requestSystemPrompt
-            )
-            .presentationDetents([.height(250)])
-            .presentationCornerRadius(30)
-            .presentationDragIndicator(.visible)
-        })
-        .popup(isPresented: $isVersionPopupPresented) {
-            VersionPopupView(isCritical: relevantVersion?.isCritical ?? false)
-                .shadow(radius: 2)
-        } customize: {
-            $0
-                .type(.toast)
-                .appearFrom(.bottomSlide)
-                .dragToDismiss(!(relevantVersion?.isCritical ?? true))
-                .displayMode(.overlay)  
+            })
+            .sheet(isPresented: $isVersionPopupPresented, content: {
+                VersionPopupView(isCritical: relevantVersion?.isCritical ?? false)
+                    .presentationDetents([.height(170)])
+                    .presentationCornerRadius(30)
+                    .presentationDragIndicator(.visible)
+            })
         }
     }
-}
+
 
 private extension RootView {
     func checkAppVersion() {

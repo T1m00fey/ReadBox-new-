@@ -16,7 +16,6 @@ struct MediaViews: View {
     let authorId: String
     let mediaCount: Int
     let mediaVersion: Int
-    let isArchive: Bool
     
     @Binding var zoomableImage: UIImage?
     @Binding var isZoomableViewPresented: Bool
@@ -175,25 +174,28 @@ struct MediaViews: View {
             // 3.2. Само видео
             do {
                 let mp4Ref = root.child("\(id)_\(i).mp4")
-                let url = try await mp4Ref.downloadURLAsync()
+                let remoteURL = try await mp4Ref.downloadURLAsync()
                 let cacheVideoId = "video_\(id)_\(i)"
 
-                let localURL = try await VideoCacheManager.shared.cachedURL(
-                    for: url,
-                    id: cacheVideoId,
-                    ignoreCache: ignoreCache
-                )
-
-                await MainActor.run {
-                    if images.count != mediaCount {
-                        images = Array(repeating: nil, count: mediaCount)
+                if let local = await VideoCacheManager.shared.cachedLocalURL(id: cacheVideoId),
+                   !ignoreCache {
+                    await MainActor.run {
+                        if images.count != mediaCount { images = Array(repeating: nil, count: mediaCount) }
+                        images[i] = MediaKind(videoURL: local)
                     }
-                    images[i] = MediaKind(videoURL: localURL)
+                } else {
+                    await MainActor.run {
+                        if images.count != mediaCount { images = Array(repeating: nil, count: mediaCount) }
+                        images[i] = MediaKind(videoURL: remoteURL)
+                    }
+
+                    Task.detached(priority: .utility) {
+                        await VideoCacheManager.shared.warmCache(remoteURL: remoteURL, id: cacheVideoId)
+                    }
                 }
 
-                // 3.3. В фоне считаем аспект видео
                 Task.detached(priority: .utility) {
-                    let asset = AVURLAsset(url: url)
+                    let asset = AVURLAsset(url: remoteURL)
                     do {
                         let tracks = try await asset.loadTracks(withMediaType: .video)
                         if let track = tracks.first {
@@ -252,33 +254,44 @@ struct MediaViews: View {
                 .downloadURLAsync()
 
             let cacheId = "video_\(self.id)_0"
-            let localURL = (try? await VideoCacheManager.shared.cachedURL(
-                for: remoteURL,
-                id: cacheId
-            )) ?? remoteURL
+
+            if let local = await VideoCacheManager.shared.cachedLocalURL(id: cacheId) {
+                await MainActor.run {
+                    if images.isEmpty {
+                        images = [MediaKind(videoURL: local)]
+                    } else {
+                        images[0] = MediaKind(videoURL: local)
+                    }
+                }
+                return
+            }
 
             await MainActor.run {
                 if images.isEmpty {
-                    images = [MediaKind(videoURL: localURL)]
+                    images = [MediaKind(videoURL: remoteURL)]
                 } else {
-                    images[0] = MediaKind(videoURL: localURL)
+                    images[0] = MediaKind(videoURL: remoteURL)
                 }
+            }
+
+            Task.detached(priority: .utility) {
+                await VideoCacheManager.shared.warmCache(remoteURL: remoteURL, id: cacheId)
             }
         } catch {
             // ничего нет — оставляем пусто
         }
+
     }
     
     var body: some View {
         let feedW = UIScreen.main.bounds.width - 25
         let ph = carouselHeight(for: feedW)
         let placeholderHeight = ph * 0.7
-        let counterHeight: CGFloat = 24
         
         let hasMedia = images.contains { $0 != nil }
         
         let containerHeight: CGFloat? = {
-            if mediaCount == 0 || isArchive {
+            if mediaCount == 0 {
                 return 0
             }
             
@@ -292,7 +305,7 @@ struct MediaViews: View {
                 }
             } else {
                 if hasMedia {
-                    return ph + counterHeight
+                    return ph
                 } else if isLoadingMedia {
                     return placeholderHeight
                 } else {
@@ -302,7 +315,7 @@ struct MediaViews: View {
         }()
         
         return ZStack {
-            if hasMedia && mediaCount != 0 && !isArchive {
+            if hasMedia && mediaCount != 0 {
                 Group {
                     if mediaCount == 1 {
                         if let image = images.first??.image {
@@ -320,18 +333,15 @@ struct MediaViews: View {
                                 }
                                 
                         } else if let url = images.first??.videoURL {
-                            let rawH = itemHeight(for: 0, width: feedW)
-                            let h = min(rawH, 400)
-                            
                             TappableVideoPreview(
                                 url: url,
                                 cornerRadius: 20,
                                 width: feedW,
-                                height: h,
-                                placeholder: videoPreviews[0]
+                                placeholder: videoPreviews[0],
+                                fillMode: true,
+                                maxHeight: 500
                             )
                             .id(url.absoluteString)
-                            .frame(width: feedW, height: h)
                         }
                     } else {
                         TabView(selection: $currentIndex) {
@@ -364,7 +374,8 @@ struct MediaViews: View {
                                                     cornerRadius: 20,
                                                     width: feedW,
                                                     height: ph,
-                                                    placeholder: videoPreviews[i]
+                                                    placeholder: videoPreviews[i],
+                                                    fillMode: true
                                                 )
                                                 .id(videoURL.absoluteString)
                                                 .frame(width: feedW, height: ph)
@@ -396,6 +407,7 @@ struct MediaViews: View {
                         .tabViewStyle(.page(indexDisplayMode: .never))
                         .contentMargins(.horizontal, 0, for: .scrollContent)
                         .frame(width: feedW, height: ph)
+                        .clipShape(RoundedRectangle(cornerRadius: 20))
                     }
                 }
                 .transition(.opacity)
@@ -410,11 +422,10 @@ struct MediaViews: View {
             }
         }
         .frame(width: feedW, height: containerHeight)
-        .padding(.bottom, 5)
         .animation(.easeOut(duration: 0.18), value: hasMedia)
         .animation(.easeOut(duration: 0.12), value: isLoadingMedia)
         .task {
-            guard mediaCount != 0, !isArchive else { return }
+            guard mediaCount != 0 else { return }
             
             if mediaVersion == 1 {
                 let alreadyHasMedia = await MainActor.run {
@@ -521,12 +532,12 @@ private extension MediaViews {
         if #available(iOS 26, *) {
             Text("\(currentIndex + 1)/\(mediaCount)")
                 .font(.system(size: 14))
-                .padding(.all, 10)
+                .padding(.all, 8)
                 .glassEffect(.regular, in: Capsule())
                 .frame(maxWidth: .infinity, alignment: .trailing)
-                .padding(.top, 10)
+                .padding(.top, 12)
                 .padding(.horizontal, 10)
-                .padding(.trailing, isVideo ? 50 : 0)
+                .padding(.trailing, isVideo ? 40 : 0)
         } else{
             Text("\(currentIndex + 1)/\(mediaCount)")
             .font(.system(size: 17))

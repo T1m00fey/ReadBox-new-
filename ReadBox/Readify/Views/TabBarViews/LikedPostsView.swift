@@ -14,6 +14,10 @@ struct LikedPostsView: View {
     
     @StateObject var viewModel = LikedPostsViewModel()
     
+    @EnvironmentObject var sessionManager: SessionManager
+    @EnvironmentObject var changedPostsManager: ChangedPostsManager
+    @EnvironmentObject var subManager: SubscriptionManager
+    
     var body: some View {
         
         NavigationStack {
@@ -23,11 +27,12 @@ struct LikedPostsView: View {
                     
                     LazyVStack {
                         
-                        Color.clear.frame(height: 60)
+                        Text("")
+                        VisibilityTracker(id: "likedHeader")
                         
                         if viewModel.isLoadingShowed {
                             
-                            ForEach(0..<5) { _ in
+                            ForEach(0..<5) { id in
                                 ArticleView(
                                     id: "-1",
                                     title: "Hello, World!",
@@ -40,6 +45,9 @@ struct LikedPostsView: View {
                                     mediaVersion: 2,
                                     mediaPosition: 0,
                                     lastVersionOfAvatar: 0,
+                                    locCount: 0,
+                                    isLocalizedVersion: false,
+                                    isPremiumPost: false,
                                     user: .constant(nil),
                                     isZoomableViewPresented: .constant(false),
                                     zoomableImage: .constant(nil),
@@ -47,7 +55,7 @@ struct LikedPostsView: View {
                                     isChannelViewPresented: .constant(false)
                                 )
                                 .redacted(reason: .placeholder)
-                                .padding(.top, 20)
+                                .padding(.top, id == 0 ? 40 : 10)
                                 .padding(.horizontal)
                                 .shimmering()
                             }
@@ -86,13 +94,16 @@ struct LikedPostsView: View {
                                     mediaVersion: article.mediaVersion ?? 1,
                                     mediaPosition: article.mediaPosition ?? 0,
                                     lastVersionOfAvatar: viewModel.authorsInfo[article.authorId ?? ""]?.avatarVersion ?? 0,
+                                    locCount: article.localizationCount ?? 0,
+                                    isLocalizedVersion: article.isLocalizedVersion ?? false,
+                                    isPremiumPost: article.isPremiumPost ?? false,
                                     user: $viewModel.user,
                                     isZoomableViewPresented: $viewModel.isZoomableViewPresented,
                                     zoomableImage: $viewModel.zoomableImage,
                                     selectedAuthorId: $viewModel.authorId,
                                     isChannelViewPresented: $viewModel.isChannelViewPresented
                                 )
-                                .padding(.top, 12)
+                                .padding(.top, article.id == viewModel.articles[0].id ? 40 : 10)
                                 .padding(.horizontal)
                                 .onAppear {
                                     viewModel.onPostAppearing(article)
@@ -165,6 +176,9 @@ struct LikedPostsView: View {
                         isChannelViewPresented: $viewModel.isChannelViewPresented,
                         isPresented: $viewModel.isReadViewPresented
                     )
+                    .environmentObject(sessionManager)
+                    .environmentObject(changedPostsManager)
+                    .environmentObject(subManager)
                 })
                 .navigationDestination(isPresented: $viewModel.isChannelViewPresented, destination: {
                     ChannelView(
@@ -174,6 +188,9 @@ struct LikedPostsView: View {
                         isCheckmark: viewModel.authorsInfo[viewModel.authorId]?.isCheckmark ?? false,
                         lastVersionOfAvatar: viewModel.authorsInfo[viewModel.authorId]?.avatarVersion ?? 0
                     )
+                    .environmentObject(sessionManager)
+                    .environmentObject(changedPostsManager)
+                    .environmentObject(subManager)
                 })
                 .fullScreenCover(isPresented: $viewModel.isZoomableViewPresented, content: {
                     if let image = viewModel.zoomableImage {
@@ -220,6 +237,18 @@ struct LikedPostsView: View {
                 viewModel: viewModel,
                 isWelcomeViewPresented: isWelcomeViewPresented
             )
+            .onPreferenceChange(VisibilityPreferenceKey.self) { values in
+                if let minY = values["likedHeader"] {
+                    let isVisible = minY > 60
+                    print("TRECCECEC: \(minY)")
+
+                    if viewModel.isLargeHeaderVisible != isVisible {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            viewModel.isLargeHeaderVisible = isVisible
+                        }
+                    }
+                }
+            }
         }
         
     }
@@ -228,11 +257,15 @@ struct LikedPostsView: View {
 private extension LikedPostsView {
     var headerView: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 15)
-                .frame(width: UIScreen.main.bounds.width, height: 120)
-//                .foregroundStyle(Color(uiColor: .secondarySystemBackground))
-                .foregroundStyle(.thinMaterial)
-                .shadow(radius: 5)
+            if viewModel.isLargeHeaderVisible {
+                RoundedRectangle(cornerRadius: 15)
+                    .frame(width: UIScreen.main.bounds.width, height: 120)
+                    .foregroundStyle(Color.clear)
+            } else {
+                RoundedRectangle(cornerRadius: 15)
+                    .frame(width: UIScreen.main.bounds.width, height: 120)
+                    .foregroundStyle(.thinMaterial)
+            }
             
             HStack {
                 Text(LocalizedStringKey("favoritesLabel"))

@@ -2,11 +2,16 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>UIDesignRequiresCompatibility</key>
-	<false/>
+	<key>UIAppFonts</key>
+	<array>
+		<string>PlaywriteIE.ttf</string>
+		<string>Borel.ttf</string>
+	</array>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>remote-notification</string>
 	</array>
+	<key>UIDesignRequiresCompatibility</key>
+	<false/>
 </dict>
 </plist>

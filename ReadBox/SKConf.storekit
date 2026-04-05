@@ -1,0 +1,84 @@
+{
+  "appPolicies" : {
+    "eula" : "",
+    "policies" : [
+      {
+        "locale" : "en_US",
+        "policyText" : "",
+        "policyURL" : ""
+      }
+    ]
+  },
+  "identifier" : "40702B3C",
+  "nonRenewingSubscriptions" : [
+
+  ],
+  "products" : [
+
+  ],
+  "settings" : {
+    "_applicationInternalID" : "6745975985",
+    "_askToBuyEnabled" : false,
+    "_billingGracePeriodEnabled" : false,
+    "_billingIssuesEnabled" : false,
+    "_developerTeamID" : "7PV9N4T7V4",
+    "_disableDialogs" : false,
+    "_failTransactionsEnabled" : false,
+    "_lastSynchronizedDate" : 795997153.029333,
+    "_locale" : "ru",
+    "_renewalBillingIssuesEnabled" : false,
+    "_storefront" : "RUS",
+    "_storeKitErrors" : [
+
+    ],
+    "_timeRate" : 0
+  },
+  "subscriptionGroups" : [
+    {
+      "id" : "21993307",
+      "localizations" : [
+
+      ],
+      "name" : "ReadBox premium",
+      "subscriptions" : [
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "119.0",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "6761026516",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Доступ к статьям",
+              "displayName" : "ReadBox Premium",
+              "locale" : "ru"
+            },
+            {
+              "description" : "Access to premium articles",
+              "displayName" : "ReadBox Premium",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "ReadBox.Sub.Month",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "ReadBox Premium",
+          "subscriptionGroupID" : "21993307",
+          "type" : "RecurringSubscription",
+          "winbackOffers" : [
+
+          ]
+        }
+      ]
+    }
+  ],
+  "version" : {
+    "major" : 4,
+    "minor" : 0
+  }
+}

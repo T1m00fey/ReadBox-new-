@@ -22,13 +22,19 @@ struct ArticleView: View {
     let mediaVersion: Int
     let mediaPosition: Int
     let lastVersionOfAvatar: Int
+    let locCount: Int
+    let isCreatedView: Bool
+    let isLocalizedVersion: Bool
+    let isPremiumPost: Bool
     
     @Binding var user: DBUser?
     @Binding var isZoomableViewPresented: Bool
     @Binding var zoomableImage: UIImage?
     @Binding var selectedAuthorId: String
     @Binding var isChannelViewPresented: Bool
-    
+    @Binding var postOption: PostOptions
+    @Binding var selectedId: String
+
     @State private var videoURL: URL? = nil
     @State private var avatarImage: UIImage? = nil
     @State private var isExpanded = false
@@ -39,6 +45,7 @@ struct ArticleView: View {
     @State private var images: [MediaKind?] = []
     
     @EnvironmentObject var sessionManager: SessionManager
+    @EnvironmentObject var subscriptionMnaager: SubscriptionManager
     
     private let maxTitleLen = 250
     
@@ -54,11 +61,17 @@ struct ArticleView: View {
         mediaVersion: Int,
         mediaPosition: Int,
         lastVersionOfAvatar: Int,
+        locCount: Int,
+        isCreatedView: Bool = false,
+        isLocalizedVersion: Bool,
+        isPremiumPost: Bool,
         user: Binding<DBUser?>,
         isZoomableViewPresented: Binding<Bool>,
         zoomableImage: Binding<UIImage?>,
         selectedAuthorId: Binding<String>,
         isChannelViewPresented: Binding<Bool>,
+        postOption: Binding<PostOptions> = .constant(.nothing),
+        selectedId: Binding<String> = .constant("")
     ) {
         self.id = id
         self.title = title
@@ -71,11 +84,21 @@ struct ArticleView: View {
         self.mediaVersion = mediaVersion
         self.mediaPosition = mediaPosition
         self.lastVersionOfAvatar = lastVersionOfAvatar
+        self.locCount = locCount
+        self.isCreatedView = isCreatedView
+        self.isLocalizedVersion = isLocalizedVersion
+        self.isPremiumPost = isPremiumPost
         self._user = user
         self._isZoomableViewPresented = isZoomableViewPresented
         self._zoomableImage = zoomableImage
         self._selectedAuthorId = selectedAuthorId
         self._isChannelViewPresented = isChannelViewPresented
+        self._postOption = postOption
+        self._selectedId = selectedId
+    }
+    
+    private func isAccessToPremiumDenied() -> Bool {
+        isPremiumPost && !subscriptionMnaager.hasPremium && authorId != user?.userId
     }
     
     private func updateLike() async throws {
@@ -157,6 +180,17 @@ struct ArticleView: View {
                     
                     Spacer()
                     
+                    if isLocalizedVersion {
+                        Image("translateIcon")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 15)
+                            .foregroundStyle(Color(.systemGray6))
+                            .padding(.all, 5)
+                            .background(Color(.systemGray4))
+                            .clipShape(RoundedRectangle(cornerRadius: 5))
+                    }
+                    
                     if !isShortPost {
                         Text(NSLocalizedString("articleLabel", comment: ""))
                             .font(.system(size: 12))
@@ -165,31 +199,129 @@ struct ArticleView: View {
                             .background(Color(.systemGray4))
                             .clipShape(RoundedRectangle(cornerRadius: 5))
                     }
+                    
+                    if isPremiumPost {
+//                        Image(systemName: "plus")
+//                            .resizable()
+//                            .scaledToFit()
+//                            .frame(width: 15)
+//                            .foregroundStyle(Color(.label))
+//                            .padding(.all, 5)
+//                            .background(Color(.systemGray4))
+//                            .clipShape(RoundedRectangle(cornerRadius: 5))
+                        Text("R+")
+                            .font(.custom("PlaywriteIE-Regular", size: 15))
+                            .foregroundStyle(Color(.gray))
+                            .padding(.trailing, -5)
+                    }
+                    
+                    if isCreatedView {
+                        Menu {
+                            Button {
+                                postOption = .editing
+                                selectedId = id
+                            } label: {
+                                Label(NSLocalizedString("editingLabel", comment: ""), systemImage: "pencil")
+                            }
+                            
+                            Button {
+                                selectedId = id
+                                
+                                if isArchive {
+                                    postOption = .publish
+                                } else {
+                                    postOption = .toArchive
+                                }
+                                
+                            } label: {
+                                if isArchive {
+                                    Label(NSLocalizedString("publishLabel", comment: ""), systemImage: "paperplane")
+                                } else {
+                                    Label(NSLocalizedString("saveToArchiveLabel", comment: ""), systemImage: "archivebox")
+                                }
+                            }
+                            
+                            if locCount == 0 && !isLocalizedVersion {
+                                Button {
+                                    postOption = .localize
+                                    selectedId = id
+                                } label: {
+                                    Label(NSLocalizedString("toLocalizeMenuActionLabel", comment: ""), systemImage: "globe")
+                                }
+                            }
+                        
+                            Button {
+                                postOption = .delete
+                                selectedId = id
+                        
+                                
+                                StorageManager.shared.deleteImage(id: id)
+                            } label: {
+                                Label(NSLocalizedString("deleteLabel", comment: ""), systemImage: "xmark.circle")
+                            }
+                        } label: {
+                            Image(systemName: "ellipsis")
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 15, height: 15)
+                                .foregroundStyle(Color(.gray))
+                                .padding(.all, 5)
+                                .background(Color(.systemGray4))
+                                .clipShape(RoundedRectangle(cornerRadius: 5))
+                        }
+        
+                    }
+                    
                 }
             }
             .frame(width: UIScreen.main.bounds.width - 42, height: 40, alignment: .leading)
             .padding(.top, 7)
             .padding(.vertical, 5)
             
-            if mediaPosition == 1 && isShortPost {
+            if mediaPosition == 1 && isShortPost && !isAccessToPremiumDenied() {
                 titleView
             }
             
             if mediaCount > 0 {
-                MediaViews(
-                    id: id,
-                    authorId: authorId,
-                    mediaCount: effectiveMediaCount,
-                    mediaVersion: mediaVersion,
-                    isArchive: isArchive,
-                    zoomableImage: $zoomableImage,
-                    isZoomableViewPresented: $isZoomableViewPresented,
-                    currentIndex: $currentIndex
-                )
-                .id("\(id)-\(effectiveMediaCount)")
-//                .padding(.top, isChannelViewPresented ? 9 : 0)
-                .padding(.bottom, title == "" || (mediaPosition == 1 && isShortPost) ? 10 : 0)
-                
+                ZStack {
+                    MediaViews(
+                        id: id,
+                        authorId: authorId,
+                        mediaCount: effectiveMediaCount,
+                        mediaVersion: mediaVersion,
+                        zoomableImage: $zoomableImage,
+                        isZoomableViewPresented: $isZoomableViewPresented,
+                        currentIndex: $currentIndex
+                    )
+                    .id("\(id)-\(effectiveMediaCount)")
+                    .padding(.bottom, mediaPosition == 1 && isShortPost && title != "" ? 10 : 0)
+                    .padding(.bottom, title == "" ? -25: 0)
+                    .blur(radius: isAccessToPremiumDenied() ? 10 : 0)
+                    .disabled(isAccessToPremiumDenied())
+                    
+                    if isAccessToPremiumDenied() {
+                        subscriptionAlertView
+                            .padding(.all, 10)
+                            .background(.thinMaterial)
+                            .clipShape(RoundedRectangle(cornerRadius: 20))
+                    }
+                }
+            } else if isAccessToPremiumDenied() {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 20)
+                        .frame(width: UIScreen.main.bounds.width - 32, height: 200)
+                        .foregroundStyle(Color("availableInRead+"))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 20)
+                                .stroke(
+                                    Color(.systemGray5),
+                                    lineWidth: 2
+                                )
+                        )
+                    
+                    subscriptionAlertView
+                }
+                .padding(.bottom, 5)
             }
             
             ZStack {
@@ -204,10 +336,10 @@ struct ArticleView: View {
 //                        .padding(.bottom, !isExpanded && title.count >= maxTitleLen && isShortPost ? 10 : 0)
 //                        .padding(.bottom, !isExpanded && title.count >= maxTitleLen ? 17 : 0)
                     
-                    if mediaPosition == 0 || !isShortPost {
+                    if (mediaPosition == 0 || !isShortPost) && !(isShortPost && isAccessToPremiumDenied() && isPremiumPost) {
                         titleView
+                            .padding(.top, mediaCount > 0 ? 5 : 0)
                             .padding(.bottom, isShortPost ? 10 : 20)
-                            .padding(.top, mediaCount > 0 ? 3 : 0)
                     }
                     
                     if isShortPost {
@@ -291,10 +423,12 @@ struct ArticleView: View {
             effectiveMediaCount = mediaCount
         }
         .task {
-            let ava = await MediaManager.shared.getAvatar(authorId: authorId, lastVersion: lastVersionOfAvatar)
-            
-            withAnimation {
-                avatarImage = ava
+            if avatarImage == nil {
+                let ava = await MediaManager.shared.getAvatar(authorId: authorId, lastVersion: lastVersionOfAvatar)
+                
+                withAnimation {
+                    avatarImage = ava
+                }
             }
         }
     }
@@ -307,5 +441,21 @@ private extension ArticleView {
             .lineLimit(!isExpanded && title.count >= maxTitleLen ? 4 : nil)
             .fontDesign(.rounded)
             .frame(width: UIScreen.main.bounds.width - 42, alignment: .leading)
+    }
+    
+    var subscriptionAlertView: some View {
+        VStack(spacing: 1) {
+            Text("доступно только с")
+                .font(.system(size: 16))
+                .fontDesign(.rounded)
+                .foregroundStyle(Color(.gray))
+                
+            
+            Text("Read+")
+    //                                .font(.custom("PlaywriteIE-Regular", size: 28))
+                .font(.custom("Borel-Regular", size: 28))
+                .foregroundStyle(Color(.gray))
+                .padding(.bottom, -20)
+        }
     }
 }

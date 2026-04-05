@@ -15,7 +15,15 @@ enum PostOptions {
     case editing
     case toArchive
     case publish
+    case localize
     case delete
+}
+
+enum CreatedPostsSection {
+    case all
+    case archive
+    case localizedPublished
+    case localizedArchive
 }
 
 @MainActor
@@ -31,6 +39,7 @@ final class CreatedPostsViewModel: ObservableObject {
     @Published var isSuccessPopupPresented = false
     @Published var isCreateViewPresented = false
     @Published var isArchivePresented = false
+    @Published var isLocalizedPostsPresented = false
     @Published var postsNeedToLoad: [String] = []
     @Published var postOption: PostOptions = .nothing
     @Published var isNewPublicationButtonPresented = false
@@ -62,6 +71,7 @@ final class CreatedPostsViewModel: ObservableObject {
     @Published var name = NSLocalizedString("notFoundLabel", comment: "")
     @Published var description = ""
     @Published var isCheckmark = false
+    @Published var isPremiumAuthor = false
     
     @Published var user: DBUser? = nil
     
@@ -81,6 +91,11 @@ final class CreatedPostsViewModel: ObservableObject {
     var mediaCount = 0
     var mediaVersion = 0
     var mediaPosition = 0
+    var isLocalizing = false
+    var localizationCount = 0
+    var rootLang = ""
+    var rootMediaPosition = 0
+    var rootIsPremiumPost = false
     
     var alertText = ""
     
@@ -90,6 +105,15 @@ final class CreatedPostsViewModel: ObservableObject {
         text = ""
         mediaURLs = []
         mediaKind = []
+        mediaCount = 0
+        mediaVersion = 0
+        mediaPosition = 0
+        isLocalizing = false
+        localizationCount = 0
+        rootLang = ""
+        title = ""
+        rootMediaPosition = 0
+        rootIsPremiumPost = false
     }
     
     func isButtonEnable() {
@@ -103,16 +127,15 @@ final class CreatedPostsViewModel: ObservableObject {
     }
     
     func getBottomPadding(by id: String) -> CGFloat {
-        if isArchivePresented {
-            return archivePosts.last?.id == id ? 70 : 0
-        } else {
-            return posts.last?.id == id ? 70 : 0
-        }
+        currentPosts.last?.id == id ? 70 : 10
     }
     
     func loadUser() async throws {
         let authDataResult = try AuthenticationManager.shared.getAuthenticatedUser()
         let user = try await UserManager.shared.getUser(userId: authDataResult.uid)
+        if let id = user?.userId {
+            isPremiumAuthor = try await UserManager.shared.getIsPremiumAuthorStatus(for: id)
+        }
         
         postsCount = user?.postsCount ?? 0
         subscribersCount = user?.subscribersCount ?? 0
@@ -147,6 +170,8 @@ final class CreatedPostsViewModel: ObservableObject {
         withAnimation {
             posts = []
             archivePosts = []
+            isArchivePresented = false
+            isLocalizedPostsPresented = false
             postsCount = 0
             isLoadingShowing = true
             isNewPublicationButtonPresented = false
@@ -207,6 +232,14 @@ final class CreatedPostsViewModel: ObservableObject {
         
         let mediaURLs = try await ArticlesManager.shared.getMediaURLs(from: id)
         
+        if let rootId = post.rootId, let isLocVer = post.isLocalizedVersion, isLocVer {
+            let locCountOfRoot = try? await ArticlesManager.shared.getLocalizationCount(for: rootId)
+            
+            if let locCountOfRoot {
+                try? await ArticlesManager.shared.setLocalizationCount(for: rootId, count: locCountOfRoot - 1)
+            }
+        }
+        
         try await ArticlesManager.shared.deletePost(id: id)
         try await UserManager.shared.deleteCreatedPost(id: id)
         
@@ -235,6 +268,8 @@ final class CreatedPostsViewModel: ObservableObject {
             } else {
                 posts.removeAll { $0.id == id }
             }
+            
+            updatePresentedSectionIfNeeded()
         }
         
         self.id = ""
@@ -278,6 +313,8 @@ final class CreatedPostsViewModel: ObservableObject {
                     archivePosts[0].isArchive?.toggle()
                     posts.removeAll { $0.id == id }
                 }
+                
+                updatePresentedSectionIfNeeded()
             }
            
            id = ""
@@ -367,6 +404,101 @@ final class CreatedPostsViewModel: ObservableObject {
                 errorText = NSLocalizedString("loadDataErrorText", comment: "")
                 isErrorPopupPresented = true
             }
+        }
+    }
+    
+    var publishedPosts: [PrePost] {
+        posts.filter { !($0.isLocalizedVersion ?? false) }
+    }
+    
+    var localizedPosts: [PrePost] {
+        posts.filter { $0.isLocalizedVersion ?? false }
+    }
+    
+    var regularArchivePosts: [PrePost] {
+        archivePosts.filter { !($0.isLocalizedVersion ?? false) }
+    }
+    
+    var localizedArchivePosts: [PrePost] {
+        archivePosts.filter { $0.isLocalizedVersion ?? false }
+    }
+    
+    var currentPosts: [PrePost] {
+        if isArchivePresented && isLocalizedPostsPresented {
+            localizedArchivePosts
+        } else if isArchivePresented {
+            regularArchivePosts
+        } else if isLocalizedPostsPresented {
+            localizedPosts
+        } else {
+            publishedPosts
+        }
+    }
+    
+    var hasLocalizedPosts: Bool {
+        !localizedPosts.isEmpty || !localizedArchivePosts.isEmpty
+    }
+    
+    var hasRegularArchivePosts: Bool {
+        !regularArchivePosts.isEmpty
+    }
+    
+    var currentSection: CreatedPostsSection {
+        if isArchivePresented && isLocalizedPostsPresented {
+            .localizedArchive
+        } else if isArchivePresented {
+            .archive
+        } else if isLocalizedPostsPresented {
+            .localizedPublished
+        } else {
+            .all
+        }
+    }
+    
+    var currentSectionTitle: String {
+        switch currentSection {
+        case .all:
+            NSLocalizedString("publicationsLabel", comment: "")
+        case .archive:
+            NSLocalizedString("archiveLabel", comment: "")
+        case .localizedPublished:
+            NSLocalizedString("localizedPostsLabel", comment: "")
+        case .localizedArchive:
+            NSLocalizedString("localizedArchivePostsLabel", comment: "")
+        }
+    }
+    
+    func showAllPosts() {
+        isArchivePresented = false
+        isLocalizedPostsPresented = false
+    }
+    
+    func showArchivePosts() {
+        isArchivePresented = true
+        isLocalizedPostsPresented = false
+    }
+    
+    func showLocalizedPosts() {
+        isArchivePresented = false
+        isLocalizedPostsPresented = true
+    }
+    
+    func showLocalizedArchivePosts() {
+        isArchivePresented = true
+        isLocalizedPostsPresented = true
+    }
+    
+    func updatePresentedSectionIfNeeded() {
+        if currentSection == .archive && regularArchivePosts.isEmpty {
+            showAllPosts()
+        }
+        
+        if currentSection == .localizedPublished && localizedPosts.isEmpty {
+            showAllPosts()
+        }
+        
+        if currentSection == .localizedArchive && localizedArchivePosts.isEmpty {
+            showAllPosts()
         }
     }
     

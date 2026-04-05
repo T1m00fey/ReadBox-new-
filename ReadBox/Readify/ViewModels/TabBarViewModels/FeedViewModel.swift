@@ -165,7 +165,9 @@ final class FeedViewModel: ObservableObject {
                                     isShortPost: false,
                                     mediaCount: 0,
                                     mediaVersion: 2,
-                                    mediaPosition: 0
+                                    mediaPosition: 0,
+                                    localizationCount: 0,
+                                    isLocalizedVersion: false
                                 )
                             )
                         }
@@ -190,7 +192,9 @@ final class FeedViewModel: ObservableObject {
                                 isShortPost: false,
                                 mediaCount: 0,
                                 mediaVersion: 2,
-                                mediaPosition: 0
+                                mediaPosition: 0,
+                                localizationCount: 0,
+                                isLocalizedVersion: false
                             )
                         )
                         
@@ -208,7 +212,9 @@ final class FeedViewModel: ObservableObject {
                             isShortPost: false,
                             mediaCount: 0,
                             mediaVersion: 2,
-                            mediaPosition: 0
+                            mediaPosition: 0,
+                            localizationCount: 0,
+                            isLocalizedVersion: false
                         )
                     )
                 }

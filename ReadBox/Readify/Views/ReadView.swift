@@ -27,18 +27,65 @@ struct ReadView: View {
     let mediaVersion: Int
     let mediaPosition: Int
     let lastVersionOfAvatar: Int
+    let isLocalizedVersion: Bool
+    let rootId: String
+    let originalPrePost: PrePost?
     
     @Binding var user: DBUser?
     @Binding var isChannelViewPresented: Bool
     @Binding var isPresented: Bool
     
     @State private var isSubscribed = false
+    @State private var currentPrePost: PrePost? = nil
+    @State private var currentPostToRead: PostToRead? = nil
     
     @StateObject var viewModel = ReadViewModel()
     
     @Namespace var namespace
     
     @EnvironmentObject var sessionManager: SessionManager
+    
+    init(
+        id: String,
+        title: String,
+        text: String,
+        dateCreated: Date,
+        likesCount: Int,
+        authorId: String,
+        authorName: String,
+        isCheckmark: Bool,
+        isArchive: Bool,
+        mediaCount: Int,
+        mediaVersion: Int,
+        mediaPosition: Int,
+        lastVersionOfAvatar: Int,
+        user: Binding<DBUser?>,
+        isChannelViewPresented: Binding<Bool>,
+        isPresented: Binding<Bool>,
+        isLocalizedVersion: Bool = false,
+        rootId: String = "",
+        originalPrePost: PrePost? = nil
+    ) {
+        self.id = id
+        self.title = title
+        self.text = text
+        self.dateCreated = dateCreated
+        self.likesCount = likesCount
+        self.authorId = authorId
+        self.authorName = authorName
+        self.isCheckmark = isCheckmark
+        self.isArchive = isArchive
+        self.mediaCount = mediaCount
+        self.mediaVersion = mediaVersion
+        self.mediaPosition = mediaPosition
+        self.lastVersionOfAvatar = lastVersionOfAvatar
+        self._user = user
+        self._isChannelViewPresented = isChannelViewPresented
+        self._isPresented = isPresented
+        self.isLocalizedVersion = isLocalizedVersion
+        self.rootId = rootId
+        self.originalPrePost = originalPrePost
+    }
     
     var body: some View {
         ZStack {
@@ -48,8 +95,8 @@ struct ReadView: View {
             ScrollView(showsIndicators: false) {
                 VStack {
                                                                     
-                    if !text.isEmpty {
-                        Text(title)
+                    if !currentText.isEmpty {
+                        Text(currentTitle)
                             .fontWeight(.light)
                             .fontDesign(.rounded)
                             .font(.system(size: 24))
@@ -64,10 +111,10 @@ struct ReadView: View {
                         VisibilityTracker(id: "authorBlock")
                         
                         HStack {
-                            Text("by")
-                                .font(.system(size: 20))
-                                .fontDesign(.rounded)
-                                .foregroundStyle(Color.gray)
+//                            Text("by")
+//                                .font(.system(size: 20))
+//                                .fontDesign(.rounded)
+//                                .foregroundStyle(Color.gray)
                             
                             if let avatar = viewModel.avatarImage {
                                 Image(uiImage: avatar)
@@ -110,7 +157,7 @@ struct ReadView: View {
                             }
                         }
                         .frame(width: UIScreen.main.bounds.width - 32, alignment: .leading)
-                        .padding(.bottom, 10)
+                        .padding(.bottom, 5)
                         .padding(.top, viewModel.images.count == 0 ? 10 : 0)
                     }
                    
@@ -129,14 +176,16 @@ struct ReadView: View {
 //                                .frame(width: UIScreen.main.bounds.width - 20)
 //                        }
                     
-                    if mediaPosition == 0 && mediaCount > 0 {
+                    if currentMediaPosition == 0 && currentMediaCount > 0 {
                         mediaViews
-                    } else if mediaPosition == 1 && !title.isEmpty {
+                    } else if currentMediaPosition == 1 && !currentTitle.isEmpty {
                         titleView
+                            .padding(.top, 10)
+//                            .padding(.bottom, -20)
                     }
                 
                     HStack {
-                        Text(viewModel.getDateCreated(regDate: dateCreated))
+                        Text(viewModel.getDateCreated(regDate: currentDateCreated))
                             .font(.system(size: 21))
                             .fontWeight(.light)
                             .fontDesign(.rounded)
@@ -151,7 +200,7 @@ struct ReadView: View {
                                 }
                                 
                                 user?.likedPosts?.removeAll {
-                                    id == $0
+                                    currentId == $0
                                 
                                 }
                                 
@@ -160,7 +209,7 @@ struct ReadView: View {
                                 Task {
                                     do {
                                         viewModel.vibrationsService.lightImpact()
-                                        try await viewModel.removeLikedPost(userId: user?.userId ?? "", articleId: id)
+                                        try await viewModel.removeLikedPost(userId: user?.userId ?? "", articleId: currentId)
                                     } catch {
                                         withAnimation {
                                             viewModel.errorText = error.localizedDescription
@@ -168,22 +217,22 @@ struct ReadView: View {
                                         }
                                     }
                                     
-                                    try? await viewModel.updateLikes(at: id, likesCount: viewModel.likesCount)
+                                    try? await viewModel.updateLikes(at: currentId, likesCount: viewModel.likesCount)
                                 }
                             } else {
-                                if id != "" {
+                                if currentId != "" {
                                     withAnimation {
                                         viewModel.isPostLiked.toggle()
                                     }
                                     
                                     viewModel.likesCount += 1
                                     
-                                    user?.likedPosts?.append(id)
+                                    user?.likedPosts?.append(currentId)
                                     
                                     Task {
                                         do {
                                             viewModel.vibrationsService.lightImpact()
-                                            try await viewModel.addLikedPost(userId: user?.userId ?? "", articleId: id)
+                                            try await viewModel.addLikedPost(userId: user?.userId ?? "", articleId: currentId)
                                         } catch {
                                             withAnimation {
                                                 viewModel.errorText = error.localizedDescription
@@ -191,7 +240,7 @@ struct ReadView: View {
                                             }
                                         }
                                         
-                                        try? await viewModel.updateLikes(at: id, likesCount: viewModel.likesCount)
+                                        try? await viewModel.updateLikes(at: currentId, likesCount: viewModel.likesCount)
                                     }
                                 } else {
                                     withAnimation {
@@ -316,9 +365,9 @@ struct ReadView: View {
                     .padding(.horizontal)
                     .padding(.bottom, 20)
                     
-                    if !text.isEmpty {
+                    if !currentText.isEmpty {
                         Markdown(
-                            text.replacingOccurrences(of: "\n", with: "  \n").normalizeEmptyLines()
+                            currentText.replacingOccurrences(of: "\n", with: "  \n").normalizeEmptyLines()
                         )
                         .markdownImageProvider(
                             WebImageProvider(onImageTap: { url in
@@ -332,11 +381,13 @@ struct ReadView: View {
                         .markdownTheme(.gitHub)
                         .frame(width: UIScreen.main.bounds.width - 32, alignment: .topLeading)
                         .padding(.bottom, 50)
-                    } else if mediaPosition == 0 && title != "" {
+                    } else if currentMediaPosition == 0 && currentTitle != "" {
                         titleView
                             .padding(.bottom, 50)
-                    } else if mediaPosition == 1 {
+                            .padding(.top, -15)
+                    } else if currentMediaPosition == 1 {
                         mediaViews
+                            .padding(.top, -15)
                             .padding(.bottom, 50)
                     }
                 }
@@ -367,10 +418,10 @@ struct ReadView: View {
                         isSubscribed = subscribes.contains(authorId)
                     }
             
-                    viewModel.isPostLiked = (user?.likedPosts ?? []).contains(id)
+                    viewModel.isPostLiked = (user?.likedPosts ?? []).contains(currentId)
                 }
                 
-                viewModel.likesCount = likesCount
+                viewModel.likesCount = currentLikesCount
                 
                 viewModel.fontSize = StorageManager.shared.getFontSize()
             }
@@ -419,10 +470,6 @@ struct ReadView: View {
                     }
                 }
             }
-            .overlay(
-                EnableSwipeBack()
-                    .frame(width: 0, height: 0)
-            )
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     
@@ -435,96 +482,278 @@ struct ReadView: View {
                 }
                 
                 ToolbarItem(placement: .principal) {
-                    if let avatar = viewModel.avatarImage, !viewModel.isAuthorBlockVisible {
-                        HStack(spacing: 0) {
-                            Image(uiImage: avatar)
-                                .resizable()
-                                .scaledToFill()
-                                .frame(width: 35, height: 35)
-                                .clipShape(Circle())
-                                .overlay {
-                                    Circle()
-                                        .stroke(
-                                            Color(.label),
-                                            lineWidth: 0.1
-                                        )
-                                }
-                            
-                            if isCheckmark {
-                                Image(systemName: "checkmark.seal.fill")
-                                    .foregroundStyle(Color.blue)
-                                    .font(.system(size: 10))
-                            }
+                    if !viewModel.isAuthorBlockVisible {
+                        if #available(iOS 26, *) {
+                            principalToolView
+                                .padding(.all, 10)
+                                .glassEffect(.regular)
+                        } else {
+                            principalToolView
                         }
                     }
                 }
                 
                 ToolbarItem(placement: .topBarTrailing) {
-                    
-                    if #available(iOS 26.0, *) {
-                        HStack(spacing: 10) {
-                            if text != "" {
+                    if hasExtraToolbarActions {
+                        Menu {
+                            if currentText != "" {
                                 Button {
                                     viewModel.isFontSettingPopupPresented.toggle()
                                 } label: {
-                                    Image(systemName: "book.pages")
+                                    Label(
+                                        StorageManager.shared.getLanguage() == "ru" ? "Шрифт" : "Font",
+                                        systemImage: "book.pages"
+                                    )
                                 }
                             }
                             
-                            if !isArchive {
-                                ShareLink(item: URL(string: "https://readbox-links.online/posts/?index=\(id)")!) {
-                                    Image(systemName: "arrowshape.turn.up.right")
-                                }
+                            if currentIsLocalizedVersion && !currentRootId.isEmpty {
+                                originalArticleMenuButton
                             }
                             
+                            if !currentIsArchive {
+                                ShareLink(item: URL(string: "https://readbox-links.online/posts/?index=\(currentId)")!) {
+                                    Label(
+                                        StorageManager.shared.getLanguage() == "ru" ? "Поделиться" : "Share",
+                                        systemImage: "arrowshape.turn.up.right"
+                                    )
+                                }
+                            }
+                        } label: {
+                            Image(systemName: "ellipsis.circle")
                         }
-                    } else {
-                        HStack {
-                            if text != "" {
-                                Button {
-                                    viewModel.isFontSettingPopupPresented.toggle()
-                                } label: {
-                                    Image(systemName: "book.pages")
-                                }
-                            }
-                            
-                            if !isArchive {
-                                ShareLink(item: URL(string: "https://readbox-links.online/posts/?index=\(id)")!) {
-                                    Image(systemName: "arrowshape.turn.up.right")
-                                }
-                            }
-                            
+                    } else if !currentIsArchive {
+                        ShareLink(item: URL(string: "https://readbox-links.online/posts/?index=\(currentId)")!) {
+                            Image(systemName: "arrowshape.turn.up.right")
                         }
                     }
-                    
                 }
             }
             .background(Color(uiColor: .systemBackground))
             
         }
         .navigationBarBackButtonHidden()
+        .overlay(
+            EnableSwipeBack()
+                .frame(width: 0, height: 0)
+        )
     }
 }
 
 private extension ReadView {
     var mediaViews: some View {
         MediaViews(
-            id: id,
+            id: currentId,
             authorId: authorId,
-            mediaCount: mediaCount,
-            mediaVersion: mediaVersion,
-            isArchive: isArchive,
+            mediaCount: currentMediaCount,
+            mediaVersion: currentMediaVersion,
             zoomableImage: $viewModel.zoomableImage,
             isZoomableViewPresented: $viewModel.isZoomableViewPresented,
             currentIndex: $viewModel.currentIndex
         )
+        .id(currentId)
     }
     
     var titleView: some View {
-        Text(title)
+        Text(currentTitle)
             .font(.system(size: 18))
             .fontDesign(.rounded)
             .frame(width: UIScreen.main.bounds.width - 32, alignment: .leading)
+    }
+    
+    var currentId: String {
+        currentPrePost?.id ?? id
+    }
+    
+    var currentTitle: String {
+        currentPrePost?.title ?? title
+    }
+    
+    var currentText: String {
+        currentPostToRead?.text ?? text
+    }
+    
+    var currentDateCreated: Date {
+        currentPostToRead?.dateCreated ?? dateCreated
+    }
+    
+    var currentLikesCount: Int {
+        currentPrePost?.likesCount ?? likesCount
+    }
+    
+    var currentIsArchive: Bool {
+        currentPrePost?.isArchive ?? isArchive
+    }
+    
+    var currentMediaCount: Int {
+        currentPrePost?.mediaCount ?? mediaCount
+    }
+    
+    var currentMediaVersion: Int {
+        currentPrePost?.mediaVersion ?? mediaVersion
+    }
+    
+    var currentMediaPosition: Int {
+        currentPrePost?.mediaPosition ?? mediaPosition
+    }
+    
+    var currentIsLocalizedVersion: Bool {
+        currentPrePost?.isLocalizedVersion ?? isLocalizedVersion
+    }
+    
+    var currentRootId: String {
+        currentPrePost?.rootId ?? rootId
+    }
+    
+    var canSwitchArticleLanguage: Bool {
+        isLocalizedVersion && !rootId.isEmpty
+    }
+    
+    var isShowingOriginalArticle: Bool {
+        currentPrePost != nil
+    }
+    
+    var hasExtraToolbarActions: Bool {
+        currentText != "" || canSwitchArticleLanguage
+    }
+    
+    @ViewBuilder
+    var originalArticleButton: some View {
+        if viewModel.isOriginalArticleLoading {
+            LoadingIndicator(
+                animation: .circleRunner,
+                color: Color(uiColor: .label),
+                size: .small,
+                speed: .fast
+            )
+        } else {
+            Button {
+                toggleArticleLanguage()
+            } label: {
+                Image("switchLanguageIcon")
+            }
+        }
+    }
+    
+    @ViewBuilder
+    var originalArticleMenuButton: some View {
+        if viewModel.isOriginalArticleLoading {
+            HStack {
+                Image("switchLanguageIcon")
+                Text(StorageManager.shared.getLanguage() == "ru" ? "Загрузка..." : "Loading...")
+            }
+        } else {
+            Button {
+                toggleArticleLanguage()
+            } label: {
+                HStack {
+                    Image("switchLanguageIcon")
+                    Text(languageSwitchButtonTitle)
+                }
+            }
+        }
+    }
+    
+    var languageSwitchButtonTitle: String {
+        if StorageManager.shared.getLanguage() == "ru" {
+            return isShowingOriginalArticle ? "Перевод" : "Оригинал"
+        }
+        
+        return isShowingOriginalArticle ? "Translation" : "Original"
+    }
+    
+    func toggleArticleLanguage() {
+        if isShowingOriginalArticle {
+            withAnimation {
+                currentPrePost = nil
+                currentPostToRead = nil
+                viewModel.likesCount = likesCount
+                viewModel.isPostLiked = (user?.likedPosts ?? []).contains(id)
+                viewModel.currentIndex = 0
+                viewModel.selectedImageURL = nil
+            }
+            return
+        }
+        
+        showOriginalArticle()
+    }
+    
+    func showOriginalArticle() {
+        guard !currentRootId.isEmpty, !viewModel.isOriginalArticleLoading else { return }
+        
+        Task {
+            do {
+                await MainActor.run {
+                    withAnimation {
+                        viewModel.isOriginalArticleLoading = true
+                    }
+                }
+                
+                let loadedOriginalPrePost: PrePost
+                
+                if let originalPrePostFromChannel = self.originalPrePost {
+                    loadedOriginalPrePost = originalPrePostFromChannel
+                } else {
+                    loadedOriginalPrePost = try await ArticlesManager.shared.getPrePost(id: currentRootId)
+                }
+                
+                let originalPostToRead = try await ArticlesManager.shared.getPostToRead(id: currentRootId)
+                
+                await MainActor.run {
+                    withAnimation {
+                        currentPrePost = loadedOriginalPrePost
+                        currentPostToRead = originalPostToRead
+                        viewModel.likesCount = loadedOriginalPrePost.likesCount ?? 0
+                        viewModel.isPostLiked = (user?.likedPosts ?? []).contains(loadedOriginalPrePost.id)
+                        viewModel.currentIndex = 0
+                        viewModel.selectedImageURL = nil
+                        viewModel.isOriginalArticleLoading = false
+                    }
+                }
+            } catch {
+                await MainActor.run {
+                    withAnimation {
+                        viewModel.isOriginalArticleLoading = false
+                        viewModel.errorText = error.localizedDescription
+                        viewModel.isErrorPopupPresented = true
+                    }
+                }
+            }
+        }
+    }
+}
+
+private extension ReadView {
+    var principalToolView: some View {
+        HStack(spacing: 0) {
+            if let avatar = viewModel.avatarImage {
+                Image(uiImage: avatar)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: 35, height: 35)
+                    .clipShape(Circle())
+                    .overlay {
+                        Circle()
+                            .stroke(
+                                Color(.label),
+                                lineWidth: 0.1
+                            )
+                    }
+                    .padding(.trailing, authorName == "" ? 0 : 2)
+            }
+            
+            if authorName != "" {
+                Text(authorName)
+                    .font(.system(size: 17))
+            }
+            
+            
+            if isCheckmark {
+                Image(systemName: "checkmark.seal.fill")
+                    .foregroundStyle(Color.blue)
+                    .font(.system(size: 10))
+            }
+        }
     }
 }
 
@@ -600,7 +829,3 @@ private extension ReadView {
 //        return coordinator
 //    }
 //}
-
-
-
-

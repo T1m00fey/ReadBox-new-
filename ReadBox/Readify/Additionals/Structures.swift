@@ -189,6 +189,7 @@ struct PrePost: Identifiable, Codable, Equatable, Hashable {
     let id: String
     let title: String?
     let authorId: String?
+    let originalLanguage: String?
     let viewsCount: Int?
     let likesCount: Int?
     var isArchive: Bool?
@@ -196,6 +197,10 @@ struct PrePost: Identifiable, Codable, Equatable, Hashable {
     let mediaCount: Int?
     let mediaVersion: Int?
     let mediaPosition: Int?
+    let localizationCount: Int?
+    let isLocalizedVersion: Bool?
+    let rootId: String?
+    let isPremiumPost: Bool?
     
     init?(document: DocumentSnapshot) {
         let data = document.data()
@@ -214,6 +219,7 @@ struct PrePost: Identifiable, Codable, Equatable, Hashable {
         self.id = id
         self.title = title
         self.authorId = authorId
+        self.originalLanguage = data?["original_language"] as? String
         self.viewsCount = viewsCount
         self.likesCount = likesCount
         self.isArchive = isArchive
@@ -221,23 +227,33 @@ struct PrePost: Identifiable, Codable, Equatable, Hashable {
         self.mediaCount = data?["media_count"] as? Int
         self.mediaVersion = data?["media_version"] as? Int
         self.mediaPosition = data?["media_position"] as? Int
+        self.localizationCount = data?["localization_count"] as? Int
+        self.isLocalizedVersion = data?["is_localized_version"] as? Bool
+        self.rootId = data?["root_id"] as? String
+        self.isPremiumPost = data?["is_premium_post"] as? Bool
     }
     
     init(
         id: String,
         title: String?,
         authorId: String?,
+        originalLanguage: String? = nil,
         viewsCount: Int?,
         likesCount: Int?,
         isArchive: Bool? = nil,
         isShortPost: Bool?,
         mediaCount: Int?,
         mediaVersion: Int?,
-        mediaPosition: Int?
+        mediaPosition: Int?,
+        localizationCount: Int?,
+        isLocalizedVersion: Bool?,
+        rootId: String? = nil,
+        isPremiumPost: Bool? = false
     ) {
         self.id = id
         self.title = title
         self.authorId = authorId
+        self.originalLanguage = originalLanguage
         self.viewsCount = viewsCount
         self.likesCount = likesCount
         self.isArchive = isArchive
@@ -245,6 +261,10 @@ struct PrePost: Identifiable, Codable, Equatable, Hashable {
         self.mediaCount = mediaCount
         self.mediaVersion = mediaVersion
         self.mediaPosition = mediaPosition
+        self.localizationCount = localizationCount
+        self.isLocalizedVersion = isLocalizedVersion
+        self.rootId = rootId
+        self.isPremiumPost = isPremiumPost
     }
     
     enum CodingKeys: String, CodingKey {
@@ -252,12 +272,17 @@ struct PrePost: Identifiable, Codable, Equatable, Hashable {
         case title = "title"
         case likesCount = "likes_count"
         case authorId = "author_id"
+        case originalLanguage = "original_language"
         case viewsCount = "views_count"
         case isArchive = "is_archive"
         case isShortPost = "is_short_post"
         case mediaCount = "media_count"
         case mediaVersion = "media_version"
         case mediaPosition = "media_position"
+        case localizationCount = "localization_count"
+        case isLocalizedVersion = "is_localized_version"
+        case rootId = "root_id"
+        case isPremiumPost = "is_premium_post"
     }
 }
 
@@ -367,9 +392,24 @@ struct AvatarVersion: Codable {
     }
 }
 
+struct LocalizationCount: Codable {
+    let localizationCount: Int
+    
+    enum CodingKeys: String, CodingKey {
+        case localizationCount = "localization_count"
+    }
+}
+
+struct IsPremiumAuthor: Codable {
+    let isPremiumAuthor: Bool?
+    
+    enum CodingKeys: String, CodingKey {
+        case isPremiumAuthor = "is_premium_author"
+    }
+}
+
 enum NotificationPushRoute: Codable {
     case requestSystemPrompt
     case goToSettings
     case ok
 }
-

@@ -16,6 +16,7 @@ final class PostCreateViewModel: ObservableObject {
     @Published var selectedLanguage = (StorageManager.shared.getLanguage() ?? "en") == "en" ? 0 : 1
     @Published var selectedMediaPosition = 0
     @Published var addingMode = 0
+    @Published var isPremiumPost = 0
     @Published var isLoading = false
     @Published var oldMediaCount = 0
     @Published var isCoverLoading = false
@@ -27,6 +28,15 @@ final class PostCreateViewModel: ObservableObject {
     
     @Published var isConfirmationPopupPresented = false
     @Published var isPostSettingsPopupPresented = false
+    
+    func getHeightOfPopupSettingPopup(isLocalizing: Bool, isPremiumAuthor: Bool) -> CGFloat {
+        var h = CGFloat(200)
+        
+        if !isLocalizing { h += 100 }
+        if isPremiumAuthor { h += 100 }
+        
+        return h
+    }
     
     // MARK: - Helpers for full delete (если где-то пригодится)
     
@@ -93,7 +103,7 @@ final class PostCreateViewModel: ObservableObject {
             }
         }
     }
-
+    
     // MARK: - Новый пост
     
     func uploadPost(
@@ -101,7 +111,11 @@ final class PostCreateViewModel: ObservableObject {
         isArchive: Bool,
         uploadingLanguage: String,
         items: [MediaKind],
-        mediaPosition: Int
+        mediaPosition: Int,
+        isLocalizing: Bool,
+        localizationCount: Int,
+        rootId: String,
+        isPremiumPost: Bool
     ) async throws -> String {
         let id = try await ArticlesManager.shared.addNewPost(
             title: title,
@@ -110,8 +124,15 @@ final class PostCreateViewModel: ObservableObject {
             uploadingLanguage: uploadingLanguage,
             mediaCount: items.count,
             isShortPost: true,
-            mediaPosition: mediaPosition
+            mediaPosition: mediaPosition,
+            isLocalizing: isLocalizing,
+            rootId: rootId,
+            isPremiumPost: isPremiumPost
         )
+        
+        if isLocalizing {
+            try await ArticlesManager.shared.setLocalizationCount(for: rootId, count: localizationCount + 1)
+        }
         
         for i in 0..<items.count {
             try await uploadCover(media: items[i], postId: id, index: i)
@@ -127,32 +148,83 @@ final class PostCreateViewModel: ObservableObject {
         isArchive: Bool,
         uploadingLanguage: String,
         items: [MediaKind],
-        mediaPosition: Int
+        mediaPosition: Int,
+        isPremiumPost: Bool
     ) async throws {
+        
         StorageManager.shared.deleteCacheForPost(
             id: postId,
             maxIndex: max(oldMediaCount, items.count)
         )
-
-        for i in 0..<items.count {
-            let jpgRef     = Storage.storage().reference(withPath: "images/\(postId)_\(i).jpg")
-            let mp4Ref     = Storage.storage().reference(withPath: "images/\(postId)_\(i).mp4")
-            let previewRef = Storage.storage().reference(withPath: "images/\(postId)_\(i)_preview.jpg")
-
-            let media = items[i]
+        await VideoCacheManager.shared.clearPost(id: postId, maxIndex: max(oldMediaCount, items.count))
+        
+        let maxParallel = 2
+        
+        func preDeleteIfTypeChanged(index: Int, media: MediaKind) async {
+            let jpgRef     = Storage.storage().reference(withPath: "images/\(postId)_\(index).jpg")
+            let mp4Ref     = Storage.storage().reference(withPath: "images/\(postId)_\(index).mp4")
+            let previewRef = Storage.storage().reference(withPath: "images/\(postId)_\(index)_preview.jpg")
             
             if media.videoURL != nil {
                 try? await jpgRef.delete()
-                StorageManager.shared.deleteImage(id: "\(postId)_\(i)")
-            } else if media.image != nil {
+                StorageManager.shared.deleteImage(id: "\(postId)_\(index)")
+            }
+            
+            if media.image != nil {
                 try? await mp4Ref.delete()
                 try? await previewRef.delete()
-                StorageManager.shared.deleteImage(id: "\(postId)_\(i)_preview")
+                StorageManager.shared.deleteImage(id: "\(postId)_\(index)_preview")
             }
-
-            try await uploadCover(media: media, postId: postId, index: i)
         }
-
+        
+        try await withThrowingTaskGroup(of: Void.self) { group in
+            var nextIndex = 0
+                        
+            while nextIndex < min(items.count, maxParallel) {
+                let i = nextIndex
+                group.addTask { [weak self] in
+                    guard let self else { return }
+                    let media = items[i]
+                    await preDeleteIfTypeChanged(index: i, media: media)
+                    try await self.uploadCover(media: media, postId: postId, index: i)
+                }
+                nextIndex += 1
+            }
+                        
+            while let _ = try await group.next() {
+                if nextIndex < items.count {
+                    let i = nextIndex
+                    group.addTask { [weak self] in
+                        guard let self else { return }
+                        let media = items[i]
+                        await preDeleteIfTypeChanged(index: i, media: media)
+                        try await self.uploadCover(media: media, postId: postId, index: i)
+                    }
+                    nextIndex += 1
+                }
+            }
+        }
+                
+        if oldMediaCount > items.count {
+            try await withThrowingTaskGroup(of: Void.self) { group in
+                for i in items.count..<oldMediaCount {
+                    group.addTask {
+                        let imageRef   = Storage.storage().reference(withPath: "images/\(postId)_\(i).jpg")
+                        let videoRef   = Storage.storage().reference(withPath: "images/\(postId)_\(i).mp4")
+                        let previewRef = Storage.storage().reference(withPath: "images/\(postId)_\(i)_preview.jpg")
+                        
+                        try? await imageRef.delete()
+                        try? await videoRef.delete()
+                        try? await previewRef.delete()
+                        
+                        StorageManager.shared.deleteImage(id: "\(postId)_\(i)")
+                        StorageManager.shared.deleteImage(id: "\(postId)_\(i)_preview")
+                    }
+                }
+                while (try await group.next()) != nil {}
+            }
+        }
+        
         try await ArticlesManager.shared.updatePost(
             id: postId,
             title: title,
@@ -160,29 +232,12 @@ final class PostCreateViewModel: ObservableObject {
             isArchive: isArchive,
             uploadingLanguage: uploadingLanguage,
             mediaCount: items.count,
-            mediaPosition: mediaPosition
+            mediaPosition: mediaPosition,
+            isPremiumPost: isPremiumPost
         )
-
-        if oldMediaCount > items.count {
-            for i in items.count..<oldMediaCount {
-                let imageRef   = Storage.storage().reference(withPath: "images/\(postId)_\(i).jpg")
-                let videoRef   = Storage.storage().reference(withPath: "images/\(postId)_\(i).mp4")
-                let previewRef = Storage.storage().reference(withPath: "images/\(postId)_\(i)_preview.jpg")
-                
-                try? await imageRef.delete()
-                try? await videoRef.delete()
-                try? await previewRef.delete()
-                
-                StorageManager.shared.deleteImage(id: "\(postId)_\(i)")
-                StorageManager.shared.deleteImage(id: "\(postId)_\(i)_preview")
-            }
-        }
-
-        await MainActor.run {
-            self.oldMediaCount = items.count
-        }
         
         await MainActor.run {
+            self.oldMediaCount = items.count
             NotificationCenter.default.post(
                 name: .postMediaDidUpdate,
                 object: nil,

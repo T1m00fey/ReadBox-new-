@@ -11,6 +11,7 @@
 		5258435D2E2A6BA000EF34F2 /* SDWebImageSwiftUI in Frameworks */ = {isa = PBXBuildFile; productRef = 5258435C2E2A6BA000EF34F2 /* SDWebImageSwiftUI */; };
 		52B21AA62EBDE5D800F1913F /* VideoPlayer in Frameworks */ = {isa = PBXBuildFile; productRef = 52B21AA52EBDE5D800F1913F /* VideoPlayer */; };
 		C46E2CCB2E0861A4008B4BB2 /* Shimmer in Frameworks */ = {isa = PBXBuildFile; productRef = C46E2CCA2E0861A4008B4BB2 /* Shimmer */; };
+		C47154A02F71D6BE00F05EEA /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C471549F2F71D6BE00F05EEA /* StoreKit.framework */; };
 		C49684412DABF0E0004ED3AB /* PopupView in Frameworks */ = {isa = PBXBuildFile; productRef = C49684402DABF0E0004ED3AB /* PopupView */; };
 		C49684442DABF0F0004ED3AB /* SwiftfulLoadingIndicators in Frameworks */ = {isa = PBXBuildFile; productRef = C49684432DABF0F0004ED3AB /* SwiftfulLoadingIndicators */; };
 		C49684472DABF112004ED3AB /* MarkdownUI in Frameworks */ = {isa = PBXBuildFile; productRef = C49684462DABF112004ED3AB /* MarkdownUI */; };
@@ -49,6 +50,7 @@
 
 /* Begin PBXFileReference section */
 		52207A012E38F83800D1564F /* NotificationService.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = NotificationService.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		C471549F2F71D6BE00F05EEA /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
 		C49683D52DABF067004ED3AB /* ReadBox.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ReadBox.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -102,6 +104,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				5258435D2E2A6BA000EF34F2 /* SDWebImageSwiftUI in Frameworks */,
+				C47154A02F71D6BE00F05EEA /* StoreKit.framework in Frameworks */,
 				C49684532DABF200004ED3AB /* FirebaseMessaging in Frameworks */,
 				C49684472DABF112004ED3AB /* MarkdownUI in Frameworks */,
 				52B21AA62EBDE5D800F1913F /* VideoPlayer in Frameworks */,
@@ -123,6 +126,7 @@
 		52B21AA42EBDE5D800F1913F /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				C471549F2F71D6BE00F05EEA /* StoreKit.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
