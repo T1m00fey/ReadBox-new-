@@ -83,6 +83,36 @@ final class ArticlesManager {
         try await articleDocument(id: id).updateData(data)
     }
     
+    func getLocalizedVersions(rootId: String) async throws -> [PrePost] {
+        let snapshot = try await articlesCollection
+            .whereField("root_id", isEqualTo: rootId)
+            .getDocuments()
+        
+        return snapshot.documents.compactMap { PrePost(document: $0) }
+    }
+    
+    func makeLocalizedVersionsRegular(rootId: String) async throws {
+        let snapshot = try await articlesCollection
+            .whereField("root_id", isEqualTo: rootId)
+            .getDocuments()
+        
+        guard !snapshot.documents.isEmpty else { return }
+        
+        let batch = Firestore.firestore().batch()
+        
+        snapshot.documents.forEach { document in
+            batch.updateData(
+                [
+                    "is_localized_version": FieldValue.delete(),
+                    "root_id": FieldValue.delete()
+                ],
+                forDocument: document.reference
+            )
+        }
+        
+        try await batch.commit()
+    }
+    
     func updatePost(
         id: String,
         title: String,

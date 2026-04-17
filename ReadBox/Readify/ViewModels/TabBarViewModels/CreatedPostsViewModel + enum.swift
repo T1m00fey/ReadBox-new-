@@ -19,11 +19,27 @@ enum PostOptions {
     case delete
 }
 
-enum CreatedPostsSection {
+enum CreatedPostsSection: Int, CaseIterable {
     case all
+    case articles
     case archive
     case localizedPublished
     case localizedArchive
+
+    var title: String {
+        switch self {
+        case .all:
+            NSLocalizedString("publicationsLabel", comment: "")
+        case .articles:
+            NSLocalizedString("articlesLabel", comment: "")
+        case .archive:
+            NSLocalizedString("archiveLabel", comment: "")
+        case .localizedPublished:
+            NSLocalizedString("localizedPostsLabel", comment: "")
+        case .localizedArchive:
+            NSLocalizedString("localizedArchivePostsLabel", comment: "")
+        }
+    }
 }
 
 @MainActor
@@ -39,6 +55,7 @@ final class CreatedPostsViewModel: ObservableObject {
     @Published var isSuccessPopupPresented = false
     @Published var isCreateViewPresented = false
     @Published var isArchivePresented = false
+    @Published var isArticlesPresented = false
     @Published var isLocalizedPostsPresented = false
     @Published var postsNeedToLoad: [String] = []
     @Published var postOption: PostOptions = .nothing
@@ -57,6 +74,7 @@ final class CreatedPostsViewModel: ObservableObject {
     @Published var mediaURLs: [URL] = []
     @Published var avatarImage: UIImage? = nil
     @Published var isZoomableImageViewPresented = false
+    @Published var zoomableImage: UIImage? = nil
     @Published var isVideoCover = false
     @Published var videoURL: URL? = nil
     @Published var addingMode = 0
@@ -64,7 +82,9 @@ final class CreatedPostsViewModel: ObservableObject {
     @Published var isPostCreateViewPresented = false
     @Published var mediaKind: [MediaKind?] = []
     @Published var isPublicationsLabelVisible = true
-    
+    @Published var isDeletePostAlertPresented = false
+    @Published var pendingDeletePostId = ""
+
     @Published var avatarVersion = 0
     @Published var postsCount = 0
     @Published var subscribersCount = 0
@@ -72,11 +92,11 @@ final class CreatedPostsViewModel: ObservableObject {
     @Published var description = ""
     @Published var isCheckmark = false
     @Published var isPremiumAuthor = false
-    
+
     @Published var user: DBUser? = nil
-    
+
     @Published var id = ""
-    
+
     let vibrationsService = VibrationsService.shared
     let subscribersCountLabel = NSLocalizedString("subscribersCountLabel", comment: "")
     let postsCountLabel = NSLocalizedString("publicationsCountLabel", comment: "")
@@ -91,31 +111,45 @@ final class CreatedPostsViewModel: ObservableObject {
     var mediaCount = 0
     var mediaVersion = 0
     var mediaPosition = 0
+    var readArticleLanguage = ""
+    var readIsPremiumPost = false
+    var readIsLocalizedVersion = false
+    var readRootId = ""
     var isLocalizing = false
     var localizationCount = 0
     var rootLang = ""
     var rootMediaPosition = 0
     var rootIsPremiumPost = false
-    
+    var createIsLocalizedVersion = false
+
     var alertText = ""
-    
+
     func clearData() {
         postOption = .nothing
         id = ""
         text = ""
+        isEditing = false
+        postId = ""
         mediaURLs = []
         mediaKind = []
         mediaCount = 0
         mediaVersion = 0
         mediaPosition = 0
+        readArticleLanguage = ""
+        readIsPremiumPost = false
+        readIsLocalizedVersion = false
+        readRootId = ""
         isLocalizing = false
         localizationCount = 0
         rootLang = ""
         title = ""
         rootMediaPosition = 0
         rootIsPremiumPost = false
+        createIsLocalizedVersion = false
+        isDeletePostAlertPresented = false
+        pendingDeletePostId = ""
     }
-    
+
     func isButtonEnable() {
         withAnimation {
             if name.count > 0 && !isLoading {
@@ -125,52 +159,53 @@ final class CreatedPostsViewModel: ObservableObject {
             }
         }
     }
-    
+
     func getBottomPadding(by id: String) -> CGFloat {
         currentPosts.last?.id == id ? 70 : 10
     }
-    
+
     func loadUser() async throws {
         let authDataResult = try AuthenticationManager.shared.getAuthenticatedUser()
         let user = try await UserManager.shared.getUser(userId: authDataResult.uid)
         if let id = user?.userId {
             isPremiumAuthor = try await UserManager.shared.getIsPremiumAuthorStatus(for: id)
         }
-        
+
         postsCount = user?.postsCount ?? 0
         subscribersCount = user?.subscribersCount ?? 0
         name = user?.name ?? NSLocalizedString("notFoundLabel", comment: "")
         description = user?.authorDescription ?? ""
         isCheckmark = user?.isCheckmark ?? false
         avatarVersion = user?.avatarVersion ?? 0
-        
+
         self.user = user
     }
-    
+
     func getAuthorIsCheckmarkStatus(id: String) async throws -> Bool {
         try await UserManager.shared.getIsCheckmarkStatus(id: id) ?? false
     }
-    
+
     func getPrePost(id: String) async throws -> PrePost {
         try await ArticlesManager.shared.getPrePost(id: id)
     }
-    
+
     func getPostToRead(id: String) async throws {
         let post = try await ArticlesManager.shared.getPostToRead(id: id)
-        
+
         dateCreated = post.dateCreated ?? Date()
         text = post.text ?? ""
-        
+
         if let mediaURLs = post.mediaURLs {
             self.mediaURLs = mediaURLs.map { URL(string: $0)! }
         }
     }
-    
+
     func reload() {
         withAnimation {
             posts = []
             archivePosts = []
             isArchivePresented = false
+            isArticlesPresented = false
             isLocalizedPostsPresented = false
             postsCount = 0
             isLoadingShowing = true
@@ -180,25 +215,25 @@ final class CreatedPostsViewModel: ObservableObject {
             lastPostSnapshot = nil
             lastArchivedPostSnapshot = nil
             isNeedToReload = false
-            
+
             user = nil
         }
-        
+
         Task {
             isLoading = true
-            
+
             try? await loadUser()
-            
+
             if let id = user?.userId {
                 let ava = await MediaManager.shared.getAvatar(authorId: id, lastVersion: user?.avatarVersion ?? 0)
-                
+
                 withAnimation {
                     avatarImage = ava
                 }
             }
         }
     }
-    
+
     private func deleteAllCovers(postId: String, mediaCount: Int) async {
         for i in 0..<mediaCount {
             let imageRef   = Storage.storage().reference(withPath: "images/\(postId)_\(i).jpg")
@@ -213,40 +248,85 @@ final class CreatedPostsViewModel: ObservableObject {
             StorageManager.shared.deleteImage(id: "\(postId)_\(i)_preview")
         }
     }
-    
+
+    private func makePromotedPost(from post: PrePost) -> PrePost {
+        PrePost(
+            id: post.id,
+            title: post.title,
+            authorId: post.authorId,
+            originalLanguage: post.originalLanguage,
+            viewsCount: post.viewsCount,
+            likesCount: post.likesCount,
+            isArchive: post.isArchive,
+            isShortPost: post.isShortPost,
+            mediaCount: post.mediaCount,
+            mediaVersion: post.mediaVersion,
+            mediaPosition: post.mediaPosition,
+            localizationCount: post.localizationCount,
+            isLocalizedVersion: false,
+            rootId: nil,
+            isPremiumPost: post.isPremiumPost
+        )
+    }
+
+    private func promoteLocalizedVersionsLocally(rootId: String) {
+        posts = posts.map { post in
+            guard post.rootId == rootId, post.isLocalizedVersion ?? false else { return post }
+            return makePromotedPost(from: post)
+        }
+
+        archivePosts = archivePosts.map { post in
+            guard post.rootId == rootId, post.isLocalizedVersion ?? false else { return post }
+            return makePromotedPost(from: post)
+        }
+    }
+
     func deletePost(id: String) async throws {
         guard let post = isArchivePresented
                 ? archivePosts.first(where: { $0.id == id })
                 : posts.first(where: { $0.id == id }) else { return }
-        
-        if let isArchive = post.isArchive, isArchive == false {
+
+        var localizedVersions: [PrePost] = []
+
+        if !(post.isLocalizedVersion ?? false) {
+            localizedVersions = try await ArticlesManager.shared.getLocalizedVersions(rootId: id)
+        }
+
+        let hasLocalizedVersions = !localizedVersions.isEmpty
+
+        if let isArchive = post.isArchive,
+           isArchive == false,
+           !(post.isLocalizedVersion ?? false),
+           !hasLocalizedVersions {
             withAnimation {
                 postsCount -= 1
             }
-            
+
             try await UserManager.shared.updatePostsCount(
                 userId: user?.userId ?? "",
                 postsCount: postsCount
             )
         }
-        
+
         let mediaURLs = try await ArticlesManager.shared.getMediaURLs(from: id)
-        
+
         if let rootId = post.rootId, let isLocVer = post.isLocalizedVersion, isLocVer {
             let locCountOfRoot = try? await ArticlesManager.shared.getLocalizationCount(for: rootId)
-            
+
             if let locCountOfRoot {
                 try? await ArticlesManager.shared.setLocalizationCount(for: rootId, count: locCountOfRoot - 1)
             }
+        } else if hasLocalizedVersions {
+            try await ArticlesManager.shared.makeLocalizedVersionsRegular(rootId: id)
         }
-        
+
         try await ArticlesManager.shared.deletePost(id: id)
         try await UserManager.shared.deleteCreatedPost(id: id)
-        
+
         await deleteAllCovers(postId: id, mediaCount: post.mediaCount ?? 10)
-        
+
         let storage = Storage.storage()
-        
+
         for url in mediaURLs {
             if let path = URLComponents(string: url.absoluteString)?
                 .path
@@ -255,54 +335,88 @@ final class CreatedPostsViewModel: ObservableObject {
                 .components(separatedBy: "?")
                 .first?
                 .replacingOccurrences(of: "%2F", with: "/") {
-                
+
                 let ref = storage.reference(withPath: path)
                 try? await ref.delete()
                 print("🗑 Удалено: \(path)")
             }
         }
-        
+
         withAnimation {
             if isArchivePresented {
                 archivePosts.removeAll { $0.id == id }
             } else {
                 posts.removeAll { $0.id == id }
             }
-            
+
+            if hasLocalizedVersions {
+                promoteLocalizedVersionsLocally(rootId: id)
+            }
+
             updatePresentedSectionIfNeeded()
         }
-        
+
         self.id = ""
-        
+
         StorageManager.shared.deleteImage(id: id)
-        
+
         let fileReference = Storage.storage().reference().child("images/\(id).jpg")
         let videoReference = Storage.storage().reference().child("images/\(id).mp4")
-        
+
         try? await fileReference.delete()
         try? await videoReference.delete()
     }
-    
+
+    func shouldShowLocalizedDeleteAlert(for post: PrePost) -> Bool {
+        !(post.isLocalizedVersion ?? false) && (post.localizationCount ?? 0) > 0
+    }
+
+    func postForDeletion(id: String) -> PrePost? {
+        posts.first { $0.id == id } ?? archivePosts.first { $0.id == id }
+    }
+
+    func deleteAlertMessageKey(for id: String) -> String {
+        if let post = postForDeletion(id: id),
+           shouldShowLocalizedDeleteAlert(for: post) {
+            return "deleteLocalizedPostAlertMessage"
+        }
+
+        return "deletePublicationAlertMessage"
+    }
+
     func updateIsArchiveStatus() {
        Task {
             do {
-                try await ArticlesManager.shared.updateIsArchiveStatus(id: id, isArchive: !isArchivePresented)
-                
-                withAnimation {
-                    postsCount += isArchivePresented ? 1 : -1
+                let currentPost = isArchivePresented
+                    ? archivePosts.first(where: { $0.id == id })
+                    : posts.first(where: { $0.id == id })
+                let familyId = currentPost?.rootId ?? currentPost?.id ?? id
+                let hasOtherPublishedVersion = posts.contains {
+                    ($0.rootId ?? $0.id) == familyId && $0.id != id
                 }
-                
-                try await UserManager.shared.updatePostsCount(userId: user?.userId ?? "", postsCount: postsCount)
-                
+                let wasPublishedBefore = !isArchivePresented || hasOtherPublishedVersion
+                let willBePublishedAfter = isArchivePresented || hasOtherPublishedVersion
+                let delta = (willBePublishedAfter ? 1 : 0) - (wasPublishedBefore ? 1 : 0)
+
+                try await ArticlesManager.shared.updateIsArchiveStatus(id: id, isArchive: !isArchivePresented)
+
+                if delta != 0 {
+                    withAnimation {
+                        postsCount += delta
+                    }
+
+                    try await UserManager.shared.updatePostsCount(userId: user?.userId ?? "", postsCount: postsCount)
+                }
+
             } catch {
                 withAnimation {
                     errorText = error.localizedDescription
                     isErrorPopupPresented = true
                 }
-                
+
                 return
             }
-            
+
             withAnimation {
                 if isArchivePresented {
                     posts.insert(archivePosts.filter { $0.id == id }[0], at: 0)
@@ -313,28 +427,28 @@ final class CreatedPostsViewModel: ObservableObject {
                     archivePosts[0].isArchive?.toggle()
                     posts.removeAll { $0.id == id }
                 }
-                
+
                 updatePresentedSectionIfNeeded()
             }
-           
+
            id = ""
         }
     }
-    
+
     func getPosts() async throws {
         guard !isAllLoaded else { return }
-        
+
         let (posts, lastDocument) = try await ArticlesManager.shared.getCreatedPosts(
             userId: user?.userId ?? "",
             startAfter: lastPostSnapshot
         )
-        
+
         if posts.isEmpty {
             isAllLoaded = true
             return
         }
-        
-        
+
+
         posts.forEach { post in
             if let post {
                 withAnimation {
@@ -342,33 +456,33 @@ final class CreatedPostsViewModel: ObservableObject {
                 }
             }
         }
-        
+
         lastPostSnapshot = lastDocument
     }
-    
+
     func getArchivedPost() async throws {
         guard !isAllArchivedLoaded else { return }
-        
+
         let (posts, lastDocument) = try await ArticlesManager.shared.getCreatedPosts(
             userId: user?.userId ?? "",
             startAfter: lastArchivedPostSnapshot,
             isArchive: true
         )
-        
+
         if posts.isEmpty {
             isAllArchivedLoaded = true
             return
         }
-        
+
         posts.forEach { post in
             if let post {
                 self.archivePosts.append(post)
             }
         }
-        
+
         lastArchivedPostSnapshot = lastDocument
     }
-    
+
     func tapGestureHandler(on post: PrePost) {
         title = post.title ?? NSLocalizedString("notFoundLabel", comment: "")
         image = StorageManager.shared.getImage(id: post.id) ?? UIImage()
@@ -377,17 +491,21 @@ final class CreatedPostsViewModel: ObservableObject {
         mediaCount = post.mediaCount ?? 1
         mediaVersion = post.mediaVersion ?? 1
         mediaPosition = post.mediaPosition ?? 0
-        
+        readArticleLanguage = post.originalLanguage ?? ""
+        readIsPremiumPost = post.isPremiumPost ?? false
+        readIsLocalizedVersion = post.isLocalizedVersion ?? false
+        readRootId = post.rootId ?? ""
+
         if post.isArchive ?? true {
             image = UIImage()
         }
-        
+
         if user != nil {
             Task {
                 do {
                     isLoadingPopupPresented = true
                     try await getPostToRead(id: post.id)
-                    
+
                     isLoadingPopupPresented = false
                     isReadViewPresented = true
                 } catch {
@@ -396,7 +514,7 @@ final class CreatedPostsViewModel: ObservableObject {
                         isErrorPopupPresented = true
                     }
                 }
-                
+
                 isLoadingPopupPresented = false
             }
         } else {
@@ -406,23 +524,27 @@ final class CreatedPostsViewModel: ObservableObject {
             }
         }
     }
-    
+
     var publishedPosts: [PrePost] {
         posts.filter { !($0.isLocalizedVersion ?? false) }
     }
-    
+
+    var articles: [PrePost] {
+        publishedPosts.filter { !($0.isShortPost ?? false) }
+    }
+
     var localizedPosts: [PrePost] {
         posts.filter { $0.isLocalizedVersion ?? false }
     }
-    
+
     var regularArchivePosts: [PrePost] {
         archivePosts.filter { !($0.isLocalizedVersion ?? false) }
     }
-    
+
     var localizedArchivePosts: [PrePost] {
         archivePosts.filter { $0.isLocalizedVersion ?? false }
     }
-    
+
     var currentPosts: [PrePost] {
         if isArchivePresented && isLocalizedPostsPresented {
             localizedArchivePosts
@@ -430,19 +552,21 @@ final class CreatedPostsViewModel: ObservableObject {
             regularArchivePosts
         } else if isLocalizedPostsPresented {
             localizedPosts
+        } else if isArticlesPresented {
+            articles
         } else {
             publishedPosts
         }
     }
-    
+
     var hasLocalizedPosts: Bool {
         !localizedPosts.isEmpty || !localizedArchivePosts.isEmpty
     }
-    
+
     var hasRegularArchivePosts: Bool {
         !regularArchivePosts.isEmpty
     }
-    
+
     var currentSection: CreatedPostsSection {
         if isArchivePresented && isLocalizedPostsPresented {
             .localizedArchive
@@ -450,58 +574,84 @@ final class CreatedPostsViewModel: ObservableObject {
             .archive
         } else if isLocalizedPostsPresented {
             .localizedPublished
+        } else if isArticlesPresented {
+            .articles
         } else {
             .all
         }
     }
-    
+
     var currentSectionTitle: String {
-        switch currentSection {
+        currentSection.title
+    }
+
+    func posts(for section: CreatedPostsSection) -> [PrePost] {
+        switch section {
         case .all:
-            NSLocalizedString("publicationsLabel", comment: "")
+            publishedPosts
+        case .articles:
+            articles
         case .archive:
-            NSLocalizedString("archiveLabel", comment: "")
+            regularArchivePosts
         case .localizedPublished:
-            NSLocalizedString("localizedPostsLabel", comment: "")
+            localizedPosts
         case .localizedArchive:
-            NSLocalizedString("localizedArchivePostsLabel", comment: "")
+            localizedArchivePosts
         }
     }
-    
+
     func showAllPosts() {
         isArchivePresented = false
+        isArticlesPresented = false
         isLocalizedPostsPresented = false
     }
-    
+
+    func showArticles() {
+        isArchivePresented = false
+        isArticlesPresented = true
+        isLocalizedPostsPresented = false
+    }
+
+    func loadArticlesUntilAvailableIfNeeded() async {
+        while isArticlesPresented && articles.isEmpty && !isAllLoaded {
+            do {
+                try await getPosts()
+            } catch {
+                errorText = error.localizedDescription
+                isErrorPopupPresented = true
+                return
+            }
+        }
+    }
+
     func showArchivePosts() {
         isArchivePresented = true
+        isArticlesPresented = false
         isLocalizedPostsPresented = false
     }
-    
+
     func showLocalizedPosts() {
         isArchivePresented = false
+        isArticlesPresented = false
         isLocalizedPostsPresented = true
     }
-    
+
     func showLocalizedArchivePosts() {
         isArchivePresented = true
+        isArticlesPresented = false
         isLocalizedPostsPresented = true
     }
-    
+
     func updatePresentedSectionIfNeeded() {
-        if currentSection == .archive && regularArchivePosts.isEmpty {
-            showAllPosts()
-        }
-        
         if currentSection == .localizedPublished && localizedPosts.isEmpty {
             showAllPosts()
         }
-        
+
         if currentSection == .localizedArchive && localizedArchivePosts.isEmpty {
             showAllPosts()
         }
     }
-    
+
 }
 
 extension CreatedPostsViewModel {
@@ -516,7 +666,7 @@ extension CreatedPostsViewModel {
         for i in 0..<mediaCount {
             let imageCacheId   = "\(postId)_\(i)"
             let previewCacheId = "\(postId)_\(i)_preview"
-            
+
             if ignoreCache {
                 StorageManager.shared.deleteImage(id: imageCacheId)
                 StorageManager.shared.deleteImage(id: previewCacheId)
@@ -538,13 +688,13 @@ extension CreatedPostsViewModel {
             } catch {
                 // object-not-found — норм, идём к mp4
             }
-            
+
             let mp4Ref = root.child("\(postId)_\(i).mp4")
             do {
                 let url = try await mp4Ref.downloadURLAsync()
-                
+
                 var preview: UIImage? = StorageManager.shared.getImage(id: previewCacheId)
-                
+
                 if preview == nil {
                     do {
                         let data = try await root
@@ -561,11 +711,11 @@ extension CreatedPostsViewModel {
                         }
                     }
                 }
-                
+
                 withAnimation {
                     mediaKind[i] = MediaKind(videoURL: url, videoPreview: preview)
                 }
-                
+
             } catch {
                 // нет ни jpg, ни mp4 — оставляем nil, потом fallback
             }
@@ -615,7 +765,7 @@ extension CreatedPostsViewModel {
             withAnimation { mediaKind = [MediaKind(videoURL: url, videoPreview: thumb)] }
         } catch { /* nothing */ }
     }
-    
+
     private func isNotFound(_ error: Error) -> Bool {
         let ns = error as NSError
         return ns.domain == StorageErrorDomain

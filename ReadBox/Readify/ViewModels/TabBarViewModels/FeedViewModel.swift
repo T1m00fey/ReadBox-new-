@@ -56,6 +56,10 @@ final class FeedViewModel: ObservableObject {
     var mediaCount = 0
     var mediaVersion = 0
     var mediaPosition = 0
+    var articleLanguage = ""
+    var isPremiumPost = false
+    var isLocalizedVersion = false
+    var rootId = ""
     
     private var db = Firestore.firestore()
     
@@ -295,17 +299,10 @@ final class FeedViewModel: ObservableObject {
             }
         }
         
-        if let isShort = post.isShortPost {
-            if isShort {
-                if user?.userId ?? "" != post.authorId {
-                    Task {
-                        do {
-                            try await ArticlesManager.shared.updateViews(at: post.id)
-                            
-                            views.append(post.id)
-                            saveViews()
-                        }
-                    }
+        if user?.userId ?? "" != post.authorId {
+            Task {
+                do {
+                    try await ArticlesManager.shared.updateViews(at: post.id)
                 }
             }
         }
@@ -322,6 +319,10 @@ final class FeedViewModel: ObservableObject {
         mediaCount = post.mediaCount ?? 1
         mediaVersion = post.mediaVersion ?? 1
         mediaPosition = post.mediaPosition ?? 0
+        articleLanguage = post.originalLanguage ?? ""
+        isPremiumPost = post.isPremiumPost ?? false
+        isLocalizedVersion = post.isLocalizedVersion ?? false
+        rootId = post.rootId ?? ""
         
         if post.isArchive ?? true {
             image = UIImage()
@@ -356,20 +357,6 @@ final class FeedViewModel: ObservableObject {
                     }
                 }
                 
-                if let isShort = post.isShortPost, !isShort {
-                    if user.userId != post.authorId, !views.contains(post.id) {
-                        Task {
-                            do {
-                                try await ArticlesManager.shared.updateViews(at: post.id)
-                                await MainActor.run {
-                                    self.views.append(post.id)
-                                    self.saveViews()
-                                }
-                            } catch {
-                            }
-                        }
-                    }
-                }
             } catch {
                 await MainActor.run {
                     self.isLoadingPopupPresented = false

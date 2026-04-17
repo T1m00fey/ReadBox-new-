@@ -4,6 +4,7 @@
 <dict>
 	<key>UIAppFonts</key>
 	<array>
+		<string>ChironGoRoundTC.ttf</string>
 		<string>PlaywriteIE.ttf</string>
 		<string>Borel.ttf</string>
 	</array>

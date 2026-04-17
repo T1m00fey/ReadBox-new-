@@ -61,7 +61,9 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
     @objc func messaging(_ messaging: Messaging, didReceiveRegistrationToken fcmToken: String?) {
         print("Firebase token: \(String(describing: fcmToken))")
         
-        let originalLanguage = StorageManager.shared.getLanguage() ?? "en"
+        let originalLanguage = Locale.preferredLanguages.first?.components(separatedBy: "-").first == "ru"
+            ? "ru"
+            : "en"
         
         print("Original language: \(originalLanguage)")
         

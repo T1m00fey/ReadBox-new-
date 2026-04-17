@@ -43,6 +43,10 @@ final class LikedPostsViewModel: ObservableObject {
     var mediaCount = 0
     var mediaVersion = 0
     var mediaPosition = 0
+    var articleLanguage = ""
+    var isPremiumPost = false
+    var isLocalizedVersion = false
+    var rootId = ""
     
     private var db = Firestore.firestore()
     
@@ -194,6 +198,10 @@ final class LikedPostsViewModel: ObservableObject {
         mediaCount = post.mediaCount ?? 1
         mediaVersion = post.mediaVersion ?? 1
         mediaPosition = post.mediaPosition ?? 0
+        articleLanguage = post.originalLanguage ?? ""
+        isPremiumPost = post.isPremiumPost ?? false
+        isLocalizedVersion = post.isLocalizedVersion ?? false
+        rootId = post.rootId ?? ""
         
         if user != nil {
             if likedPosts == [] {

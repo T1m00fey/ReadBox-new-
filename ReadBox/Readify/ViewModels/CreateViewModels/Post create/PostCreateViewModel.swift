@@ -10,10 +10,14 @@ import PhotosUI
 import FirebaseStorage
 
 final class PostCreateViewModel: ObservableObject {
+    private static var defaultLanguageSelection: Int {
+        Locale.preferredLanguages.first?.components(separatedBy: "-").first == "ru" ? 1 : 0
+    }
+    
     @Published var text = ""
     @Published var isArchive = false
     @Published var imageItem: PhotosPickerItem? = nil
-    @Published var selectedLanguage = (StorageManager.shared.getLanguage() ?? "en") == "en" ? 0 : 1
+    @Published var selectedLanguage = PostCreateViewModel.defaultLanguageSelection
     @Published var selectedMediaPosition = 0
     @Published var addingMode = 0
     @Published var isPremiumPost = 0
@@ -29,10 +33,10 @@ final class PostCreateViewModel: ObservableObject {
     @Published var isConfirmationPopupPresented = false
     @Published var isPostSettingsPopupPresented = false
     
-    func getHeightOfPopupSettingPopup(isLocalizing: Bool, isPremiumAuthor: Bool) -> CGFloat {
+    func getHeightOfPopupSettingPopup(isLanguageSettingHidden: Bool, isPremiumAuthor: Bool) -> CGFloat {
         var h = CGFloat(200)
         
-        if !isLocalizing { h += 100 }
+        if !isLanguageSettingHidden { h += 100 }
         if isPremiumAuthor { h += 100 }
         
         return h

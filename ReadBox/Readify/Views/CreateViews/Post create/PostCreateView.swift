@@ -149,6 +149,57 @@ struct PostCreateView: View {
         self._postsCount = postsCount
     }
     
+    private func familyIdentifier(for currentPostId: String) -> String {
+        if let currentPost = posts.first(where: { $0.id == currentPostId }) ??
+            archivedPosts.first(where: { $0.id == currentPostId }) {
+            return currentPost.rootId ?? currentPost.id
+        }
+        
+        if isLocalizing && !rootId.isEmpty {
+            return rootId
+        }
+        
+        return currentPostId
+    }
+    
+    private var currentEditingPost: PrePost? {
+        posts.first(where: { $0.id == postId }) ??
+        archivedPosts.first(where: { $0.id == postId })
+    }
+    
+    private var isLanguageSettingHidden: Bool {
+        if isLocalizing || localizationCount > 0 {
+            return true
+        }
+        
+        return currentEditingPost?.isLocalizedVersion ?? false
+    }
+    
+    private func updatePostsCountIfNeeded(
+        currentPostId: String,
+        newIsArchive: Bool,
+        oldCount: Int,
+        author: String
+    ) async throws {
+        let familyId = familyIdentifier(for: currentPostId)
+        let hasOtherPublishedVersion = posts.contains {
+            ($0.rootId ?? $0.id) == familyId && $0.id != currentPostId
+        }
+        
+        let wasPublishedBefore = (!currentPostId.isEmpty && posts.contains { $0.id == currentPostId }) || hasOtherPublishedVersion
+        let willBePublishedAfter = !newIsArchive || hasOtherPublishedVersion
+        let delta = (willBePublishedAfter ? 1 : 0) - (wasPublishedBefore ? 1 : 0)
+        
+        guard delta != 0 else { return }
+        
+        let newCount = max(0, oldCount + delta)
+        try await UserManager.shared.updatePostsCount(userId: author, postsCount: newCount)
+        
+        await MainActor.run {
+            postsCount = newCount
+        }
+    }
+    
     private func uploadPost() {
         viewModel.isArchive = (viewModel.addingMode == 2)
         hudService.showLoading()
@@ -161,15 +212,14 @@ struct PostCreateView: View {
         let currentPostId = postId
         let author = authorId
         let oldCount = postsCount
-        let wasArchived = isArchived
         let mediaPosition = viewModel.selectedMediaPosition
 
         dismiss()
 
-        Task.detached {
+        Task {
             do {
                 if currentPostId.isEmpty {
-                    _ = try await viewModel.uploadPost(
+                    let createdPostId = try await viewModel.uploadPost(
                         title: titleText,
                         isArchive: isArchive,
                         uploadingLanguage: selectedLanguage == 0 ? "en" : "ru",
@@ -181,10 +231,12 @@ struct PostCreateView: View {
                         isPremiumPost: viewModel.isPremiumPost == 0 ? false : true
                     )
 
-                    if !isArchive && !isLocalizing {
-                        let newCount = oldCount + 1
-                        try await UserManager.shared.updatePostsCount(userId: author, postsCount: newCount)
-                    }
+                    try await updatePostsCountIfNeeded(
+                        currentPostId: createdPostId,
+                        newIsArchive: isArchive,
+                        oldCount: oldCount,
+                        author: author
+                    )
                 } else {
                     try await viewModel.updatePost(
                         postId: currentPostId,
@@ -196,11 +248,12 @@ struct PostCreateView: View {
                         isPremiumPost: viewModel.isPremiumPost == 0 ? false : true
                     )
 
-                    if isArchive != wasArchived && !isLocalizing {
-                        let delta = isArchive ? -1 : +1
-                        let newCount = max(0, oldCount + delta)
-                        try await UserManager.shared.updatePostsCount(userId: author, postsCount: newCount)
-                    }
+                    try await updatePostsCountIfNeeded(
+                        currentPostId: currentPostId,
+                        newIsArchive: isArchive,
+                        oldCount: oldCount,
+                        author: author
+                    )
                     
                     await MainActor.run {
                         changedPostsManager.changedPostsIDs.append(currentPostId)
@@ -480,7 +533,7 @@ struct PostCreateView: View {
 //                }
                 .sheet(isPresented: $viewModel.isPostSettingsPopupPresented, content: {
                     PostCreateSettingsView(
-                        isLocalizing: isLocalizing,
+                        isLanguageSettingHidden: isLanguageSettingHidden,
                         isPremiumAuthor: isPremiumAuthor,
                         localizationCount: localizationCount,
                         selectedLanguage: $viewModel.selectedLanguage,
@@ -491,7 +544,7 @@ struct PostCreateView: View {
                         [
                             .height(
                                 viewModel.getHeightOfPopupSettingPopup(
-                                    isLocalizing: isLocalizing,
+                                    isLanguageSettingHidden: isLanguageSettingHidden,
                                     isPremiumAuthor: isPremiumAuthor
                                 )
                             )
@@ -735,6 +788,8 @@ struct PostCreateView: View {
                     
                     if isLocalizing {
                         viewModel.selectedLanguage = rootLang == "en" ? 1 : 0
+                    } else if let currentLanguage = currentEditingPost?.originalLanguage {
+                        viewModel.selectedLanguage = currentLanguage == "ru" ? 1 : 0
                     }
                 }
                 

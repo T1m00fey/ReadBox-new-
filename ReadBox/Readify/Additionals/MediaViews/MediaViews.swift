@@ -323,7 +323,7 @@ struct MediaViews: View {
                                 .resizable()
                                 .scaledToFit()
                                 .clipped()
-                                .clipShape(RoundedRectangle(cornerRadius: 20))
+                                .clipShape(RoundedRectangle(cornerRadius: 23))
                                 .frame(maxWidth: feedW, maxHeight: 400, alignment: .leading)
                                 .onTapGesture {
                                     withAnimation {
@@ -335,11 +335,11 @@ struct MediaViews: View {
                         } else if let url = images.first??.videoURL {
                             TappableVideoPreview(
                                 url: url,
-                                cornerRadius: 20,
+                                cornerRadius: 23,
                                 width: feedW,
                                 placeholder: videoPreviews[0],
                                 fillMode: true,
-                                maxHeight: 500
+                                maxHeight: 450
                             )
                             .id(url.absoluteString)
                         }
@@ -355,7 +355,7 @@ struct MediaViews: View {
                                                     .scaledToFill()
                                                     .frame(width: feedW, height: ph)
                                                     .clipped()
-                                                    .clipShape(RoundedRectangle(cornerRadius: 20))
+                                                    .clipShape(RoundedRectangle(cornerRadius: 23))
                                                     .contentShape(Rectangle())
                                                     .onTapGesture {
                                                         withAnimation {
@@ -371,7 +371,7 @@ struct MediaViews: View {
                                             ZStack(alignment: .top) {
                                                 TappableVideoPreview(
                                                     url: videoURL,
-                                                    cornerRadius: 20,
+                                                    cornerRadius: 23,
                                                     width: feedW,
                                                     height: ph,
                                                     placeholder: videoPreviews[i],
@@ -407,13 +407,13 @@ struct MediaViews: View {
                         .tabViewStyle(.page(indexDisplayMode: .never))
                         .contentMargins(.horizontal, 0, for: .scrollContent)
                         .frame(width: feedW, height: ph)
-                        .clipShape(RoundedRectangle(cornerRadius: 20))
+                        .clipShape(RoundedRectangle(cornerRadius: 23))
                     }
                 }
                 .transition(.opacity)
                 
             } else if isLoadingMedia {
-                RoundedRectangle(cornerRadius: 20)
+                RoundedRectangle(cornerRadius: 23)
                     .fill(Color(.systemGray5))
                     .frame(width: feedW, height: placeholderHeight)
                     .redacted(reason: .placeholder)

@@ -10,6 +10,10 @@ import _PhotosUI_SwiftUI
 import FirebaseStorage
 
 final class CreateViewModel: ObservableObject {
+    private static var defaultLanguageSelection: Int {
+        Locale.preferredLanguages.first?.components(separatedBy: "-").first == "ru" ? 1 : 0
+    }
+    
     @Published var isFirstTapOnTitleTE = true
     
     @Published var titleText = NSLocalizedString("titlePlaceholder", comment: "")
@@ -29,7 +33,7 @@ final class CreateViewModel: ObservableObject {
     
     @Published var isFirstAppear = true
     
-    @Published var languageSelection = (StorageManager.shared.getLanguage() ?? "en") == "en" ? 0 : 1
+    @Published var languageSelection = CreateViewModel.defaultLanguageSelection
     @Published var isPremiumPostSetting = 0
     
     @Published var mediaURLs: [URL] = []

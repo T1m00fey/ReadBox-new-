@@ -15,6 +15,7 @@ import PopupView
 final class SubscribesViewModel: ObservableObject {
     @Published var isLoading = true
     @Published var channels: [ChannelInfo] = []
+    @Published var allPosts: [PrePost] = []
     @Published var articles: [PrePost] = []
     @Published var errorText = ""
     @Published var isErrorPopupPresented = false
@@ -28,6 +29,7 @@ final class SubscribesViewModel: ObservableObject {
     @Published var user: DBUser?
     @Published var lastDocument: DocumentSnapshot? = nil
     @Published var isLargeHeaderVisible = true
+    @Published var primaryLanguage = "en"
 
     private let db = Firestore.firestore()
     private let inQueryLimit = 30
@@ -41,10 +43,63 @@ final class SubscribesViewModel: ObservableObject {
     var mediaCount = 0
     var mediaVersion = 0
     var mediaPosition = 0
+    var articleLanguage = ""
+    var isPremiumPost = false
+    var isLocalizedVersion = false
+    var rootId = ""
 
     func loadUser() async throws {
         let auth = try AuthenticationManager.shared.getAuthenticatedUser()
         self.user = try await UserManager.shared.getUser(userId: auth.uid)
+    }
+    
+    func updatePrimaryLanguage() {
+        let fallbackLanguage = Locale.preferredLanguages.first?.components(separatedBy: "-").first == "ru"
+        ? "ru"
+        : "en"
+        
+        let userLanguage = user?.originalLanguage?.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        primaryLanguage = (userLanguage?.isEmpty == false ? userLanguage : nil) ?? fallbackLanguage
+    }
+    
+    func refresh() async {
+        withAnimation {
+            isLoading = true
+            channels = []
+            allPosts = []
+            articles = []
+            authorsInfo = [:]
+            user = nil
+            lastDocument = nil
+            errorText = ""
+            isErrorPopupPresented = false
+        }
+        
+        do {
+            try await loadUser()
+            updatePrimaryLanguage()
+            
+            guard let subscribes = user?.subscribes, !subscribes.isEmpty else {
+                withAnimation {
+                    isLoading = false
+                }
+                return
+            }
+            
+            try await getChannels()
+            try await getArticles()
+            
+            withAnimation {
+                isLoading = false
+            }
+        } catch {
+            withAnimation {
+                errorText = error.localizedDescription
+                isErrorPopupPresented = true
+                isLoading = false
+            }
+        }
     }
 
     func getChannels() async throws {
@@ -109,7 +164,8 @@ final class SubscribesViewModel: ObservableObject {
             let newPosts = snapshot.documents.compactMap { PrePost(document: $0) }
             
             withAnimation {
-                articles.append(contentsOf: newPosts)
+                allPosts.append(contentsOf: newPosts)
+                articles = localizedPosts(from: allPosts)
                 lastDocument = snapshot.documents.count == 20 ? snapshot.documents.last : nil
             }
         } catch {
@@ -119,6 +175,39 @@ final class SubscribesViewModel: ObservableObject {
             }
             throw error
         }
+    }
+    
+    private func localizedPosts(from posts: [PrePost]) -> [PrePost] {
+        var bestPostsByRoot: [String: (post: PrePost, index: Int)] = [:]
+        
+        for (index, post) in posts.enumerated() {
+            let rootKey = post.rootId ?? post.id
+            
+            if let current = bestPostsByRoot[rootKey] {
+                if localizationPriority(for: post) < localizationPriority(for: current.post) {
+                    bestPostsByRoot[rootKey] = (post, index)
+                }
+            } else {
+                bestPostsByRoot[rootKey] = (post, index)
+            }
+        }
+        
+        return bestPostsByRoot
+            .values
+            .sorted { $0.index < $1.index }
+            .map(\.post)
+    }
+    
+    private func localizationPriority(for post: PrePost) -> Int {
+        if post.originalLanguage == primaryLanguage {
+            return 0
+        }
+        
+        if !(post.isLocalizedVersion ?? false) {
+            return 1
+        }
+        
+        return 2
     }
     
     func getPostToRead(id: String) {
@@ -178,6 +267,10 @@ final class SubscribesViewModel: ObservableObject {
         mediaCount = post.mediaCount ?? 1
         mediaVersion = post.mediaVersion ?? 1
         mediaPosition = post.mediaPosition ?? 0
+        articleLanguage = post.originalLanguage ?? ""
+        isPremiumPost = post.isPremiumPost ?? false
+        isLocalizedVersion = post.isLocalizedVersion ?? false
+        rootId = post.rootId ?? ""
         
         isLoadingPopupPresented = true
         getPostToRead(id: post.id)
@@ -186,6 +279,7 @@ final class SubscribesViewModel: ObservableObject {
 
 struct SubscribesView: View {
     @StateObject private var viewModel = SubscribesViewModel()
+    @Binding var isPremiumViewPresented: Bool
     
     @EnvironmentObject var sessionManager: SessionManager
     @EnvironmentObject var changedPostsManager: ChangedPostsManager
@@ -209,37 +303,75 @@ struct SubscribesView: View {
                         .padding(.top, 30)
                         .padding(.bottom, -40)
                         
-                        ForEach(viewModel.articles) { post in
-                            ArticleView(
-                                id: post.id,
-                                title: post.title ?? "",
-                                authorId: post.authorId ?? "",
-                                authorName: viewModel.authorsInfo[post.authorId ?? ""]?.name ?? "",
-                                isCheckmark: viewModel.authorsInfo[post.authorId ?? ""]?.isCheckmark ?? false,
-                                isArchive: post.isArchive ?? true,
-                                isShortPost: post.isShortPost ?? false,
-                                mediaCount: post.mediaCount ?? 1,
-                                mediaVersion: post.mediaVersion ?? 1,
-                                mediaPosition: post.mediaPosition ?? 0,
-                                lastVersionOfAvatar: viewModel.authorsInfo[post.authorId ?? ""]?.avatarVersion ?? 0,
-                                locCount: post.localizationCount ?? 0,
-                                isLocalizedVersion: post.isLocalizedVersion ?? false,
-                                isPremiumPost: post.isPremiumPost ?? false,
-                                user: $viewModel.user,
-                                isZoomableViewPresented: $viewModel.isZoomableImageViewPresented,
-                                zoomableImage: $viewModel.zoomableImage,
-                                selectedAuthorId: $viewModel.authorId,
-                                isChannelViewPresented: $viewModel.isChannelViewPresented
-                            )
-                            .padding(.top, 10)
-                            .onAppear {
-                                viewModel.onPostAppearing(post)
+                        if viewModel.isLoading {
+                            ForEach(0..<3) { num in
+                                ArticleView(
+                                    id: String(num),
+                                    title: "Hello, World! Hello, World! Hello, World!",
+                                    authorId: "",
+                                    authorName: "Hello, World!",
+                                    isCheckmark: true,
+                                    isArchive: false,
+                                    isShortPost: false,
+                                    mediaCount: 0,
+                                    mediaVersion: 2,
+                                    mediaPosition: 0,
+                                    lastVersionOfAvatar: 0,
+                                    locCount: 0,
+                                    isLocalizedVersion: false,
+                                    isPremiumPost: false,
+                                    user: .constant(nil),
+                                    isZoomableViewPresented: .constant(false),
+                                    zoomableImage: .constant(nil),
+                                    selectedAuthorId: $viewModel.authorId,
+                                    isChannelViewPresented: .constant(false)
+                                )
+                                .redacted(reason: .placeholder)
+                                .padding(.top, 10)
+                                .shimmering()
                             }
-                            .onTapGesture {
-                                viewModel.tapGestureHandler(on: post)
+                        } else {
+                            ForEach(viewModel.articles) { post in
+                                ArticleView(
+                                    id: post.id,
+                                    title: post.title ?? "",
+                                    authorId: post.authorId ?? "",
+                                    authorName: viewModel.authorsInfo[post.authorId ?? ""]?.name ?? "",
+                                    isCheckmark: viewModel.authorsInfo[post.authorId ?? ""]?.isCheckmark ?? false,
+                                    isArchive: post.isArchive ?? true,
+                                    isShortPost: post.isShortPost ?? false,
+                                    mediaCount: post.mediaCount ?? 1,
+                                    mediaVersion: post.mediaVersion ?? 1,
+                                    mediaPosition: post.mediaPosition ?? 0,
+                                    lastVersionOfAvatar: viewModel.authorsInfo[post.authorId ?? ""]?.avatarVersion ?? 0,
+                                    locCount: post.localizationCount ?? 0,
+                                    isLocalizedVersion: post.isLocalizedVersion ?? false,
+                                    isPremiumPost: post.isPremiumPost ?? false,
+                                    user: $viewModel.user,
+                                    isZoomableViewPresented: $viewModel.isZoomableImageViewPresented,
+                                    zoomableImage: $viewModel.zoomableImage,
+                                    selectedAuthorId: $viewModel.authorId,
+                                    isChannelViewPresented: $viewModel.isChannelViewPresented
+                                )
+                                .padding(.top, 10)
+                                .onAppear {
+                                    viewModel.onPostAppearing(post)
+                                }
+                                .onTapGesture {
+                                    if let isPremiumPost = post.isPremiumPost,
+                                       isPremiumPost && !subManager.hasPremium,
+                                       post.authorId != viewModel.user?.userId {
+                                        isPremiumViewPresented = true
+                                    } else {
+                                        viewModel.tapGestureHandler(on: post)
+                                    }
+                                }
                             }
                         }
                     }
+                }
+                .refreshable {
+                    await viewModel.refresh()
                 }
                 
                 VStack {
@@ -250,27 +382,9 @@ struct SubscribesView: View {
                 .ignoresSafeArea()
             }
             .onAppear {
-                Task {
-                    do {
-                        try await viewModel.loadUser()
-                        
-                        if let subscribes = viewModel.user?.subscribes, !subscribes.isEmpty {
-                            if viewModel.articles.isEmpty {
-                                viewModel.lastDocument = nil
-                            }
-                            
-                            try await viewModel.getChannels()
-                            
-                            if viewModel.articles.isEmpty {
-                                try await viewModel.getArticles()
-                            }
-                            
-                            withAnimation {
-                                viewModel.isLoading = false
-                            }
-                        }
-                    } catch {
-                        print("error")
+                if viewModel.isLoading && viewModel.channels.isEmpty && viewModel.articles.isEmpty {
+                    Task {
+                        await viewModel.refresh()
                     }
                 }
             }
@@ -300,9 +414,14 @@ struct SubscribesView: View {
                     mediaVersion: viewModel.mediaVersion,
                     mediaPosition: viewModel.mediaPosition,
                     lastVersionOfAvatar: viewModel.authorsInfo[viewModel.authorId]?.avatarVersion ?? 0,
+                    articleLanguage: viewModel.articleLanguage,
+                    isPremiumPost: viewModel.isPremiumPost,
                     user: $viewModel.user,
                     isChannelViewPresented: $viewModel.isChannelViewPresented,
-                    isPresented: $viewModel.isReadViewPresented
+                    isPresented: $viewModel.isReadViewPresented,
+                    isLocalizedVersion: viewModel.isLocalizedVersion,
+                    rootId: viewModel.rootId,
+                    originalPrePost: originalPost(for: viewModel.id)
                 )
                 .environmentObject(sessionManager)
                 .environmentObject(changedPostsManager)
@@ -314,7 +433,8 @@ struct SubscribesView: View {
                     authorId: viewModel.authorId,
                     authorName: viewModel.authorsInfo[viewModel.authorId]?.name ?? NSLocalizedString("notFoundLabel", comment: ""),
                     isCheckmark: viewModel.authorsInfo[viewModel.authorId]?.isCheckmark ?? false,
-                    lastVersionOfAvatar: viewModel.authorsInfo[viewModel.authorId]?.avatarVersion ?? 0
+                    lastVersionOfAvatar: viewModel.authorsInfo[viewModel.authorId]?.avatarVersion ?? 0,
+                    isPremiumViewPresented: $isPremiumViewPresented
                 )
                 .environmentObject(sessionManager)
                 .environmentObject(changedPostsManager)
@@ -354,6 +474,17 @@ struct SubscribesView: View {
 }
 
 private extension SubscribesView {
+    func originalPost(for postId: String) -> PrePost? {
+        guard let post = viewModel.allPosts.first(where: { $0.id == postId }),
+              post.isLocalizedVersion ?? false,
+              let rootId = post.rootId
+        else {
+            return nil
+        }
+        
+        return viewModel.allPosts.first { $0.id == rootId }
+    }
+    
     var headerView: some View {
         ZStack {
             if viewModel.isLargeHeaderVisible {
@@ -367,7 +498,7 @@ private extension SubscribesView {
             }
             
             HStack(spacing: 5) {
-                Text("Подписки")
+                Text(NSLocalizedString("subscribesLabel", comment: ""))
                     .font(.system(size: 32))
                     .fontWeight(.light)
                 
@@ -387,5 +518,5 @@ private extension SubscribesView {
 }
 
 #Preview {
-    SubscribesView()
+    SubscribesView(isPremiumViewPresented: .constant(false))
 }

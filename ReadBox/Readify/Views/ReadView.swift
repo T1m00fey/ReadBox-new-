@@ -11,9 +11,10 @@ import MarkdownUI
 import SwiftfulLoadingIndicators
 import SDWebImageSwiftUI
 import FirebaseStorage
+import UIKit
 
 struct ReadView: View {
-    
+
     let id: String
     let title: String
     let text: String
@@ -27,24 +28,34 @@ struct ReadView: View {
     let mediaVersion: Int
     let mediaPosition: Int
     let lastVersionOfAvatar: Int
+    let articleLanguage: String
+    let isPremiumPost: Bool
     let isLocalizedVersion: Bool
     let rootId: String
     let originalPrePost: PrePost?
-    
+
     @Binding var user: DBUser?
     @Binding var isChannelViewPresented: Bool
     @Binding var isPresented: Bool
-    
+
     @State private var isSubscribed = false
     @State private var currentPrePost: PrePost? = nil
     @State private var currentPostToRead: PostToRead? = nil
-    
+    @State private var originalArticleLanguage = ""
+    @State private var cachedOriginalPrePost: PrePost? = nil
+    @State private var cachedOriginalPostToRead: PostToRead? = nil
+    @State private var originalArticleCanBeOpened: Bool? = nil
+    @State private var localizedPrePost: PrePost? = nil
+    @State private var cachedLocalizedPostToRead: PostToRead? = nil
+    @State private var localizedArticleLanguage = ""
+    @State private var viewedArticleIdsInReadSession: Set<String> = []
+
     @StateObject var viewModel = ReadViewModel()
-    
+
     @Namespace var namespace
-    
+
     @EnvironmentObject var sessionManager: SessionManager
-    
+
     init(
         id: String,
         title: String,
@@ -59,6 +70,8 @@ struct ReadView: View {
         mediaVersion: Int,
         mediaPosition: Int,
         lastVersionOfAvatar: Int,
+        articleLanguage: String = "",
+        isPremiumPost: Bool = false,
         user: Binding<DBUser?>,
         isChannelViewPresented: Binding<Bool>,
         isPresented: Binding<Bool>,
@@ -79,6 +92,8 @@ struct ReadView: View {
         self.mediaVersion = mediaVersion
         self.mediaPosition = mediaPosition
         self.lastVersionOfAvatar = lastVersionOfAvatar
+        self.articleLanguage = articleLanguage
+        self.isPremiumPost = isPremiumPost
         self._user = user
         self._isChannelViewPresented = isChannelViewPresented
         self._isPresented = isPresented
@@ -86,36 +101,37 @@ struct ReadView: View {
         self.rootId = rootId
         self.originalPrePost = originalPrePost
     }
-    
+
     var body: some View {
         ZStack {
             Color(uiColor: .systemBackground)
                 .ignoresSafeArea()
-            
+
             ScrollView(showsIndicators: false) {
                 VStack {
-                                                                    
+
                     if !currentText.isEmpty {
                         Text(currentTitle)
                             .fontWeight(.light)
                             .fontDesign(.rounded)
                             .font(.system(size: 24))
                             .frame(width: UIScreen.main.bounds.width - 32, alignment: .leading)
-                        
+                            .hiddenReadContentOnScreenshots(currentIsPremiumPost)
+
                         RoundedRectangle(cornerRadius: 0)
                             .frame(width: UIScreen.main.bounds.width, height: 1)
                             .foregroundStyle(Color.gray)
                     }
-                    
+
                     ZStack {
                         VisibilityTracker(id: "authorBlock")
-                        
+
                         HStack {
 //                            Text("by")
 //                                .font(.system(size: 20))
 //                                .fontDesign(.rounded)
 //                                .foregroundStyle(Color.gray)
-                            
+
                             if let avatar = viewModel.avatarImage {
                                 Image(uiImage: avatar)
                                     .resizable()
@@ -130,13 +146,13 @@ struct ReadView: View {
                                             )
                                     }
                             }
-                            
+
                             HStack(spacing: 0) {
                                 Button {
                                     withAnimation {
                                         if authorName != "" {
                                             isChannelViewPresented = true
-                                            
+
                                             isPresented = false
                                         }
                                     }
@@ -147,7 +163,7 @@ struct ReadView: View {
                                         .lineLimit(2)
                                         .underline()
                                 }
-                                
+
                                 if isCheckmark {
                                     Image(systemName: "checkmark.seal.fill")
                                         .foregroundStyle(Color.blue)
@@ -160,7 +176,7 @@ struct ReadView: View {
                         .padding(.bottom, 5)
                         .padding(.top, viewModel.images.count == 0 ? 10 : 0)
                     }
-                   
+
 //                        if viewModel.image != UIImage() {
 //                            Image(uiImage: viewModel.image)
 //                                .resizable()
@@ -175,37 +191,37 @@ struct ReadView: View {
 //                            TappableVideoPreview(url: videoURL, cornerRadius: 20, width: UIScreen.main.bounds.width - 20)
 //                                .frame(width: UIScreen.main.bounds.width - 20)
 //                        }
-                    
+
                     if currentMediaPosition == 0 && currentMediaCount > 0 {
                         mediaViews
                     } else if currentMediaPosition == 1 && !currentTitle.isEmpty {
                         titleView
-                            .padding(.top, 10)
+//                            .padding(.top, 10)
 //                            .padding(.bottom, -20)
                     }
-                
+
                     HStack {
                         Text(viewModel.getDateCreated(regDate: currentDateCreated))
                             .font(.system(size: 21))
                             .fontWeight(.light)
                             .fontDesign(.rounded)
                             .foregroundStyle(Color.gray)
-                        
+
                         Spacer()
-                        
+
                         Button {
                             if viewModel.isPostLiked {
                                 withAnimation {
                                     viewModel.isPostLiked.toggle()
                                 }
-                                
+
                                 user?.likedPosts?.removeAll {
                                     currentId == $0
-                                
+
                                 }
-                                
+
                                 viewModel.likesCount -= 1
-                                
+
                                 Task {
                                     do {
                                         viewModel.vibrationsService.lightImpact()
@@ -216,7 +232,7 @@ struct ReadView: View {
                                             viewModel.isErrorPopupPresented = true
                                         }
                                     }
-                                    
+
                                     try? await viewModel.updateLikes(at: currentId, likesCount: viewModel.likesCount)
                                 }
                             } else {
@@ -224,11 +240,11 @@ struct ReadView: View {
                                     withAnimation {
                                         viewModel.isPostLiked.toggle()
                                     }
-                                    
+
                                     viewModel.likesCount += 1
-                                    
+
                                     user?.likedPosts?.append(currentId)
-                                    
+
                                     Task {
                                         do {
                                             viewModel.vibrationsService.lightImpact()
@@ -239,7 +255,7 @@ struct ReadView: View {
                                                 viewModel.isErrorPopupPresented = true
                                             }
                                         }
-                                        
+
                                         try? await viewModel.updateLikes(at: currentId, likesCount: viewModel.likesCount)
                                     }
                                 } else {
@@ -264,7 +280,7 @@ struct ReadView: View {
                                     .shadow(radius: 1)
                             }
                         }
-                        
+
                         if authorId != "" && authorId != user?.userId {
                             ZStack {
                                 if #available(iOS 26.0, *) {
@@ -298,7 +314,7 @@ struct ReadView: View {
                                         )
                                         .shadow(radius: isSubscribed ? 1 : 0)
                                         .frame(width: 120)
-                                    
+
                                     if viewModel.isSubscribeLoading {
                                         LoadingIndicator(
                                             animation: .circleRunner,
@@ -331,12 +347,12 @@ struct ReadView: View {
                                             withAnimation {
                                                 viewModel.isSubscribeLoading = true
                                             }
-                                            
+
                                             try await viewModel.un_subcribeUser(
                                                 on: authorId,
                                                 isNeedToSubscribe: !isSubscribed
                                             )
-                                            
+
                                             withAnimation {
                                                 if isSubscribed {
                                                     user?.subscribes?.removeAll { $0 == authorId }
@@ -345,7 +361,7 @@ struct ReadView: View {
                                                     user?.subscribes?.append(authorId)
                                                     viewModel.vibrationsService.successFeedback()
                                                 }
-                                                                                                
+
                                                 viewModel.isSubscribeLoading = false
                                                 isSubscribed.toggle()
                                             }
@@ -364,7 +380,8 @@ struct ReadView: View {
                     .frame(width: UIScreen.main.bounds.width - 32)
                     .padding(.horizontal)
                     .padding(.bottom, 20)
-                    
+                    .padding(.top, mediaCount == 0 ? -10 : 0)
+
                     if !currentText.isEmpty {
                         Markdown(
                             currentText.replacingOccurrences(of: "\n", with: "  \n").normalizeEmptyLines()
@@ -379,8 +396,10 @@ struct ReadView: View {
                             FontSize(CGFloat(viewModel.fontSize))
                         }
                         .markdownTheme(.gitHub)
+                        .id("\(currentId)-\(viewModel.fontSize)")
                         .frame(width: UIScreen.main.bounds.width - 32, alignment: .topLeading)
                         .padding(.bottom, 50)
+                        .hiddenReadContentOnScreenshots(currentIsPremiumPost)
                     } else if currentMediaPosition == 0 && currentTitle != "" {
                         titleView
                             .padding(.bottom, 50)
@@ -391,7 +410,7 @@ struct ReadView: View {
                             .padding(.bottom, 50)
                     }
                 }
-                
+
             }
             .coordinateSpace(name: "readScroll")
             .fullScreenCover(isPresented: $viewModel.isZoomableViewPresented) {
@@ -413,23 +432,35 @@ struct ReadView: View {
                 }
             }
             .onAppear {
+                viewedArticleIdsInReadSession.insert(id)
+
                 withAnimation {
                     if let subscribes = user?.subscribes {
                         isSubscribed = subscribes.contains(authorId)
                     }
-            
+
                     viewModel.isPostLiked = (user?.likedPosts ?? []).contains(currentId)
                 }
-                
+
                 viewModel.likesCount = currentLikesCount
-                
+
                 viewModel.fontSize = StorageManager.shared.getFontSize()
+
+                if originalArticleLanguage.isEmpty {
+                    originalArticleLanguage = formattedLanguageCode(originalPrePost?.originalLanguage)
+                }
             }
             .task {
                 let ava = await MediaManager.shared.getAvatar(authorId: authorId, lastVersion: lastVersionOfAvatar)
                 withAnimation {
                     viewModel.avatarImage = ava
                 }
+            }
+            .task(id: currentRootId) {
+                await loadOriginalArticleLanguageIfNeeded()
+            }
+            .task(id: id) {
+                await loadLocalizedArticleIfNeeded()
             }
             .onChange(of: viewModel.isZoomableViewPresented) {
                 if !viewModel.isZoomableViewPresented {
@@ -456,6 +487,7 @@ struct ReadView: View {
             .sheet(isPresented: $viewModel.isFontSettingPopupPresented, content: {
                 FontSettingView(
                     isPopupPresented: $viewModel.isFontSettingPopupPresented,
+                    selectedFontSize: $viewModel.fontSize,
                     successText: .constant(""),
                     isSuccessPopupPresented: .constant(false)
                 )
@@ -463,24 +495,17 @@ struct ReadView: View {
                 .presentationCornerRadius(30)
                 .presentationDragIndicator(.visible)
             })
-            .onChange(of: viewModel.isFontSettingPopupPresented) {
-                withAnimation {
-                    if !viewModel.isFontSettingPopupPresented {
-                        viewModel.fontSize = StorageManager.shared.getFontSize()
-                    }
-                }
-            }
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    
+
                     Button {
                         isPresented = false
                     } label: {
                         Image(systemName: "arrow.left")
                     }
-                    
+
                 }
-                
+
                 ToolbarItem(placement: .principal) {
                     if !viewModel.isAuthorBlockVisible {
                         if #available(iOS 26, *) {
@@ -492,35 +517,37 @@ struct ReadView: View {
                         }
                     }
                 }
-                
+
                 ToolbarItem(placement: .topBarTrailing) {
-                    if hasExtraToolbarActions {
+                    if viewModel.isOriginalArticleLoading {
+                        ProgressView()
+                    } else if hasExtraToolbarActions {
                         Menu {
                             if currentText != "" {
                                 Button {
                                     viewModel.isFontSettingPopupPresented.toggle()
                                 } label: {
                                     Label(
-                                        StorageManager.shared.getLanguage() == "ru" ? "Шрифт" : "Font",
+                                        NSLocalizedString("fontLabel", comment: ""),
                                         systemImage: "book.pages"
                                     )
                                 }
                             }
-                            
-                            if currentIsLocalizedVersion && !currentRootId.isEmpty {
+
+                            if canSwitchArticleLanguage {
                                 originalArticleMenuButton
                             }
-                            
+
                             if !currentIsArchive {
                                 ShareLink(item: URL(string: "https://readbox-links.online/posts/?index=\(currentId)")!) {
                                     Label(
-                                        StorageManager.shared.getLanguage() == "ru" ? "Поделиться" : "Share",
+                                        NSLocalizedString("shareLabel", comment: ""),
                                         systemImage: "arrowshape.turn.up.right"
                                     )
                                 }
                             }
                         } label: {
-                            Image(systemName: "ellipsis.circle")
+                            Image(systemName: "ellipsis")
                         }
                     } else if !currentIsArchive {
                         ShareLink(item: URL(string: "https://readbox-links.online/posts/?index=\(currentId)")!) {
@@ -530,8 +557,9 @@ struct ReadView: View {
                 }
             }
             .background(Color(uiColor: .systemBackground))
-            
+
         }
+        .simultaneousGesture(backSwipeGesture)
         .navigationBarBackButtonHidden()
         .overlay(
             EnableSwipeBack()
@@ -541,6 +569,21 @@ struct ReadView: View {
 }
 
 private extension ReadView {
+    var backSwipeGesture: some Gesture {
+        DragGesture(minimumDistance: 20, coordinateSpace: .global)
+            .onEnded { value in
+                let isFromLeftEdge = value.startLocation.x <= 30
+                let isHorizontalSwipe = value.translation.width > 80
+                    && abs(value.translation.width) > abs(value.translation.height)
+
+                guard isFromLeftEdge && isHorizontalSwipe else { return }
+
+                withAnimation {
+                    isPresented = false
+                }
+            }
+    }
+
     var mediaViews: some View {
         MediaViews(
             id: currentId,
@@ -552,71 +595,100 @@ private extension ReadView {
             currentIndex: $viewModel.currentIndex
         )
         .id(currentId)
+        .hiddenReadContentOnScreenshots(currentIsPremiumPost)
     }
-    
+
     var titleView: some View {
-        Text(currentTitle)
+        Text(currentTitleAttributedString)
             .font(.system(size: 18))
-            .fontDesign(.rounded)
+//            .fontDesign(.rounded)
             .frame(width: UIScreen.main.bounds.width - 32, alignment: .leading)
+            .hiddenReadContentOnScreenshots(currentIsPremiumPost)
     }
-    
+
+    var currentTitleAttributedString: AttributedString {
+        var attributedString = currentTitle.markdownAttributedStringPreservingLineBreaks
+
+        for run in attributedString.runs where run.link != nil {
+            attributedString[run.range].foregroundColor = .blue
+            attributedString[run.range].underlineStyle = .single
+        }
+
+        return attributedString
+    }
+
     var currentId: String {
         currentPrePost?.id ?? id
     }
-    
+
     var currentTitle: String {
         currentPrePost?.title ?? title
     }
-    
+
     var currentText: String {
         currentPostToRead?.text ?? text
     }
-    
+
     var currentDateCreated: Date {
         currentPostToRead?.dateCreated ?? dateCreated
     }
-    
+
     var currentLikesCount: Int {
         currentPrePost?.likesCount ?? likesCount
     }
-    
+
     var currentIsArchive: Bool {
         currentPrePost?.isArchive ?? isArchive
     }
-    
+
     var currentMediaCount: Int {
         currentPrePost?.mediaCount ?? mediaCount
     }
-    
+
     var currentMediaVersion: Int {
         currentPrePost?.mediaVersion ?? mediaVersion
     }
-    
+
     var currentMediaPosition: Int {
         currentPrePost?.mediaPosition ?? mediaPosition
     }
-    
+
     var currentIsLocalizedVersion: Bool {
         currentPrePost?.isLocalizedVersion ?? isLocalizedVersion
     }
-    
+
+    var currentIsPremiumPost: Bool {
+        currentPrePost?.isPremiumPost ?? isPremiumPost
+    }
+
     var currentRootId: String {
         currentPrePost?.rootId ?? rootId
     }
-    
+
     var canSwitchArticleLanguage: Bool {
-        isLocalizedVersion && !rootId.isEmpty
+        if isLocalizedVersion {
+            return !rootId.isEmpty && (
+                originalArticleCanBeOpened ??
+                originalPrePost.map { !($0.isArchive ?? false) } ??
+                false
+            )
+        }
+
+        return localizedPrePost != nil && !(localizedPrePost?.isArchive ?? false)
     }
-    
+
     var isShowingOriginalArticle: Bool {
-        currentPrePost != nil
+        if isLocalizedVersion {
+            return currentPrePost != nil
+        }
+
+        return currentPrePost == nil
     }
-    
+
     var hasExtraToolbarActions: Bool {
         currentText != "" || canSwitchArticleLanguage
     }
-    
+
     @ViewBuilder
     var originalArticleButton: some View {
         if viewModel.isOriginalArticleLoading {
@@ -634,13 +706,13 @@ private extension ReadView {
             }
         }
     }
-    
+
     @ViewBuilder
     var originalArticleMenuButton: some View {
         if viewModel.isOriginalArticleLoading {
             HStack {
                 Image("switchLanguageIcon")
-                Text(StorageManager.shared.getLanguage() == "ru" ? "Загрузка..." : "Loading...")
+                Text(NSLocalizedString("loadingLabel", comment: ""))
             }
         } else {
             Button {
@@ -653,17 +725,32 @@ private extension ReadView {
             }
         }
     }
-    
+
     var languageSwitchButtonTitle: String {
-        if StorageManager.shared.getLanguage() == "ru" {
-            return isShowingOriginalArticle ? "Перевод" : "Оригинал"
-        }
-        
-        return isShowingOriginalArticle ? "Translation" : "Original"
+        let languageCode = targetArticleLanguageCode
+        let title = isShowingOriginalArticle
+            ? NSLocalizedString("translationLabel", comment: "")
+            : NSLocalizedString("originalLabel", comment: "")
+        return languageCode.isEmpty ? title : "\(title) (\(languageCode))"
     }
-    
+
+    var targetArticleLanguageCode: String {
+        if isShowingOriginalArticle {
+            return isLocalizedVersion
+                ? formattedLanguageCode(articleLanguage)
+                : displayedLocalizedArticleLanguage
+        }
+
+        return displayedOriginalArticleLanguage
+    }
+
     func toggleArticleLanguage() {
         if isShowingOriginalArticle {
+            if !isLocalizedVersion {
+                showLocalizedArticle()
+                return
+            }
+
             withAnimation {
                 currentPrePost = nil
                 currentPostToRead = nil
@@ -674,13 +761,37 @@ private extension ReadView {
             }
             return
         }
-        
-        showOriginalArticle()
+
+        if isLocalizedVersion {
+            showOriginalArticle()
+        } else {
+            showInitialArticle()
+        }
     }
-    
+
+    func showInitialArticle() {
+        withAnimation {
+            currentPrePost = nil
+            currentPostToRead = nil
+            viewModel.likesCount = likesCount
+            viewModel.isPostLiked = (user?.likedPosts ?? []).contains(id)
+            viewModel.currentIndex = 0
+            viewModel.selectedImageURL = nil
+        }
+    }
+
     func showOriginalArticle() {
         guard !currentRootId.isEmpty, !viewModel.isOriginalArticleLoading else { return }
-        
+
+        if let cachedOriginalPrePost, let cachedOriginalPostToRead {
+            guard !(cachedOriginalPrePost.isArchive ?? false) else {
+                originalArticleCanBeOpened = false
+                return
+            }
+            showLoadedArticle(prePost: cachedOriginalPrePost, postToRead: cachedOriginalPostToRead)
+            return
+        }
+
         Task {
             do {
                 await MainActor.run {
@@ -688,25 +799,44 @@ private extension ReadView {
                         viewModel.isOriginalArticleLoading = true
                     }
                 }
-                
+
                 let loadedOriginalPrePost: PrePost
-                
-                if let originalPrePostFromChannel = self.originalPrePost {
+
+                if let cachedOriginalPrePost {
+                    loadedOriginalPrePost = cachedOriginalPrePost
+                } else if let originalPrePostFromChannel = self.originalPrePost {
                     loadedOriginalPrePost = originalPrePostFromChannel
                 } else {
                     loadedOriginalPrePost = try await ArticlesManager.shared.getPrePost(id: currentRootId)
                 }
-                
-                let originalPostToRead = try await ArticlesManager.shared.getPostToRead(id: currentRootId)
-                
+
+                guard !(loadedOriginalPrePost.isArchive ?? false) else {
+                    await MainActor.run {
+                        withAnimation {
+                            originalArticleCanBeOpened = false
+                            cachedOriginalPrePost = nil
+                            cachedOriginalPostToRead = nil
+                            viewModel.isOriginalArticleLoading = false
+                        }
+                    }
+                    return
+                }
+
+                let originalPostToRead: PostToRead
+
+                if let cachedOriginalPostToRead {
+                    originalPostToRead = cachedOriginalPostToRead
+                } else {
+                    originalPostToRead = try await ArticlesManager.shared.getPostToRead(id: currentRootId)
+                }
+
                 await MainActor.run {
                     withAnimation {
-                        currentPrePost = loadedOriginalPrePost
-                        currentPostToRead = originalPostToRead
-                        viewModel.likesCount = loadedOriginalPrePost.likesCount ?? 0
-                        viewModel.isPostLiked = (user?.likedPosts ?? []).contains(loadedOriginalPrePost.id)
-                        viewModel.currentIndex = 0
-                        viewModel.selectedImageURL = nil
+                        cachedOriginalPrePost = loadedOriginalPrePost
+                        cachedOriginalPostToRead = originalPostToRead
+                        originalArticleCanBeOpened = true
+                        originalArticleLanguage = formattedLanguageCode(loadedOriginalPrePost.originalLanguage)
+                        showLoadedArticle(prePost: loadedOriginalPrePost, postToRead: originalPostToRead)
                         viewModel.isOriginalArticleLoading = false
                     }
                 }
@@ -719,6 +849,245 @@ private extension ReadView {
                     }
                 }
             }
+        }
+    }
+
+    func showLocalizedArticle() {
+        guard !viewModel.isOriginalArticleLoading else { return }
+
+        if let localizedPrePost, let cachedLocalizedPostToRead {
+            guard !(localizedPrePost.isArchive ?? false) else {
+                self.localizedPrePost = nil
+                self.cachedLocalizedPostToRead = nil
+                return
+            }
+            showLoadedArticle(prePost: localizedPrePost, postToRead: cachedLocalizedPostToRead)
+            return
+        }
+
+        Task {
+            do {
+                await MainActor.run {
+                    withAnimation {
+                        viewModel.isOriginalArticleLoading = true
+                    }
+                }
+
+                let loadedLocalizedPrePost: PrePost
+
+                if let localizedPrePost {
+                    loadedLocalizedPrePost = localizedPrePost
+                } else if let loadedPrePost = try await loadPreferredLocalizedPrePost() {
+                    loadedLocalizedPrePost = loadedPrePost
+                } else {
+                    await MainActor.run {
+                        withAnimation {
+                            viewModel.isOriginalArticleLoading = false
+                        }
+                    }
+                    return
+                }
+
+                let localizedPostToRead = try await ArticlesManager.shared.getPostToRead(id: loadedLocalizedPrePost.id)
+
+                await MainActor.run {
+                    withAnimation {
+                        localizedPrePost = loadedLocalizedPrePost
+                        cachedLocalizedPostToRead = localizedPostToRead
+                        localizedArticleLanguage = formattedLanguageCode(loadedLocalizedPrePost.originalLanguage)
+                        showLoadedArticle(prePost: loadedLocalizedPrePost, postToRead: localizedPostToRead)
+                        viewModel.isOriginalArticleLoading = false
+                    }
+                }
+            } catch {
+                await MainActor.run {
+                    withAnimation {
+                        viewModel.isOriginalArticleLoading = false
+                        viewModel.errorText = error.localizedDescription
+                        viewModel.isErrorPopupPresented = true
+                    }
+                }
+            }
+        }
+    }
+
+    func showLoadedArticle(prePost: PrePost, postToRead: PostToRead) {
+        countViewForSwitchedArticleIfNeeded(prePost)
+
+        currentPrePost = prePost
+        currentPostToRead = postToRead
+        viewModel.likesCount = prePost.likesCount ?? 0
+        viewModel.isPostLiked = (user?.likedPosts ?? []).contains(prePost.id)
+        viewModel.currentIndex = 0
+        viewModel.selectedImageURL = nil
+    }
+
+    func countViewForSwitchedArticleIfNeeded(_ prePost: PrePost) {
+        guard !viewedArticleIdsInReadSession.contains(prePost.id) else { return }
+        guard prePost.authorId != user?.userId else { return }
+
+        viewedArticleIdsInReadSession.insert(prePost.id)
+
+        Task {
+            try? await ArticlesManager.shared.updateViews(at: prePost.id)
+        }
+    }
+
+    func loadPreferredLocalizedPrePost() async throws -> PrePost? {
+        let localizedVersions = try await ArticlesManager.shared.getLocalizedVersions(rootId: id)
+            .filter { !($0.isArchive ?? false) }
+
+        let preferredLanguage = preferredArticleLanguage
+
+        return localizedVersions.first {
+            formattedLanguageCode($0.originalLanguage).lowercased() == preferredLanguage
+        } ?? localizedVersions.first
+    }
+
+    var displayedOriginalArticleLanguage: String {
+        if !isLocalizedVersion {
+            return formattedLanguageCode(articleLanguage)
+        }
+
+        let currentLanguage = formattedLanguageCode(currentPrePost?.originalLanguage)
+
+        if !currentLanguage.isEmpty {
+            return currentLanguage
+        }
+
+        return originalArticleLanguage
+    }
+
+    var displayedLocalizedArticleLanguage: String {
+        let currentLanguage = formattedLanguageCode(currentPrePost?.originalLanguage)
+
+        if !currentLanguage.isEmpty && (currentPrePost?.isLocalizedVersion ?? false) {
+            return currentLanguage
+        }
+
+        return localizedArticleLanguage
+    }
+
+    var preferredArticleLanguage: String {
+        let fallbackLanguage = Locale.preferredLanguages.first?.components(separatedBy: "-").first == "ru"
+            ? "ru"
+            : "en"
+
+        let userLanguage = user?.originalLanguage?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .split(separator: "-")
+            .first
+            .map(String.init)?
+            .lowercased()
+
+        return (userLanguage?.isEmpty == false ? userLanguage : nil) ?? fallbackLanguage
+    }
+
+    func formattedLanguageCode(_ language: String?) -> String {
+        language?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .split(separator: "-")
+            .first
+            .map(String.init)?
+            .uppercased() ?? ""
+    }
+
+    func loadOriginalArticleLanguageIfNeeded() async {
+        guard isLocalizedVersion, !currentRootId.isEmpty, displayedOriginalArticleLanguage.isEmpty else { return }
+
+        do {
+            let loadedOriginalPrePost: PrePost
+
+            if let originalPrePost {
+                loadedOriginalPrePost = originalPrePost
+            } else {
+                loadedOriginalPrePost = try await ArticlesManager.shared.getPrePost(id: currentRootId)
+            }
+
+            let canOpenOriginalArticle = !(loadedOriginalPrePost.isArchive ?? false)
+
+            await MainActor.run {
+                originalArticleCanBeOpened = canOpenOriginalArticle
+
+                if canOpenOriginalArticle {
+                    cachedOriginalPrePost = loadedOriginalPrePost
+                    originalArticleLanguage = formattedLanguageCode(loadedOriginalPrePost.originalLanguage)
+                } else {
+                    cachedOriginalPrePost = nil
+                    cachedOriginalPostToRead = nil
+                    originalArticleLanguage = ""
+                }
+            }
+        } catch {
+            await MainActor.run {
+                originalArticleCanBeOpened = false
+                viewModel.errorText = error.localizedDescription
+                viewModel.isErrorPopupPresented = true
+            }
+        }
+    }
+
+    func loadLocalizedArticleIfNeeded() async {
+        guard !isLocalizedVersion, localizedPrePost == nil else { return }
+
+        do {
+            guard let localizedPrePost = try await loadPreferredLocalizedPrePost() else { return }
+
+            await MainActor.run {
+                self.localizedPrePost = localizedPrePost
+                localizedArticleLanguage = formattedLanguageCode(localizedPrePost.originalLanguage)
+            }
+        } catch {
+            await MainActor.run {
+                viewModel.errorText = error.localizedDescription
+                viewModel.isErrorPopupPresented = true
+            }
+        }
+    }
+}
+
+private extension View {
+    @ViewBuilder
+    func hiddenReadContentOnScreenshots(_ isHidden: Bool) -> some View {
+        if isHidden {
+            mask {
+                ReadViewScreenShotPreventerMask()
+            }
+        } else {
+            self
+        }
+    }
+}
+
+private struct ReadViewScreenShotPreventerMask: UIViewRepresentable {
+    func makeUIView(context: Context) -> UIView {
+        let view = UITextField()
+        view.isSecureTextEntry = true
+        view.text = ""
+        view.isUserInteractionEnabled = false
+
+        if let autoHideLayer = findAutoHideLayer(view: view) {
+            autoHideLayer.backgroundColor = UIColor.white.cgColor
+        } else {
+            view.layer.sublayers?.last?.backgroundColor = UIColor.white.cgColor
+        }
+
+        return view
+    }
+
+    func updateUIView(_ uiView: UIView, context: Context) {
+        if let autoHideLayer = findAutoHideLayer(view: uiView) {
+            autoHideLayer.backgroundColor = UIColor.white.cgColor
+        } else {
+            uiView.layer.sublayers?.last?.backgroundColor = UIColor.white.cgColor
+        }
+    }
+
+    private func findAutoHideLayer(view: UIView) -> CALayer? {
+        guard let layers = view.layer.sublayers else { return nil }
+
+        return layers.first { layer in
+            String(describing: layer.delegate).contains("UITextLayoutCanvasView")
         }
     }
 }
@@ -741,13 +1110,13 @@ private extension ReadView {
                     }
                     .padding(.trailing, authorName == "" ? 0 : 2)
             }
-            
+
             if authorName != "" {
                 Text(authorName)
                     .font(.system(size: 17))
             }
-            
-            
+
+
             if isCheckmark {
                 Image(systemName: "checkmark.seal.fill")
                     .foregroundStyle(Color.blue)
@@ -792,7 +1161,7 @@ private extension ReadView {
 //    // Обновляем UI с атрибутированным текстом
 //    func updateUIView(_ uiView: UITextView, context: Context) {
 //        let markdownString = SwiftyMarkdown(string: markdownText)
-//        
+//
 //        markdownString.bold.fontSize = CGFloat(fontSize)
 //        markdownString.body.fontSize = CGFloat(fontSize)
 //        markdownString.body.fontStyle = .bold
@@ -807,25 +1176,24 @@ private extension ReadView {
 //        markdownString.h4.fontSize = CGFloat(fontSize)
 //        markdownString.h5.fontSize = CGFloat(fontSize)
 //        markdownString.h6.fontSize = CGFloat(fontSize)
-//        
-//        
+//
+//
 //        UIView.transition(with: uiView, duration: 0.3, options: .curveEaseIn, animations: {
 //            uiView.attributedText = markdownString.attributedString()
 //        }, completion: nil)
-//        
+//
 //        uiView.sizeToFit()
-//        
+//
 //        DispatchQueue.main.async {
 //            self.contentHeight = uiView.contentSize.height // Обновляем высоту
 //        }
 //    }
-//    
+//
 //    func makeCoordinator() -> TextViewDelegate {
 //        let coordinator = TextViewDelegate()
 //        coordinator.didChangeHeight = { height in
 //            self.contentHeight = height // Обновляем высоту
 //        }
-//        
+//
 //        return coordinator
 //    }
-//}

@@ -41,6 +41,7 @@ struct RootView: View {
     @State private var isDescriptionPopupPresented = false
     @State private var isNotificationPopupPresented = false
     @State private var isConfirmationPopupPresented = false
+    @State private var isPremiumViewPresented = false
     
     @State private var selectedTab = TabType.feed
     @State private var bottomPaddingForHUD: CGFloat = 60
@@ -67,7 +68,8 @@ struct RootView: View {
                         FeedView(
                             isWelcomeViewPresented: $isWelcomeViewPresented,
                             selectedTab: $selectedTab,
-                            isConfirmationViewPresented: $isConfirmationPopupPresented
+                            isConfirmationViewPresented: $isConfirmationPopupPresented,
+                            isPremiumViewPresented: $isPremiumViewPresented
                         )
                         .tag(TabType.feed)
                         .tabItem {
@@ -75,14 +77,15 @@ struct RootView: View {
                         }
                         
                         LikedPostsView(
-                            isWelcomeViewPresented: $isWelcomeViewPresented
+                            isWelcomeViewPresented: $isWelcomeViewPresented,
+                            isPremiumViewPresented: $isPremiumViewPresented
                         )
                         .tag(TabType.favourites)
                         .tabItem {
                             Label("", systemImage: "hand.thumbsup.fill")
                         }
                         
-                        SubscribesView()
+                        SubscribesView(isPremiumViewPresented: $isPremiumViewPresented)
                             .tag(TabType.subscribes)
                             .tabItem {
                                 Label("", systemImage: "person.crop.rectangle.stack")
@@ -223,6 +226,7 @@ struct RootView: View {
                 
                 isReadViewPresented = false
                 isChannelViewPresented = false
+                isPremiumViewPresented = false
                 
                 let type = url.absoluteString.components(separatedBy: "/")[3]
                 var index = ""
@@ -240,13 +244,10 @@ struct RootView: View {
                             Task {
                                 do {
                                     prePost = try await ArticlesManager.shared.getPrePost(id: index)
-                                    postToRead = try await ArticlesManager.shared.getPostToRead(id: index)
                                     authorName = try await UserManager.shared.getAuthorName(id: prePost?.authorId ?? "")
                                     isCheckmark = try await UserManager.shared.getIsCheckmarkStatus(id: prePost?.authorId ?? "")
                                     lastVersionOfAvatar = try? await UserManager.shared.getAvatarVersion(id: prePost?.authorId ?? "")
                                     authorId = prePost?.authorId ?? ""
-                                    
-                                    isLoadingPopupPresented = false
                                     
                                     let authUser = try AuthenticationManager.shared.getAuthenticatedUser()
                                     user = try? await UserManager.shared.getUser(userId: authUser.uid)
@@ -254,7 +255,27 @@ struct RootView: View {
                                     if let user {
                                         likedPosts = user.likedPosts ?? []
                                         
+                                        if let isPremiumPost = prePost?.isPremiumPost,
+                                           isPremiumPost,
+                                           !sub.hasPremium,
+                                           user.userId != prePost?.authorId {
+                                            isLoadingPopupPresented = false
+                                            isPremiumViewPresented = true
+                                        } else {
+                                            postToRead = try await ArticlesManager.shared.getPostToRead(id: index)
+                                            isLoadingPopupPresented = false
+
+                                            if prePost != nil && postToRead != nil && authorName != nil && authorId != "" {
+                                                try? await countLinkedArticleViewIfNeeded(prePost, viewer: user)
+                                                isReadViewPresented = true
+                                            }
+                                        }
+                                    } else {
+                                        postToRead = try await ArticlesManager.shared.getPostToRead(id: index)
+                                        isLoadingPopupPresented = false
+
                                         if prePost != nil && postToRead != nil && authorName != nil && authorId != "" {
+                                            try? await countLinkedArticleViewIfNeeded(prePost, viewer: nil)
                                             isReadViewPresented = true
                                         }
                                     }
@@ -317,9 +338,13 @@ struct RootView: View {
                         mediaVersion: prePost?.mediaVersion ?? 1,
                         mediaPosition: prePost?.mediaPosition ?? 0,
                         lastVersionOfAvatar: lastVersionOfAvatar ?? 0,
+                        articleLanguage: prePost?.originalLanguage ?? "",
+                        isPremiumPost: prePost?.isPremiumPost ?? false,
                         user: $user,
                         isChannelViewPresented: $isChannelViewPresented,
-                        isPresented: $isReadViewPresented
+                        isPresented: $isReadViewPresented,
+                        isLocalizedVersion: prePost?.isLocalizedVersion ?? false,
+                        rootId: prePost?.rootId ?? ""
                     )
                     .tint(Color(uiColor: .label))
                     .environmentObject(sessionManager)
@@ -334,13 +359,18 @@ struct RootView: View {
                         authorId: authorId,
                         authorName: authorName ?? "",
                         isCheckmark: isCheckmark ?? false,
-                        lastVersionOfAvatar: lastVersionOfAvatar ?? 0
+                        lastVersionOfAvatar: lastVersionOfAvatar ?? 0,
+                        isPremiumViewPresented: $isPremiumViewPresented
                     )
                     .tint(Color(uiColor: .label))
                     .environmentObject(sessionManager)
                     .environmentObject(changedPostsManager)
                     .environmentObject(sub)
                 }
+            })
+            .fullScreenCover(isPresented: $isPremiumViewPresented, content: {
+                PremiumView()
+                    .environmentObject(sub)
             })
             .fullScreenCover(isPresented: $isWelcomeViewPresented, content: {
                 WelcomeView(isSignInViewPreseted: $isWelcomeViewPresented)
@@ -375,7 +405,7 @@ struct RootView: View {
             })
             .sheet(isPresented: $isVersionPopupPresented, content: {
                 VersionPopupView(isCritical: relevantVersion?.isCritical ?? false)
-                    .presentationDetents([.height(170)])
+                    .presentationDetents([.height((relevantVersion?.isCritical ?? false) ? 220 : 170)])
                     .presentationCornerRadius(30)
                     .presentationDragIndicator(.visible)
             })
@@ -384,6 +414,13 @@ struct RootView: View {
 
 
 private extension RootView {
+    func countLinkedArticleViewIfNeeded(_ post: PrePost?, viewer: DBUser?) async throws {
+        guard let post else { return }
+        guard post.authorId != viewer?.userId else { return }
+
+        try await ArticlesManager.shared.updateViews(at: post.id)
+    }
+
     func checkAppVersion() {
         Task {
             let version = try? await VersionManager.shared.getRelevantVersion()
@@ -399,12 +436,17 @@ private extension RootView {
                 }
                 
                 if version.appVersion != currentVersion && !self.isUpdatePopupDidPresented {
-                    self.isVersionPopupPresented = true
                     self.isUpdatePopupDidPresented = true
+                    self.isNotificationPopupPresented = false
+                    self.isLoadingPopupPresented = false
                     
                     let isCritical = version.isCritical ?? false
                     withAnimation {
                         self.isUpdateBlur = isCritical
+                    }
+
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                        self.isVersionPopupPresented = true
                     }
                 } else {
                     withAnimation {

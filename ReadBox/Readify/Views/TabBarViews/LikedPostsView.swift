@@ -11,6 +11,7 @@ import Shimmer
 
 struct LikedPostsView: View {
     @Binding var isWelcomeViewPresented: Bool
+    @Binding var isPremiumViewPresented: Bool
     
     @StateObject var viewModel = LikedPostsViewModel()
     
@@ -109,7 +110,13 @@ struct LikedPostsView: View {
                                     viewModel.onPostAppearing(article)
                                 }
                                 .onTapGesture {
-                                    viewModel.tapGestureHandler(on: article)
+                                    if let isPremiumPost = article.isPremiumPost,
+                                       isPremiumPost && !subManager.hasPremium,
+                                       article.authorId != viewModel.user?.userId {
+                                        isPremiumViewPresented = true
+                                    } else {
+                                        viewModel.tapGestureHandler(on: article)
+                                    }
                                 }
                             }
                             
@@ -172,9 +179,13 @@ struct LikedPostsView: View {
                         mediaVersion: viewModel.mediaVersion,
                         mediaPosition: viewModel.mediaPosition,
                         lastVersionOfAvatar: viewModel.authorsInfo[viewModel.authorId]?.avatarVersion ?? 0,
+                        articleLanguage: viewModel.articleLanguage,
+                        isPremiumPost: viewModel.isPremiumPost,
                         user: $viewModel.user,
                         isChannelViewPresented: $viewModel.isChannelViewPresented,
-                        isPresented: $viewModel.isReadViewPresented
+                        isPresented: $viewModel.isReadViewPresented,
+                        isLocalizedVersion: viewModel.isLocalizedVersion,
+                        rootId: viewModel.rootId
                     )
                     .environmentObject(sessionManager)
                     .environmentObject(changedPostsManager)
@@ -186,7 +197,8 @@ struct LikedPostsView: View {
                         authorId: viewModel.authorId,
                         authorName: viewModel.authorsInfo[viewModel.authorId]?.name ?? NSLocalizedString("notFoundLabel", comment: ""),
                         isCheckmark: viewModel.authorsInfo[viewModel.authorId]?.isCheckmark ?? false,
-                        lastVersionOfAvatar: viewModel.authorsInfo[viewModel.authorId]?.avatarVersion ?? 0
+                        lastVersionOfAvatar: viewModel.authorsInfo[viewModel.authorId]?.avatarVersion ?? 0,
+                        isPremiumViewPresented: $isPremiumViewPresented
                     )
                     .environmentObject(sessionManager)
                     .environmentObject(changedPostsManager)

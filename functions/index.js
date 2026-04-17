@@ -87,12 +87,52 @@ function normalizeSubscribes(value) {
   return [];
 }
 
+function normalizeLanguage(value) {
+  try {
+    const normalized = String(value || "")
+      .trim()
+      .toLowerCase();
+
+    return normalized === "ru" ? "ru" : "en";
+  } catch (err) {
+    logger.error("⚠️ normalizeLanguage error", err);
+    return "en";
+  }
+}
+
+function getUserOriginalLanguage(userData) {
+  return normalizeLanguage(userData?.original_language);
+}
+
+function getPremiumPublicationBody(language) {
+  return language === "ru"
+    ? "Публикация в Read+"
+    : "Publication in Read+";
+}
+
+function getLikedArticleBody(language, isShortPost, shortTitle) {
+  const baseText = language === "ru"
+    ? (isShortPost ? "оценил(а) вашу публикацию" : "оценил(а) вашу статью")
+    : (isShortPost ? "liked your post" : "liked your article");
+
+  return shortTitle.length > 0
+    ? `${baseText} “${shortTitle}”`
+    : baseText;
+}
+
+function getSubscribedBody(language) {
+  return language === "ru"
+    ? "подписался(-ась) на вас"
+    : "subscribed to you";
+}
+
 /* ─────────────── helper: рассылаем пуш подписчикам ─────────────── */
 async function pushToSubscribers({
   authorUid,
   authorName,
   articleId,
   title,
+  isPremiumPost,
   mediaCount,
   mediaVersion
 }) {
@@ -106,45 +146,80 @@ async function pushToSubscribers({
     return;
   }
 
-  // собираем все токены
-  const tokens = [];
+  const languageByToken = new Map();
+
   usersSnap.forEach((doc) => {
-    const d = doc.data();
-    if (d.fcm_tokens && typeof d.fcm_tokens === "object") {
-      tokens.push(...Object.keys(d.fcm_tokens));
-    }
-    if (typeof d.fcm_token === "string" && d.fcm_token.length) {
-      tokens.push(d.fcm_token);
-    }
+    const language = getUserOriginalLanguage(doc.data());
+    const tokens = collectTokensFromUserDoc(doc);
+
+    tokens.forEach((token) => {
+      const currentLanguage = languageByToken.get(token);
+
+      if (!currentLanguage || currentLanguage !== "ru") {
+        languageByToken.set(token, language);
+      }
+    });
   });
 
-  if (!tokens.length) {
+  const tokensByLanguage = {
+    ru: new Set(),
+    en: new Set()
+  };
+
+  languageByToken.forEach((language, token) => {
+    tokensByLanguage[language].add(token);
+  });
+
+  const totalTokens =
+    tokensByLanguage.ru.size +
+    tokensByLanguage.en.size;
+
+  logger.info(
+    `🌐 Push language split for ${articleId}: ru=${tokensByLanguage.ru.size}, en=${tokensByLanguage.en.size}`
+  );
+
+  if (!totalTokens) {
     logger.info("🔇 У подписчиков нет FCM-токенов");
     return;
   }
 
   // эмодзи по первому медиа
   const emoji = await detectFirstMediaEmoji(articleId, mediaCount, mediaVersion);
-  const body = `${emoji}${title ?? ""}`;
 
-  const msg = {
-    tokens,
-    notification: {
-      title: authorName,
-      body
-      // image НЕ отправляем
-    },
-    data: {
-      articleId
-      // никаких imageUrl / fallbackImageUrl
+  let totalSuccessCount = 0;
+
+  for (const language of ["ru", "en"]) {
+    const tokens = [...tokensByLanguage[language]];
+
+    if (!tokens.length) {
+      continue;
     }
-    // ВАЖНО: не ставим "mutable-content": 1,
-    // чтобы не дергать NotificationService extension
-  };
 
-  const rsp = await getMessaging().sendEachForMulticast(msg);
+    const body = isPremiumPost
+      ? getPremiumPublicationBody(language)
+      : `${emoji}${title ?? ""}`;
+
+    const msg = {
+      tokens,
+      notification: {
+        title: authorName,
+        body
+      },
+      data: {
+        articleId
+      }
+    };
+
+    const rsp = await getMessaging().sendEachForMulticast(msg);
+    totalSuccessCount += rsp.successCount;
+
+    logger.info(
+      `✅ Pushed new article ${articleId} [${language}]: ${rsp.successCount}/${tokens.length} success`
+    );
+  }
+
   logger.info(
-    `✅ Pushed new article ${articleId}: ${rsp.successCount}/${tokens.length} success`
+    `✅ Total pushed new article ${articleId}: ${totalSuccessCount}/${totalTokens} success`
   );
 }
 
@@ -185,6 +260,7 @@ export const notifyNewPost = onDocumentCreated(
     const title =
       data.title ||
       "ReadBox";
+    const isPremiumPost = data.is_premium_post === true;
 
     const mediaCount = data.media_count ?? 0;
     const mediaVersion = data.media_version ?? 1;
@@ -194,6 +270,7 @@ export const notifyNewPost = onDocumentCreated(
       authorName,
       articleId,
       title,
+      isPremiumPost,
       mediaCount,
       mediaVersion
     });
@@ -228,6 +305,7 @@ export const notifyUnarchivedPost = onDocumentUpdated(
       const title =
         after.title ||
         "ReadBox";
+      const isPremiumPost = after.is_premium_post === true;
 
       const mediaCount = after.media_count ?? 0;
       const mediaVersion = after.media_version ?? 1;
@@ -237,6 +315,7 @@ export const notifyUnarchivedPost = onDocumentUpdated(
         authorName,
         articleId,
         title,
+        isPremiumPost,
         mediaCount,
         mediaVersion
       });
@@ -302,7 +381,8 @@ export const notifyPostLiked = onDocumentUpdated(
           continue;
         }
 
-        // --- формируем текст пуша (EN) ---
+        const language = getUserOriginalLanguage(authorDoc.data());
+
         const rawTitle = (article.title || "").trim();
         const maxLen = 40;
         let shortTitle = rawTitle;
@@ -311,16 +391,7 @@ export const notifyPostLiked = onDocumentUpdated(
         }
 
         const isShortPost = !!article.is_short_post;
-        const baseText = isShortPost
-          ? "liked your post"
-          : "liked your article";
-
-        let body;
-        if (shortTitle.length > 0) {
-          body = `${baseText} “${shortTitle}”`;
-        } else {
-          body = baseText;
-        }
+        const body = getLikedArticleBody(language, isShortPost, shortTitle);
 
         const rsp = await getMessaging().sendEachForMulticast({
           tokens,
@@ -343,7 +414,7 @@ export const notifyPostLiked = onDocumentUpdated(
         });
 
         logger.info(
-          `👍 Like: article ${articleId}, author ${authorUid}, liked by ${likerId}, sent ${rsp.successCount}/${tokens.length}`
+          `👍 Like: article ${articleId}, author ${authorUid}, language ${language}, liked by ${likerId}, sent ${rsp.successCount}/${tokens.length}`
         );
 
       } catch (e) {
@@ -401,7 +472,8 @@ export const notifyUserSubscribed = onDocumentUpdated(
           continue;
         }
 
-        const body = "subscribed to you";
+        const language = getUserOriginalLanguage(authorDoc.data());
+        const body = getSubscribedBody(language);
 
         const rsp = await getMessaging().sendEachForMulticast({
           tokens,
@@ -423,7 +495,7 @@ export const notifyUserSubscribed = onDocumentUpdated(
         });
 
         logger.info(
-          `👤 Subscription: author ${authorUid}, subscriber ${subscriberId}, sent ${rsp.successCount}/${tokens.length}`
+          `👤 Subscription: author ${authorUid}, subscriber ${subscriberId}, language ${language}, sent ${rsp.successCount}/${tokens.length}`
         );
 
       } catch (e) {

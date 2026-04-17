@@ -13,7 +13,7 @@ final class ReadViewModel: ObservableObject {
     @Published var errorText = ""
     @Published var isErrorPopupPresented = false
     @Published var likesCount = 0
-    @Published var fontSize = 0
+    @Published var fontSize = 18
     @Published var isFontSettingPopupPresented = false
     @Published var images: [MediaKind] = []
     @Published var avatarImage: UIImage? = nil

@@ -8,6 +8,15 @@
 import Foundation
 
 extension String {
+    var markdownAttributedStringPreservingLineBreaks: AttributedString {
+        (try? AttributedString(
+            markdown: self,
+            options: AttributedString.MarkdownParsingOptions(
+                interpretedSyntax: .inlineOnlyPreservingWhitespace
+            )
+        )) ?? AttributedString(self)
+    }
+
     func normalizeEmptyLines() -> String {
         let lines = self.components(separatedBy: "\n")
         return lines.map { line in

@@ -10,6 +10,23 @@ import Firebase
 import FirebaseStorage
 import SwiftfulLoadingIndicators
 
+enum ChannelPostsSection: Int, CaseIterable {
+    case all
+    case articles
+    case localized
+
+    var title: String {
+        switch self {
+        case .all:
+            NSLocalizedString("publicationsLabel", comment: "")
+        case .articles:
+            NSLocalizedString("articlesLabel", comment: "")
+        case .localized:
+            NSLocalizedString("localizedPostsLabel", comment: "")
+        }
+    }
+}
+
 @MainActor
 final class ChannelViewModel: ObservableObject {
     @Published var postsNeedToLoad: [String] = []
@@ -42,6 +59,7 @@ final class ChannelViewModel: ObservableObject {
     @Published var isNotificationPopupPresented = false
     @Published var isPublicationsLabelVisible = true
     @Published var primaryLanguage = "en"
+    @Published var currentSection: ChannelPostsSection = .all
     
     @ViewBuilder
     func buildSubscribeButtonView(_ isSubscribed: Bool) -> some View {
@@ -146,6 +164,37 @@ final class ChannelViewModel: ObservableObject {
         
         withAnimation {
             isLoading = false
+        }
+    }
+
+    var currentPosts: [PrePost] {
+        switch currentSection {
+        case .all:
+            posts
+        case .articles:
+            posts.filter { !($0.isShortPost ?? false) }
+        case .localized:
+            allPosts.filter { $0.isLocalizedVersion ?? false }
+        }
+    }
+
+    var currentSectionTitle: String {
+        currentSection.title
+    }
+
+    func showSection(_ section: ChannelPostsSection) {
+        currentSection = section
+    }
+
+    func loadCurrentSectionUntilAvailableIfNeeded(authorId: String) async {
+        while currentPosts.isEmpty && !isAllLoading {
+            do {
+                try await loadPosts(by: authorId)
+            } catch {
+                errorText = error.localizedDescription
+                isErrorPopupPresented = true
+                return
+            }
         }
     }
     

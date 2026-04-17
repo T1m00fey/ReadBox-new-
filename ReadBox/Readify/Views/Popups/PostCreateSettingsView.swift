@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct PostCreateSettingsView: View {
-    let isLocalizing: Bool
+    let isLanguageSettingHidden: Bool
     let isPremiumAuthor: Bool
     let localizationCount: Int
     
@@ -26,13 +26,13 @@ struct PostCreateSettingsView: View {
                 .padding(.bottom, 5)
             
             VStack(spacing: 10) {
-                if !isLocalizing && localizationCount == 0 {
+                if !isLanguageSettingHidden {
                     CustomSegmentedControl(selected: $selectedLanguage)
                 }
                 
                 CustomSegmentedControl(selected: $selectedMediaPosition, type: .postCreateSettings)
                 
-                if isPremiumAuthor && !isLocalizing {
+                if isPremiumAuthor {
                     CustomSegmentedControl(selected: $premiumSetting, type: .premiumSetting)
                 }
             }                        

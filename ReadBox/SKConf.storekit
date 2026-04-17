@@ -24,7 +24,7 @@
     "_developerTeamID" : "7PV9N4T7V4",
     "_disableDialogs" : false,
     "_failTransactionsEnabled" : false,
-    "_lastSynchronizedDate" : 795997153.029333,
+    "_lastSynchronizedDate" : 797714189.65907204,
     "_locale" : "ru",
     "_renewalBillingIssuesEnabled" : false,
     "_storefront" : "RUS",
@@ -39,7 +39,7 @@
       "localizations" : [
 
       ],
-      "name" : "ReadBox premium",
+      "name" : "Read+",
       "subscriptions" : [
         {
           "adHocOffers" : [
@@ -55,19 +55,19 @@
           "introductoryOffer" : null,
           "localizations" : [
             {
-              "description" : "Доступ к статьям",
-              "displayName" : "ReadBox Premium",
+              "description" : "Доступ к закрытым публикациям",
+              "displayName" : "Read+",
               "locale" : "ru"
             },
             {
-              "description" : "Access to premium articles",
-              "displayName" : "ReadBox Premium",
+              "description" : "Access to premium content",
+              "displayName" : "Read+",
               "locale" : "en_US"
             }
           ],
           "productID" : "ReadBox.Sub.Month",
           "recurringSubscriptionPeriod" : "P1M",
-          "referenceName" : "ReadBox Premium",
+          "referenceName" : "Read+",
           "subscriptionGroupID" : "21993307",
           "type" : "RecurringSubscription",
           "winbackOffers" : [

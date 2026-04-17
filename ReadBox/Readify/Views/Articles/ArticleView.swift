@@ -9,6 +9,7 @@ import SwiftUI
 import FirebaseStorage
 import AVFoundation
 import SwiftfulLoadingIndicators
+import UIKit
 
 struct ArticleView: View {
     let id: String
@@ -26,7 +27,9 @@ struct ArticleView: View {
     let isCreatedView: Bool
     let isLocalizedVersion: Bool
     let isPremiumPost: Bool
-    
+    let viewsCount: Int
+    let likesCount: Int
+
     @Binding var user: DBUser?
     @Binding var isZoomableViewPresented: Bool
     @Binding var zoomableImage: UIImage?
@@ -41,14 +44,15 @@ struct ArticleView: View {
     @State private var isLiked = false
     @State private var currentIndex = 0
     @State private var effectiveMediaCount = 0
-    
+
     @State private var images: [MediaKind?] = []
-    
+
     @EnvironmentObject var sessionManager: SessionManager
     @EnvironmentObject var subscriptionMnaager: SubscriptionManager
-    
+    @Environment(\.colorScheme) private var colorScheme
+
     private let maxTitleLen = 250
-    
+
     init(
         id: String,
         title: String,
@@ -65,6 +69,8 @@ struct ArticleView: View {
         isCreatedView: Bool = false,
         isLocalizedVersion: Bool,
         isPremiumPost: Bool,
+        viewsCount: Int = 0,
+        likesCount: Int = 0,
         user: Binding<DBUser?>,
         isZoomableViewPresented: Binding<Bool>,
         zoomableImage: Binding<UIImage?>,
@@ -88,6 +94,8 @@ struct ArticleView: View {
         self.isCreatedView = isCreatedView
         self.isLocalizedVersion = isLocalizedVersion
         self.isPremiumPost = isPremiumPost
+        self.viewsCount = viewsCount
+        self.likesCount = likesCount
         self._user = user
         self._isZoomableViewPresented = isZoomableViewPresented
         self._zoomableImage = zoomableImage
@@ -96,23 +104,23 @@ struct ArticleView: View {
         self._postOption = postOption
         self._selectedId = selectedId
     }
-    
+
     private func isAccessToPremiumDenied() -> Bool {
         isPremiumPost && !subscriptionMnaager.hasPremium && authorId != user?.userId
     }
-    
+
     private func updateLike() async throws {
         let likesCount = try await ArticlesManager.shared.getLikesCount(byPostId: id)
-                        
+
         if isLiked {
             withAnimation {
                 isLiked.toggle()
             }
             VibrationsService.shared.lightImpact()
-            
+
             try await UserManager.shared.removeLikedPost(id: user?.userId ?? "", likedPost: id)
             try await ArticlesManager.shared.updateLikes(at: id, likesCount: likesCount - 1)
-            
+
             withAnimation {
                 user?.likedPosts?.removeAll {
                     $0 == id
@@ -123,18 +131,18 @@ struct ArticleView: View {
                 isLiked.toggle()
             }
             VibrationsService.shared.lightImpact()
-            
+
             try await UserManager.shared.addLikedPost(id: user?.userId ?? "", likedPost: id)
             try await ArticlesManager.shared.updateLikes(at: id, likesCount: likesCount + 1)
-            
+
             withAnimation {
                 user?.likedPosts?.append(id)
             }
         }
     }
-    
+
     var body: some View {
-        
+
         VStack {
             HStack {
                 if let avatarImage {
@@ -158,18 +166,19 @@ struct ArticleView: View {
                         }
                         .id("\(id)")
                 }
-                
+
                 HStack(spacing: 5) {
                     HStack(spacing: 0) {
                         Text(authorName)
                             .font(.system(size: 18))
+//                            .font(.custom("Mulish", size: 18))
                             .lineLimit(1)
                             .underline()
                             .onTapGesture {
                                 selectedAuthorId = authorId
                                 isChannelViewPresented = true
                             }
-                        
+
                         if isCheckmark {
                             Image(systemName: "checkmark.seal.fill")
                                 .foregroundStyle(Color.blue)
@@ -177,9 +186,9 @@ struct ArticleView: View {
                                 .padding(.top, 1)
                         }
                     }
-                    
+
                     Spacer()
-                    
+
                     if isLocalizedVersion {
                         Image("translateIcon")
                             .resizable()
@@ -190,7 +199,7 @@ struct ArticleView: View {
                             .background(Color(.systemGray4))
                             .clipShape(RoundedRectangle(cornerRadius: 5))
                     }
-                    
+
                     if !isShortPost {
                         Text(NSLocalizedString("articleLabel", comment: ""))
                             .font(.system(size: 12))
@@ -199,7 +208,7 @@ struct ArticleView: View {
                             .background(Color(.systemGray4))
                             .clipShape(RoundedRectangle(cornerRadius: 5))
                     }
-                    
+
                     if isPremiumPost {
 //                        Image(systemName: "plus")
 //                            .resizable()
@@ -212,9 +221,10 @@ struct ArticleView: View {
                         Text("R+")
                             .font(.custom("PlaywriteIE-Regular", size: 15))
                             .foregroundStyle(Color(.gray))
-                            .padding(.trailing, -5)
+                            .padding(.trailing, isCreatedView ? 0 : -5)
+
                     }
-                    
+
                     if isCreatedView {
                         Menu {
                             Button {
@@ -223,16 +233,16 @@ struct ArticleView: View {
                             } label: {
                                 Label(NSLocalizedString("editingLabel", comment: ""), systemImage: "pencil")
                             }
-                            
+
                             Button {
                                 selectedId = id
-                                
+
                                 if isArchive {
                                     postOption = .publish
                                 } else {
                                     postOption = .toArchive
                                 }
-                                
+
                             } label: {
                                 if isArchive {
                                     Label(NSLocalizedString("publishLabel", comment: ""), systemImage: "paperplane")
@@ -240,7 +250,7 @@ struct ArticleView: View {
                                     Label(NSLocalizedString("saveToArchiveLabel", comment: ""), systemImage: "archivebox")
                                 }
                             }
-                            
+
                             if locCount == 0 && !isLocalizedVersion {
                                 Button {
                                     postOption = .localize
@@ -249,12 +259,12 @@ struct ArticleView: View {
                                     Label(NSLocalizedString("toLocalizeMenuActionLabel", comment: ""), systemImage: "globe")
                                 }
                             }
-                        
+
                             Button {
                                 postOption = .delete
                                 selectedId = id
-                        
-                                
+
+
                                 StorageManager.shared.deleteImage(id: id)
                             } label: {
                                 Label(NSLocalizedString("deleteLabel", comment: ""), systemImage: "xmark.circle")
@@ -269,19 +279,21 @@ struct ArticleView: View {
                                 .background(Color(.systemGray4))
                                 .clipShape(RoundedRectangle(cornerRadius: 5))
                         }
-        
+
                     }
-                    
+
                 }
             }
             .frame(width: UIScreen.main.bounds.width - 42, height: 40, alignment: .leading)
             .padding(.top, 7)
-            .padding(.vertical, 5)
-            
+            .padding(.top, avatarImage != nil ? 5 : 0)
+            .padding(.bottom, 2)
+//            .padding(.vertical, 3)
+
             if mediaPosition == 1 && isShortPost && !isAccessToPremiumDenied() {
-                titleView
+                titleSectionView
             }
-            
+
             if mediaCount > 0 {
                 ZStack {
                     MediaViews(
@@ -297,8 +309,9 @@ struct ArticleView: View {
                     .padding(.bottom, mediaPosition == 1 && isShortPost && title != "" ? 10 : 0)
                     .padding(.bottom, title == "" ? -25: 0)
                     .blur(radius: isAccessToPremiumDenied() ? 10 : 0)
+                    .clipShape(RoundedRectangle(cornerRadius: 20))
                     .disabled(isAccessToPremiumDenied())
-                    
+
                     if isAccessToPremiumDenied() {
                         subscriptionAlertView
                             .padding(.all, 10)
@@ -318,12 +331,12 @@ struct ArticleView: View {
                                     lineWidth: 2
                                 )
                         )
-                    
+
                     subscriptionAlertView
                 }
                 .padding(.bottom, 5)
             }
-            
+
             ZStack {
                 VStack(spacing: 0) {
 //                    Text(title)
@@ -335,72 +348,82 @@ struct ArticleView: View {
 //                        .padding(.top, mediaCount == 0 && isChannelViewPresented ? 16 : 0)
 //                        .padding(.bottom, !isExpanded && title.count >= maxTitleLen && isShortPost ? 10 : 0)
 //                        .padding(.bottom, !isExpanded && title.count >= maxTitleLen ? 17 : 0)
-                    
+
                     if (mediaPosition == 0 || !isShortPost) && !(isShortPost && isAccessToPremiumDenied() && isPremiumPost) {
-                        titleView
+                        titleSectionView
                             .padding(.top, mediaCount > 0 ? 5 : 0)
-                            .padding(.bottom, isShortPost ? 10 : 20)
+                            .padding(.bottom, titleSectionBottomPadding)
                     }
-                    
-                    if isShortPost {
+
+                    if isShortPost || isCreatedView {
                         HStack(spacing: 12) {
-                            Image(systemName: isLiked ? "hand.thumbsup.fill" : "hand.thumbsup")
-                                .foregroundStyle(Color.gray)
-                                .font(.system(size: 21))
-                                .onTapGesture {
-                                    Task {
-                                        do {
-                                          try? await updateLike()
+                            if isShortPost {
+                                Image(systemName: isLiked ? "hand.thumbsup.fill" : "hand.thumbsup")
+                                    .foregroundStyle(Color.gray)
+                                    .font(.system(size: 20))
+                                    .onTapGesture {
+                                        Task {
+                                            do {
+                                                try? await updateLike()
+                                            }
                                         }
                                     }
+
+                                if isCreatedView {
+                                    Text("\(likesCount)")
+                                        .font(.system(size: 14))
+                                        .foregroundStyle(Color.gray)
+                                        .fontDesign(.rounded)
+                                        .padding(.leading, -7)
+                                        .padding(.top, 5)
                                 }
-                            
-                            ShareLink(item: URL(string: "https://readbox-links.online/posts/?index=\(id)")!) {
-                                Image(systemName: "arrowshape.turn.up.right")
-                                    .foregroundStyle(Color.gray)
-                                    .font(.system(size: 21))
+
+                                ShareLink(item: URL(string: "https://readbox-links.online/posts/?index=\(id)")!) {
+                                    Image(systemName: "arrowshape.turn.up.right")
+                                        .foregroundStyle(Color.gray)
+                                        .font(.system(size: 20))
+                                }
+                            }
+
+                            Spacer()
+
+                            if isCreatedView {
+                                HStack(spacing: 10) {
+                                    if !isShortPost {
+                                        HStack(spacing: 2) {
+                                            Text("\(likesCount)")
+                                                .font(.system(size: 13))
+                                                .fontDesign(.rounded)
+                                                .foregroundStyle(Color.gray)
+
+                                            Image(systemName: "hand.thumbsup")
+                                                .foregroundStyle(Color.gray)
+                                                .font(.system(size: 15))
+                                        }
+                                    }
+
+                                    HStack(spacing: 2) {
+                                        Text("\(viewsCount)")
+                                            .font(.system(size: 13))
+                                            .fontDesign(.rounded)
+                                            .foregroundStyle(Color.gray)
+
+                                        Image(systemName: "eye.fill")
+                                            .foregroundStyle(Color.gray)
+                                            .font(.system(size: 15))
+                                    }
+                                }
+                                .padding(.trailing, -10)
+                                .padding(.top, isShortPost ? 10 : -10)
                             }
                         }
-                        .padding(.top, title.count > maxTitleLen && !isExpanded ? 12 : 0)
                         .padding(.bottom, 15)
                         .frame(width: UIScreen.main.bounds.width - 50, alignment: .leading)
                     }
                 }
-                
-                ZStack {
-                    if !isExpanded && title.count >= maxTitleLen {
-                        RoundedRectangle(cornerRadius: 20)
-                            .fill(
-                                LinearGradient(
-                                    gradient:
-                                        Gradient(
-                                            colors: [Color.clear, Color(.secondarySystemBackground)]
-                                        ),
-                                    startPoint: UnitPoint.top,
-                                    endPoint: .bottom
-                                )
-                            )
-                            .frame(width: UIScreen.main.bounds.width - 38, height: 50)
-                    }
-                    
-                    if !isExpanded && title.count >= maxTitleLen {
-                        Text(NSLocalizedString("expandButtonLabel", comment: ""))
-                            .font(.system(size: 16))
-                            .fontDesign(.rounded)
-                            .foregroundStyle(.gray)
-                            .frame(width: UIScreen.main.bounds.width - 42, alignment: .trailing)
-                            .padding(.horizontal, 20)
-                            .onTapGesture {
-                                withAnimation {
-                                    isExpanded = true
-                                }
-                            }
-                            .offset(y: 25)
-                    }
-                }
-                .offset(y: 10)
+
             }
-            
+
         }
         .onReceive(NotificationCenter.default.publisher(for: .postMediaDidUpdate)) { note in
             guard let pid = note.userInfo?["postId"] as? String, pid == id else { return }
@@ -410,10 +433,17 @@ struct ArticleView: View {
         }
         .frame(width: UIScreen.main.bounds.width - 10)
         .background(
-            RoundedRectangle(cornerRadius: 20)
-                .foregroundStyle(Color(.secondarySystemBackground))
+            RoundedRectangle(cornerRadius: 23)
+                .foregroundStyle(articleBackgroundColor)
 //                .shadow(radius: 1)
         )
+//        .overlay(
+//            RoundedRectangle(cornerRadius: 23)
+//                .stroke(
+//                    Color(.secondarySystemBackground),
+//                    lineWidth: 2
+//                )
+//        )
         .onAppear {
             if let user, let likedPosts = user.likedPosts {
                 isLiked = likedPosts.contains(id)
@@ -425,34 +455,142 @@ struct ArticleView: View {
         .task {
             if avatarImage == nil {
                 let ava = await MediaManager.shared.getAvatar(authorId: authorId, lastVersion: lastVersionOfAvatar)
-                
+
                 withAnimation {
                     avatarImage = ava
                 }
             }
         }
+        .hiddenOnScreenshots(isPremiumPost)
+    }
+}
+
+private extension View {
+    @ViewBuilder
+    func hiddenOnScreenshots(_ isHidden: Bool) -> some View {
+        if isHidden {
+            mask {
+                ScreenShotPreventerMask()
+            }
+        } else {
+            self
+        }
+    }
+}
+
+private struct ScreenShotPreventerMask: UIViewRepresentable {
+    func makeUIView(context: Context) -> UIView {
+        let view = UITextField()
+        view.isSecureTextEntry = true
+        view.text = ""
+        view.isUserInteractionEnabled = false
+
+        if let autoHideLayer = findAutoHideLayer(view: view) {
+            autoHideLayer.backgroundColor = UIColor.white.cgColor
+        } else {
+            view.layer.sublayers?.last?.backgroundColor = UIColor.white.cgColor
+        }
+
+        return view
+    }
+
+    func updateUIView(_ uiView: UIView, context: Context) {
+        if let autoHideLayer = findAutoHideLayer(view: uiView) {
+            autoHideLayer.backgroundColor = UIColor.white.cgColor
+        } else {
+            uiView.layer.sublayers?.last?.backgroundColor = UIColor.white.cgColor
+        }
+    }
+
+    private func findAutoHideLayer(view: UIView) -> CALayer? {
+        guard let layers = view.layer.sublayers else { return nil }
+
+        return layers.first { layer in
+            String(describing: layer.delegate).contains("UITextLayoutCanvasView")
+        }
     }
 }
 
 private extension ArticleView {
+    var articleBackgroundColor: Color {
+        colorScheme == .dark
+        ? Color(red: 0.08, green: 0.08, blue: 0.085)
+        : Color(red: 0.975, green: 0.975, blue: 0.98)
+    }
+
+    var titleSectionView: some View {
+        ZStack(alignment: .bottomTrailing) {
+            titleView
+                .padding(.bottom, shouldShowExpandButton ? 24 : 0)
+
+            if shouldShowExpandButton {
+                RoundedRectangle(cornerRadius: 20)
+                    .fill(
+                        LinearGradient(
+                            gradient: Gradient(
+                                colors: [Color.clear, articleBackgroundColor]
+                            ),
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+                    .frame(width: UIScreen.main.bounds.width - 38, height: 50)
+                    .allowsHitTesting(false)
+
+                Text(NSLocalizedString("expandButtonLabel", comment: ""))
+                    .font(.system(size: 16))
+                    .fontDesign(.rounded)
+                    .foregroundStyle(.gray)
+                    .padding(.trailing, 8)
+                    .padding(.bottom, 4)
+                    .onTapGesture {
+                        withAnimation {
+                            isExpanded = true
+                        }
+                    }
+            }
+        }
+        .frame(width: UIScreen.main.bounds.width - 42, alignment: .leading)
+    }
+
+    var shouldShowExpandButton: Bool {
+        !isExpanded && title.count >= maxTitleLen
+    }
+
+    var titleSectionBottomPadding: CGFloat {
+        shouldShowExpandButton ? 0 : (isShortPost ? 10 : 20)
+    }
+
+    var titleAttributedString: AttributedString {
+        var attributedString = title.markdownAttributedStringPreservingLineBreaks
+
+        for run in attributedString.runs where run.link != nil {
+            attributedString[run.range].foregroundColor = .blue
+            attributedString[run.range].underlineStyle = .single
+        }
+
+        return attributedString
+    }
+
     var titleView: some View {
-        Text(title)
-            .font(.system(size: 18))
+        Text(titleAttributedString)
+            .font(.system(size: 17))
+//            .font(.custom("ChironGoRoundTC", size: 17))
             .lineLimit(!isExpanded && title.count >= maxTitleLen ? 4 : nil)
-            .fontDesign(.rounded)
+//            .fontDesign(.rounded)
             .frame(width: UIScreen.main.bounds.width - 42, alignment: .leading)
     }
-    
+
     var subscriptionAlertView: some View {
         VStack(spacing: 1) {
-            Text("доступно только с")
+            Text(LocalizedStringKey("availableOnlyWithLabel"))
                 .font(.system(size: 16))
                 .fontDesign(.rounded)
                 .foregroundStyle(Color(.gray))
-                
-            
+
+
             Text("Read+")
-    //                                .font(.custom("PlaywriteIE-Regular", size: 28))
+//                                    .font(.custom("PlaywriteIE-Regular", size: 28))
                 .font(.custom("Borel-Regular", size: 28))
                 .foregroundStyle(Color(.gray))
                 .padding(.bottom, -20)

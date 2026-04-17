@@ -16,9 +16,9 @@ struct FeedView: View {
     @Binding var isWelcomeViewPresented: Bool
     @Binding var selectedTab: TabType
     @Binding var isConfirmationViewPresented: Bool
+    @Binding var isPremiumViewPresented: Bool
     
     @StateObject var viewModel = FeedViewModel()
-    @State private var isPremiumViewPresented = false
     
     @EnvironmentObject var subManager: SubscriptionManager
     @EnvironmentObject var sessionManager: SessionManager
@@ -43,20 +43,34 @@ struct FeedView: View {
                                     TopArticleView(
                                         id: String(num),
                                         title: "",
-                                        isArchive: false
+                                        isArchive: false,
+                                        isPremiumPost: false,
+                                        isAccessToPremiumDenied: false
                                     )
                                     .redacted(reason: .placeholder)
                                 }
                             } else {
                                 ForEach(viewModel.topArticles) { post in
                                     if post.id != "" {
-                                        TopArticleView(id: post.id, title: post.title, isArchive: post.isArchive)
+                                        TopArticleView(
+                                            id: post.id,
+                                            title: post.title,
+                                            isArchive: post.isArchive,
+                                            isPremiumPost: post.isPremiumPost ?? false,
+                                            isAccessToPremiumDenied: (post.isPremiumPost ?? false) && !subManager.hasPremium && post.authorId != viewModel.user?.userId
+                                        )
                                             .tabItem {}
                                             .onAppear {
                                                 viewModel.onPostAppearing(post: post)
                                             }
                                             .onTapGesture {
-                                                viewModel.tapGestureHandler(on: post)
+                                                if let isPremiumPost = post.isPremiumPost,
+                                                   isPremiumPost && !subManager.hasPremium,
+                                                   post.authorId != viewModel.user?.userId {
+                                                    isPremiumViewPresented = true
+                                                } else {
+                                                    viewModel.tapGestureHandler(on: post)
+                                                }
                                             }
                                     }
                                 }
@@ -211,9 +225,13 @@ struct FeedView: View {
                     mediaVersion: viewModel.mediaVersion,
                     mediaPosition: viewModel.mediaPosition,
                     lastVersionOfAvatar: viewModel.authorsInfo[viewModel.authorId]?.avatarVersion ?? 0,
+                    articleLanguage: viewModel.articleLanguage,
+                    isPremiumPost: viewModel.isPremiumPost,
                     user: $viewModel.user,
                     isChannelViewPresented: $viewModel.isChannelViewPresented,
-                    isPresented: $viewModel.isReadViewPresented
+                    isPresented: $viewModel.isReadViewPresented,
+                    isLocalizedVersion: viewModel.isLocalizedVersion,
+                    rootId: viewModel.rootId
                 )
                 .environmentObject(sessionManager)
                 .environmentObject(changedPostsManager)
@@ -226,14 +244,11 @@ struct FeedView: View {
                     authorName: viewModel.authorsInfo[viewModel.authorId]?.name ?? NSLocalizedString("notFoundLabel", comment: ""),
                     isCheckmark: viewModel.authorsInfo[viewModel.authorId]?.isCheckmark ?? false,
                     lastVersionOfAvatar: viewModel.authorsInfo[viewModel.authorId]?.avatarVersion ?? 0,
+                    isPremiumViewPresented: $isPremiumViewPresented
                 )
                 .environmentObject(sessionManager)
                 .environmentObject(changedPostsManager)
                 .environmentObject(subManager)
-            })
-            .fullScreenCover(isPresented: $isPremiumViewPresented, content: {
-                PremiumView()
-                    .environmentObject(subManager)
             })
             .fullScreenCover(isPresented: $viewModel.isZoomableImageViewPresented, content: {
                 if let image = viewModel.zoomableImage {

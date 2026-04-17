@@ -19,9 +19,9 @@ struct VersionPopupView: View {
                 .fontWeight(.light)
                 .fontDesign(.rounded)
                 .frame(width: UIScreen.main.bounds.width - 32, alignment: .center)
-                .lineLimit(2)
                 .multilineTextAlignment(.center)
-                .padding(.bottom, 20)
+                .padding(.bottom, 10)
+                .padding(.top, 5)
                 
             if isCritical {
                 Text(NSLocalizedString("criticalUpdateAlert", comment: ""))
@@ -30,47 +30,23 @@ struct VersionPopupView: View {
                     .fontWeight(.light)
                     .fontDesign(.rounded)
                     .frame(width: UIScreen.main.bounds.width - 32, alignment: .center)
-                    .lineLimit(2)
                     .multilineTextAlignment(.center)
                     .padding(.bottom, 20)
             }
-            
-            if #available(iOS 26, *) {
-                Button {
+
+            Text(NSLocalizedString("updateLabel", comment: ""))
+                .font(.system(size: 21))
+                .foregroundStyle(Color(uiColor: .systemBackground))
+                .frame(width: UIScreen.main.bounds.width - 40, height: 45)
+                .background(Color(.label))
+                .clipShape(Capsule())
+                .onTapGesture {
                     openURL(
                         URL(
                             string: "https://apps.apple.com/ru/app/readbox-%D1%81%D1%82%D0%B0%D1%82%D1%8C%D0%B8-%D0%B8-%D0%B8%D1%81%D1%82%D0%BE%D1%80%D0%B8%D0%B8/id6745975985"
                         )!
                     )
-                } label: {
-                    Text(NSLocalizedString("updateLabel", comment: ""))
-                        .font(.system(size: 20))
-                        .foregroundStyle(Color(uiColor: .systemBackground))
-                        .frame(width: UIScreen.main.bounds.width - 80)
                 }
-                .tint(Color(.label))
-                .buttonStyle(.glassProminent)
-            } else {
-                Button {
-                    openURL(
-                        URL(
-                            string: "https://apps.apple.com/ru/app/readbox-%D1%81%D1%82%D0%B0%D1%82%D1%8C%D0%B8-%D0%B8-%D0%B8%D1%81%D1%82%D0%BE%D1%80%D0%B8%D0%B8/id6745975985"
-                        )!
-                    )
-                } label: {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 10)
-                            .frame(width: UIScreen.main.bounds.width - 40, height: 50)
-                            .foregroundStyle(Color(uiColor: .systemBackground))
-                            .shadow(radius: 1)
-                        
-                        Text(NSLocalizedString("updateLabel", comment: ""))
-                            .font(.system(size: 20))
-                            .foregroundStyle(Color(uiColor: .label))
-                    }
-                }
-            }
-            
         }
     }
 }

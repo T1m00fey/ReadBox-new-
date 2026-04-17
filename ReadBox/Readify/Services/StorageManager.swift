@@ -44,7 +44,8 @@ final class StorageManager {
     }
     
     func getFontSize() -> Int {
-        return userDefaults.integer(forKey: "fontSize")
+        let fontSize = userDefaults.integer(forKey: "fontSize")
+        return fontSize == 0 ? 18 : fontSize
     }
     
     func getViewedPosts() -> [String] {
@@ -118,4 +119,3 @@ extension StorageManager {
         UserDefaults.standard.set(id, forKey: sessionKey)
     }
 }
-

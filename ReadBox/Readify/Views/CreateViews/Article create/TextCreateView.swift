@@ -42,17 +42,15 @@ struct TextCreateView: View {
     @EnvironmentObject var changedPostsManager: ChangedPostsManager
     
     private func applyPostsCountDelta(forNewPost newIsArchive: Bool, createdNewPostId: String? = nil) async throws {
-        var delta = 0
-        
-        if isEditing == false {
-            if newIsArchive == false { delta = 1 }
-        } else {
-            let wasArchived = archivePosts.contains { $0.id == id }
-            let wasPublished = posts.contains { $0.id == id }
-            
-            if wasArchived && newIsArchive == false { delta = 1 }
-            if wasPublished && newIsArchive == true { delta = -1 }
+        let currentPostId = createdNewPostId ?? id
+        let familyId = familyIdentifier(for: currentPostId)
+        let hasOtherPublishedVersion = posts.contains {
+            ($0.rootId ?? $0.id) == familyId && $0.id != currentPostId
         }
+        
+        let wasPublishedBefore = (!currentPostId.isEmpty && posts.contains { $0.id == currentPostId }) || hasOtherPublishedVersion
+        let willBePublishedAfter = !newIsArchive || hasOtherPublishedVersion
+        let delta = (willBePublishedAfter ? 1 : 0) - (wasPublishedBefore ? 1 : 0)
         
         guard delta != 0 else { return }
         postsCount += delta
@@ -60,6 +58,19 @@ struct TextCreateView: View {
         let userId = try AuthenticationManager.shared.getAuthenticatedUser().uid
         
         try await UserManager.shared.updatePostsCount(userId: userId, postsCount: postsCount)
+    }
+    
+    private func familyIdentifier(for currentPostId: String) -> String {
+        if let currentPost = posts.first(where: { $0.id == currentPostId }) ??
+            archivePosts.first(where: { $0.id == currentPostId }) {
+            return currentPost.rootId ?? currentPost.id
+        }
+        
+        if isLocalizing && !rootId.isEmpty {
+            return rootId
+        }
+        
+        return currentPostId
     }
 
     var body: some View {
@@ -349,7 +360,7 @@ struct TextCreateView: View {
                     } else {
                         Task {
                             do {
-                                let _ = try await viewModel.addNewPost(
+                                let createdPostId = try await viewModel.addNewPost(
                                     title: title,
                                     text: viewModel.text,
                                     isArchive: newIsArchive,
@@ -362,7 +373,10 @@ struct TextCreateView: View {
                                     isPremiumPost: isPremiumPost
                                 )
 
-                                try await applyPostsCountDelta(forNewPost: newIsArchive)
+                                try await applyPostsCountDelta(
+                                    forNewPost: newIsArchive,
+                                    createdNewPostId: createdPostId
+                                )
 
                                 StorageManager.shared.deleteText()
                                 hudService.showSuccessPopup(type: .post)

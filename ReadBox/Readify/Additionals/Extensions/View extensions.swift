@@ -295,6 +295,7 @@ extension View {
                     viewModel.mediaCount = 0
                     viewModel.mediaVersion = 0
                     viewModel.mediaPosition = 0
+                    viewModel.readIsPremiumPost = false
                     viewModel.isLocalizing = false
                     viewModel.localizationCount = 0
                     viewModel.rootLang = ""
@@ -350,11 +351,15 @@ extension View {
                 return
             }
             viewModel.isLoadingPopupPresented = true
+            viewModel.isEditing = false
             viewModel.isLocalizing = true
             viewModel.localizationCount = prePost.localizationCount ?? 0
             viewModel.rootMediaPosition = prePost.mediaPosition ?? 0
             viewModel.rootIsPremiumPost = prePost.isPremiumPost ?? false
             viewModel.rootLang = prePost.originalLanguage ?? "en"
+            viewModel.title = ""
+            viewModel.text = ""
+            StorageManager.shared.deleteText()
             
             Task {
                 do {
@@ -392,8 +397,10 @@ extension View {
             if !isShortPost {
                 viewModel.title = title
                 viewModel.isEditing = true
+                viewModel.localizationCount = prePost.localizationCount ?? 0
                 viewModel.rootIsPremiumPost = prePost.isPremiumPost ?? false
                 viewModel.rootLang = prePost.originalLanguage ?? "en"
+                viewModel.createIsLocalizedVersion = prePost.isLocalizedVersion ?? false
                 
                 Task {
                     do {
@@ -436,19 +443,14 @@ extension View {
             viewModel.postOption = .nothing
             
         case .delete:
-            Task {
-                do {
-                    hudService.showLoading(type: .delete)
-                    try await viewModel.deletePost(id: viewModel.id)
-                    hudService.showSuccessPopup(type: .delete)
-                } catch {
-                    withAnimation {
-                        hudService.showErrorPopup(with: error.localizedDescription)
-                        viewModel.id = ""
-                    }
-                }
+            guard let prePost else {
+                viewModel.clearData()
+                return
             }
             
+            viewModel.pendingDeletePostId = prePost.id
+            viewModel.isDeletePostAlertPresented = true
+
             viewModel.postOption = .nothing
             
         default:
@@ -456,6 +458,25 @@ extension View {
         }
     }
     
+    private func performCreatedPostDeletion(
+        id: String,
+        viewModel: CreatedPostsViewModel,
+        hudService: HUDService
+    ) {
+        Task {
+            do {
+                hudService.showLoading(type: .delete)
+                try await viewModel.deletePost(id: id)
+                hudService.showSuccessPopup(type: .delete)
+            } catch {
+                withAnimation {
+                    hudService.showErrorPopup(with: error.localizedDescription)
+                    viewModel.id = ""
+                }
+            }
+        }
+    }
+
     private func handleCreatedPostAddingModeChange(
         viewModel: CreatedPostsViewModel,
         isConfirmationPopupPresented: Binding<Bool>

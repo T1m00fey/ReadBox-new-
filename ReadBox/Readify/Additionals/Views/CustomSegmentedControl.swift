@@ -20,11 +20,20 @@ struct CustomSegmentedControl: View {
     var titles: [String] {
         switch type {
         case .language:
-            ["En", "Ru"]
+            [
+                NSLocalizedString("languageOptionEnglishLabel", comment: ""),
+                NSLocalizedString("languageOptionRussianLabel", comment: "")
+            ]
         case .postCreateSettings:
-            ["Сверху", "Снизу"]
+            [
+                NSLocalizedString("mediaPositionTopLabel", comment: ""),
+                NSLocalizedString("mediaPositionBottomLabel", comment: "")
+            ]
         case .premiumSetting:
-            ["Все", "Премиум"]
+            [
+                NSLocalizedString("accessAllLabel", comment: ""),
+                NSLocalizedString("accessPremiumLabel", comment: "")
+            ]
         }
     }
     

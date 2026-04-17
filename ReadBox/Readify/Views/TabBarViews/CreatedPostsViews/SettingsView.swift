@@ -16,27 +16,28 @@ final class SettingsViewModel: ObservableObject {
     @Published var avatar2: UIImage? = nil
     @Published var nameText2 = ""
     @Published var descriptionText2 = ""
-    
+
     @Published var sizeOfData: Double = 0
-    
+
     @Published var isSettingsLabelVisible = true
-    
+
     @Published var isErrorPopupPresented = false
     @Published var errorText = ""
-    
+
     @Published var isSuccessPopupPresented = false
     @Published var successText = ""
-    
+
     @Published var isSignOutDialogPresented = false
 //    @Published var isDeleteAccDialogPresented = false
-    
+
     @Published var isNewPasswordViewPresented = false
     @Published var isFontSettingPopupPresented = false
     @Published var isMemoryPopupPresented = false
     @Published var isMailViewPresented = false
-    
+
     @Published var isLoading = false
-    
+    @Published var fontSize = StorageManager.shared.getFontSize()
+
     @Published var mailData = ComposeMailData(
         subject: "To the developer",
          recipients: ["support@ireadbox.ru"],
@@ -44,15 +45,15 @@ final class SettingsViewModel: ObservableObject {
                     App: ReadBox
                     iOS: \(UIDevice.current.systemVersion)
                     _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
-                
+
                     Your question...
                 """,
          attachments: []
     )
-    
+
     @Published var privacyURL = URL(string: "https://readbox-links.online/privacy.html")
     @Published var termsURL = URL(string: "https://readbox-links.online/terms.html")
-    
+
     var settingsTitles: [String] = [
         NSLocalizedString("passwordTFPlaceholder", comment: ""),
         NSLocalizedString("fontLabel", comment: ""),
@@ -61,7 +62,7 @@ final class SettingsViewModel: ObservableObject {
         NSLocalizedString("privacyPolicy", comment: ""),
         NSLocalizedString("termsOfUse", comment: "")
     ]
-    
+
     var settingsImages: [String] = [
         "lock",
         "book.pages",
@@ -70,7 +71,7 @@ final class SettingsViewModel: ObservableObject {
         "document",
         "document"
     ]
-    
+
     var settingsColors: [Color] = [
         .blue,
         .mint,
@@ -79,7 +80,7 @@ final class SettingsViewModel: ObservableObject {
         .gray,
         .gray
     ]
-    
+
     func getTotalCacheSize() {
         var totalSize = 0
 
@@ -107,22 +108,22 @@ final class SettingsViewModel: ObservableObject {
             }
         }
     }
-    
+
     func changeAuthorName(withId authorId: String, to name: String, description: String) async throws {
         try await UserManager.shared.changeAuthorName(userId: authorId, to: name, description: description)
     }
-    
+
     func removeCheckmarkStatus(toId id:String) async throws {
         try await UserManager.shared.removeCheckmarkStatus(userId: id)
     }
-    
+
     func signOut(userId: String) async throws {
         try? await UserManager.shared.deleteFcmToken(from: userId)
         try AuthenticationManager.shared.signOut()
-        
+
         let userDefaults = UserDefaults.standard
         let dictionary = userDefaults.dictionaryRepresentation()
-        
+
         for key in dictionary.keys {
             if key != "language"
                 && key != "fontSize"
@@ -132,9 +133,9 @@ final class SettingsViewModel: ObservableObject {
                 userDefaults.removeObject(forKey: key)
             }
         }
-        
+
         await SDImageCache.shared.clear(with: .all)
-        
+
         let tmp = FileManager.default.temporaryDirectory
         let fileURLs = try? FileManager.default.contentsOfDirectory(at: tmp, includingPropertiesForKeys: nil)
         fileURLs?.forEach { url in
@@ -142,10 +143,10 @@ final class SettingsViewModel: ObservableObject {
                 try? FileManager.default.removeItem(at: url)
             }
         }
-        
+
         userDefaults.synchronize()
     }
-    
+
 //    func deleteAccount(user: DBUser) async throws {
 //        try await AuthenticationManager.shared.delete()
 //        try await UserManager.shared.deleteUser(user: user)
@@ -161,15 +162,15 @@ struct SettingsView: View {
     @Binding var descriptionText: String
     @Binding var isScreenPresented: Bool
     @Binding var isWelcomeViewPresented: Bool
-    
+
     @StateObject private var viewModel = SettingsViewModel()
-    
+
     @EnvironmentObject var sessionManager: SessionManager
-    
+
     @Environment(\.openURL) var openURL
-    
+
     @FocusState var isNameTFFocused: Bool
-    
+
     func settingsListAction(_ id: Int) {
         switch id {
         case 0: viewModel.isNewPasswordViewPresented = true
@@ -181,7 +182,7 @@ struct SettingsView: View {
         default: print("Error")
         }
     }
-    
+
     func update(withId userId: String) async throws {
         if viewModel.nameText2.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             withAnimation {
@@ -192,26 +193,26 @@ struct SettingsView: View {
             withAnimation {
                 viewModel.isLoading = true
             }
-            
+
             VibrationsService.shared.lightImpact()
-            
+
             let cacheKey = "avatar_\(userId)_\(lastVersionOfAvatar+1)"
             let lastCacheKey = "avatar_\(userId)_\(lastVersionOfAvatar)"
-            
+
             if let ava = viewModel.avatar2, avatar != viewModel.avatar2 {
                 let resized = ava.resizedForAvatar(maxDimension: 512)
                 guard let data = resized.jpegData(compressionQuality: 0.7) else { return }
-                
+
                 let ref = Storage.storage().reference().child("avatars/\(userId).jpg")
                 _ = try await ref.putDataAsync(data)
-                
+
                 StorageManager.shared.saveImage(id: cacheKey, image: resized)
                 StorageManager.shared.deleteImage(id: lastCacheKey)
-                
+
                 print("AVAVAVAVAVVA: \(lastVersionOfAvatar)")
                 try await UserManager.shared.setAvatarVersion(id: userId, lastVersion: lastVersionOfAvatar)
                 lastVersionOfAvatar += 1
-                
+
                 await MainActor.run {
                     avatar = resized
                 }
@@ -226,29 +227,34 @@ struct SettingsView: View {
                 } catch {
                     print("Ошибка при удалении аватара: \(error.localizedDescription)")
                 }
-                
+
                 avatar = nil
             }
-        
-            if nameText != viewModel.nameText2 {
-                try await viewModel.removeCheckmarkStatus(toId: authorId)
+
+            let isNameChanged = nameText != viewModel.nameText2
+            let isDescriptionChanged = descriptionText != viewModel.descriptionText2
+
+            if isNameChanged || isDescriptionChanged {
+                if isNameChanged {
+                    try await viewModel.removeCheckmarkStatus(toId: authorId)
+                }
                 try await viewModel.changeAuthorName(
                     withId: authorId,
                     to: viewModel.nameText2,
                     description: viewModel.descriptionText2
                 )
-                
+
                 nameText = viewModel.nameText2
                 descriptionText = viewModel.descriptionText2
             }
-            
+
             withAnimation {
                 viewModel.isLoading = false
                 isScreenPresented = false
             }
         }
     }
-    
+
     func updateUser() {
         Task {
             do {
@@ -261,7 +267,7 @@ struct SettingsView: View {
             }
         }
     }
-    
+
     var body: some View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 20) {
@@ -271,16 +277,16 @@ struct SettingsView: View {
                     .fontDesign(.rounded)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, 16)
-                
+
                 VisibilityTracker(id: "settingsLabel")
-                
+
                 AvatarControlView(authorId: authorId, avatarImage: $viewModel.avatar2)
-                
+
                 SettingsTextFieldView(tfPlaceholder: NSLocalizedString("nameLabel", comment: ""), text: $viewModel.nameText2)
-                
+
                 SettingsTextFieldView(tfPlaceholder: NSLocalizedString("descriptionLabel", comment: ""), text: $viewModel.descriptionText2)
                     .padding(.top, 10)
-                
+
                 List {
                     ForEach(0..<viewModel.settingsTitles.count, id: \.self) { id in
                         Button {
@@ -293,13 +299,13 @@ struct SettingsView: View {
                                     .foregroundStyle(Color.white)
                                     .background(viewModel.settingsColors[id])
                                     .clipShape(Circle())
-                                
+
                                 Text(viewModel.settingsTitles[id])
                                     .font(.system(size: 18))
                                     .padding(.leading, 10)
-                                
+
                                 Spacer()
-                                
+
                                 Image(systemName: "chevron.right")
                                     .font(.system(size: 18))
                                     .foregroundStyle(Color.gray)
@@ -327,7 +333,7 @@ struct SettingsView: View {
         }
         .task {
             let ava = await MediaManager.shared.getAvatar(authorId: authorId, lastVersion: lastVersionOfAvatar)
-            
+
             withAnimation {
                 avatar = ava
             }
@@ -345,7 +351,7 @@ struct SettingsView: View {
                     Image(systemName: "arrow.left")
                 }
             }
-            
+
             ToolbarItem(placement: .topBarLeading) {
                 Button {
                     viewModel.isSignOutDialogPresented = true
@@ -354,7 +360,7 @@ struct SettingsView: View {
                         .foregroundStyle(Color.red)
                 }
             }
-            
+
             ToolbarItem(placement: .principal) {
                 if !viewModel.isSettingsLabelVisible {
                     if #available(iOS 26, *) {
@@ -366,7 +372,7 @@ struct SettingsView: View {
                     }
                 }
             }
-            
+
             ToolbarItem(placement: .topBarTrailing) {
                 if !viewModel.isLoading {
                     if #available(iOS 26, *) {
@@ -396,7 +402,7 @@ struct SettingsView: View {
             isPresented: $viewModel.isSignOutDialogPresented
         ) {
             Button(LocalizedStringKey("cancelButton"), role: .cancel) {}
-            
+
             Button(LocalizedStringKey("signOutLabel"), role: .destructive) {
                 Task {
                     do {
@@ -491,6 +497,7 @@ struct SettingsView: View {
         .sheet(isPresented: $viewModel.isFontSettingPopupPresented, content: {
             FontSettingView(
                 isPopupPresented: $viewModel.isFontSettingPopupPresented,
+                selectedFontSize: $viewModel.fontSize,
                 successText: $viewModel.successText,
                 isSuccessPopupPresented: $viewModel.isSuccessPopupPresented
             )
@@ -526,9 +533,9 @@ struct SettingsView: View {
 fileprivate struct SettingsTextFieldView: View {
     let tfPlaceholder: String
     @Binding var text: String
-    
+
     @FocusState var isTFFocused: Bool
-    
+
     var body: some View {
         VStack {
             TextField(tfPlaceholder, text: $text)
@@ -538,7 +545,7 @@ fileprivate struct SettingsTextFieldView: View {
                 .focused($isTFFocused)
                 .textInputAutocapitalization(.never)
                 .tint(Color(.label))
-            
+
             Capsule()
                 .frame(maxWidth: .infinity)
                 .frame(height: 3)
@@ -554,13 +561,13 @@ fileprivate struct SettingsTextFieldView: View {
 //            .foregroundStyle(Color(uiColor: .secondarySystemBackground))
 //            .frame(width: UIScreen.main.bounds.width - 60, height: 270)
 //            .shadow(radius: 1)
-//        
+//
 //        VStack(spacing: 25) {
 //            AvatarControlView(
 //                authorId: viewModel.user?.userId ?? "",
 //                avatarImage: $viewModel.avatarImage
 //            )
-//            
+//
 //            VStack {
 //                TextField(LocalizedStringKey("nameLabel"), text: $viewModel.name)
 //                    .frame(width: UIScreen.main.bounds.width - 92)
@@ -571,12 +578,12 @@ fileprivate struct SettingsTextFieldView: View {
 //                        viewModel.isButtonEnable()
 //                    }
 //                    .tint(Color(uiColor: .label))
-//                
+//
 //                RoundedRectangle(cornerRadius: 0)
 //                    .frame(width: UIScreen.main.bounds.width - 92, height: 2)
 //                    .foregroundStyle(isAuthorNameFocused ? Color(uiColor: .label) : Color.gray)
 //            }
-//            
+//
 //            VStack {
 //                TextField(NSLocalizedString("descriptionLabel", comment: ""), text: $viewModel.description)
 //                    .frame(width: UIScreen.main.bounds.width - 92)
@@ -584,7 +591,7 @@ fileprivate struct SettingsTextFieldView: View {
 //                    .focused($isDescriptionFocused)
 //                    .textInputAutocapitalization(.never)
 //                    .tint(Color(uiColor: .label))
-//                    
+//
 //                RoundedRectangle(cornerRadius: 0)
 //                    .frame(width: UIScreen.main.bounds.width - 92, height: 2)
 //                    .foregroundStyle(isDescriptionFocused ? Color(uiColor: .label) : Color.gray)
@@ -595,7 +602,7 @@ fileprivate struct SettingsTextFieldView: View {
 //            viewModel.isButtonEnable()
 //        }
 //    }
-//    
+//
 //    Button {
 //        if viewModel.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
 //            withAnimation {
@@ -609,18 +616,18 @@ fileprivate struct SettingsTextFieldView: View {
 //                        viewModel.isLoading = true
 //                        viewModel.isButtonEnabled = false
 //                    }
-//                    
+//
 //                    viewModel.vibrationsService.softImpact()
-//                    
+//
 //                    if let avatar = viewModel.avatarImage,
 //                       let userId = viewModel.user?.userId {
-//                        
+//
 //                        let resized = avatar.resizedForAvatar(maxDimension: 512)
 //                        guard let data = resized.jpegData(compressionQuality: 0.7) else { return }
-//                        
+//
 //                        let ref = Storage.storage().reference().child("avatars/\(userId).jpg")
 //                        _ = try await ref.putDataAsync(data)
-//                        
+//
 //                        StorageManager.shared.saveImage(id: userId, image: resized)
 //                        await MainActor.run { viewModel.avatarImage = resized }
 //                    } else {
@@ -634,19 +641,19 @@ fileprivate struct SettingsTextFieldView: View {
 //                            }
 //                        }
 //                    }
-//                
+//
 //                    if viewModel.user?.name != viewModel.name {
 //                        try await viewModel.removeCheckmarkStatus()
 //                    }
 //                    try await viewModel.changeAuthorName(to: viewModel.name, description: viewModel.description)
-//                    
+//
 //                    withAnimation {
 //                        viewModel.isLoading = false
 //                        viewModel.isSettingViewPresented = false
 //                        viewModel.user?.name = viewModel.name
 //                        viewModel.user?.authorDescription = viewModel.description
 //                    }
-//                    
+//
 //                    withAnimation {
 //                        viewModel.isButtonEnabled = false
 //                    }
@@ -672,7 +679,7 @@ fileprivate struct SettingsTextFieldView: View {
 //                    ? Color(uiColor: .label)
 //                    : Color.gray
 //                )
-//            
+//
 //            if viewModel.isLoading {
 //                LoadingIndicator(
 //                    animation: .circleRunner,

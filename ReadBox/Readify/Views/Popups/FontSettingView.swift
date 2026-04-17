@@ -9,6 +9,7 @@ import SwiftUI
 
 struct FontSettingView: View {
     @Binding var isPopupPresented: Bool
+    @Binding var selectedFontSize: Int
     @Binding var successText: String
     @Binding var isSuccessPopupPresented: Bool
     
@@ -42,20 +43,25 @@ struct FontSettingView: View {
                 .padding(.bottom, 100)
         }
         .onAppear {
-            startFontSize = StorageManager.shared.getFontSize()
+            startFontSize = selectedFontSize == 0
+            ? StorageManager.shared.getFontSize()
+            : selectedFontSize
             fontSize = Double(startFontSize)
             
             if startFontSize == 0 {
                 fontSize = 18
                 startFontSize = 18
                 StorageManager.shared.setFont(size: 18)
+                selectedFontSize = 18
             }
         }
+        .onChange(of: fontSize) {
+            let newFontSize = Int(fontSize)
+            selectedFontSize = newFontSize
+            StorageManager.shared.setFont(size: newFontSize)
+        }
         .onDisappear {
-            print("FFFFF: \(startFontSize)")
-            print("FFFFF: \(fontSize)")
             if startFontSize != Int(fontSize) {
-                StorageManager.shared.setFont(size: Int(fontSize))
                 successText = NSLocalizedString("fontSizeChangedAlert", comment: "")
                 isSuccessPopupPresented = true
             }
@@ -64,5 +70,10 @@ struct FontSettingView: View {
 }
 
 #Preview {
-    FontSettingView(isPopupPresented: .constant(true), successText: .constant(""), isSuccessPopupPresented: .constant(true))
+    FontSettingView(
+        isPopupPresented: .constant(true),
+        selectedFontSize: .constant(18),
+        successText: .constant(""),
+        isSuccessPopupPresented: .constant(true)
+    )
 }
