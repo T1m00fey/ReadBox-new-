@@ -121,9 +121,10 @@ final class ArticlesManager {
         uploadingLanguage: String,
         mediaCount: Int,
         mediaPosition: Int,
-        isPremiumPost: Bool
+        isPremiumPost: Bool,
+        shouldRefreshDateCreated: Bool = false
     ) async throws {
-        let data: [String: Any] = [
+        var data: [String: Any] = [
             "title": title,
             "text": text,
             "is_archive": isArchive,
@@ -132,7 +133,11 @@ final class ArticlesManager {
             "media_position": mediaPosition,
             "is_premium_post": isPremiumPost
         ]
-    
+
+        if shouldRefreshDateCreated {
+            data["date_created"] = Date()
+        }
+
         
         try await articlesCollection.document(id).updateData(data)
     }

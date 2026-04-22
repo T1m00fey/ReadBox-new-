@@ -93,20 +93,20 @@ struct PostCreateView: View {
     let rootIsPremium: Bool
     let rootMediaPosition: Int
     let isPremiumAuthor: Bool
-    
+
     @Binding var media: [MediaKind?]
     @Binding var posts: [PrePost]
     @Binding var archivedPosts: [PrePost]
     @Binding var postsCount: Int
-    
+
     @StateObject private var viewModel = PostCreateViewModel()
-    
+
     @FocusState private var isTEFocused: Bool
-    
+
     @EnvironmentObject var hudService: HUDService
     @EnvironmentObject var changedPostsManager: ChangedPostsManager
     @EnvironmentObject var sessionManager: SessionManager
-    
+
     @Environment(\.dismiss) var dismiss
 
     init(
@@ -148,33 +148,40 @@ struct PostCreateView: View {
         self._archivedPosts = archivedPosts
         self._postsCount = postsCount
     }
-    
+
     private func familyIdentifier(for currentPostId: String) -> String {
         if let currentPost = posts.first(where: { $0.id == currentPostId }) ??
             archivedPosts.first(where: { $0.id == currentPostId }) {
             return currentPost.rootId ?? currentPost.id
         }
-        
+
         if isLocalizing && !rootId.isEmpty {
             return rootId
         }
-        
+
         return currentPostId
     }
-    
+
     private var currentEditingPost: PrePost? {
         posts.first(where: { $0.id == postId }) ??
         archivedPosts.first(where: { $0.id == postId })
     }
-    
+
     private var isLanguageSettingHidden: Bool {
         if isLocalizing || localizationCount > 0 {
             return true
         }
-        
+
         return currentEditingPost?.isLocalizedVersion ?? false
     }
-    
+
+    private var canPublishPost: Bool {
+        let hasText = !viewModel.text.normalizedPublicationPlainText.isEmpty
+        let hasMedia = media.contains { $0 != nil }
+
+        return (hasText || hasMedia) && !viewModel.isCoverLoading
+    }
+
     private func updatePostsCountIfNeeded(
         currentPostId: String,
         newIsArchive: Bool,
@@ -185,21 +192,21 @@ struct PostCreateView: View {
         let hasOtherPublishedVersion = posts.contains {
             ($0.rootId ?? $0.id) == familyId && $0.id != currentPostId
         }
-        
+
         let wasPublishedBefore = (!currentPostId.isEmpty && posts.contains { $0.id == currentPostId }) || hasOtherPublishedVersion
         let willBePublishedAfter = !newIsArchive || hasOtherPublishedVersion
         let delta = (willBePublishedAfter ? 1 : 0) - (wasPublishedBefore ? 1 : 0)
-        
+
         guard delta != 0 else { return }
-        
+
         let newCount = max(0, oldCount + delta)
         try await UserManager.shared.updatePostsCount(userId: author, postsCount: newCount)
-        
+
         await MainActor.run {
             postsCount = newCount
         }
     }
-    
+
     private func uploadPost() {
         viewModel.isArchive = (viewModel.addingMode == 2)
         hudService.showLoading()
@@ -208,11 +215,15 @@ struct PostCreateView: View {
 
         let isArchive = viewModel.isArchive
         let selectedLanguage = viewModel.selectedLanguage
-        let titleText = viewModel.text
+        let titleText = viewModel.text.normalizedPublicationPlainText
         let currentPostId = postId
         let author = authorId
         let oldCount = postsCount
         let mediaPosition = viewModel.selectedMediaPosition
+        let uploadingLanguage = selectedLanguage == 0 ? "en" : "ru"
+        let shouldSavePublicationLanguage = !isLocalizing && !(currentEditingPost?.isLocalizedVersion ?? false)
+        let shouldUpdateMedia = viewModel.isMediaChanged || viewModel.oldMediaCount != items.count
+        let shouldRefreshDateCreated = isArchived && !isArchive
 
         dismiss()
 
@@ -222,7 +233,7 @@ struct PostCreateView: View {
                     let createdPostId = try await viewModel.uploadPost(
                         title: titleText,
                         isArchive: isArchive,
-                        uploadingLanguage: selectedLanguage == 0 ? "en" : "ru",
+                        uploadingLanguage: uploadingLanguage,
                         items: items,
                         mediaPosition: mediaPosition,
                         isLocalizing: isLocalizing,
@@ -242,10 +253,12 @@ struct PostCreateView: View {
                         postId: currentPostId,
                         title: titleText,
                         isArchive: isArchive,
-                        uploadingLanguage: selectedLanguage == 0 ? "en" : "ru",
+                        uploadingLanguage: uploadingLanguage,
                         items: items,
                         mediaPosition: mediaPosition,
-                        isPremiumPost: viewModel.isPremiumPost == 0 ? false : true
+                        shouldUpdateMedia: shouldUpdateMedia,
+                        isPremiumPost: viewModel.isPremiumPost == 0 ? false : true,
+                        shouldRefreshDateCreated: shouldRefreshDateCreated
                     )
 
                     try await updatePostsCountIfNeeded(
@@ -254,13 +267,19 @@ struct PostCreateView: View {
                         oldCount: oldCount,
                         author: author
                     )
-                    
+
                     await MainActor.run {
-                        changedPostsManager.changedPostsIDs.append(currentPostId)
+                        if shouldUpdateMedia {
+                            changedPostsManager.changedPostsIDs.append(currentPostId)
+                        }
                     }
                 }
 
                 await MainActor.run {
+                    if shouldSavePublicationLanguage {
+                        StorageManager.shared.setLastPublicationLanguage(to: uploadingLanguage)
+                    }
+
                     hudService.showSuccessPopup()
                     NotificationCenter.default.post(name: .postsDidChange, object: nil)
                 }
@@ -272,16 +291,16 @@ struct PostCreateView: View {
             }
         }
     }
-    
+
     var body: some View {
         NavigationStack {
             ZStack {
                 Color(.systemBackground)
                     .ignoresSafeArea()
                     .onTapGesture { isTEFocused = false }
-                
+
                 ScrollView(showsIndicators: false) {
-                    
+
                     VStack(spacing: 5) {
                         HStack {
                             if let avatarImage = viewModel.avatarImage {
@@ -298,13 +317,13 @@ struct PostCreateView: View {
                                             )
                                     )
                             }
-                            
+
                             HStack(spacing: 0) {
                                 Text(authorName)
                                     .font(.system(size: 19))
                                     .lineLimit(1)
                                     .underline()
-                                    
+
                                 if isCheckmark {
                                     Image(systemName: "checkmark.seal.fill")
                                         .foregroundStyle(Color.blue)
@@ -314,25 +333,25 @@ struct PostCreateView: View {
                             }
                         }
                         .frame(width: UIScreen.main.bounds.width - 32, alignment: .leading)
-                        
-                        
-                        
+
+
+
 //                        VStack(spacing: 10) {
 //                            Text(NSLocalizedString("whichFeedUploadingToLabel", comment: ""))
 //                                .font(.system(size: 17))
 //                                .foregroundStyle(.gray)
 //                                .frame(width: UIScreen.main.bounds.width - 36, alignment: .leading)
-//                            
+//
 //                            CustomSegmentedControl(selectedLanguage: $viewModel.selectedLanguage)
 //                        }
 //                        .padding(.top, 25)
-                        
+
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 20) {
                                 ForEach(Array(media.indices), id: \.self) { i in
                                     if i < media.count {
                                         let item = media[i]
-                                        
+
                                         if let image = item?.image {
                                             ZStack(alignment: .topTrailing) {
                                                 Image(uiImage: image)
@@ -340,7 +359,7 @@ struct PostCreateView: View {
                                                     .scaledToFit()
                                                     .frame(width: 200)
                                                     .clipShape(RoundedRectangle(cornerRadius: 20))
-                                                
+
                                                 Image(systemName: "xmark")
                                                     .resizable()
                                                     .scaledToFit()
@@ -357,6 +376,7 @@ struct PostCreateView: View {
                                                             if idx < media.count {
                                                                 withAnimation {
                                                                     _ = media.remove(at: idx)
+                                                                    viewModel.isMediaChanged = true
                                                                 }
                                                             }
                                                         }
@@ -371,7 +391,7 @@ struct PostCreateView: View {
                                                             .scaledToFit()
                                                             .frame(width: 100)
                                                             .clipShape(RoundedRectangle(cornerRadius: 20))
-                                                        
+
                                                         Image(systemName: "play.fill")
                                                             .resizable()
                                                             .scaledToFit()
@@ -384,7 +404,7 @@ struct PostCreateView: View {
                                                             .overlay {
                                                                 ProgressView().scaleEffect(0.8)
                                                             }
-                                                        
+
                                                         Image(systemName: "play.fill")
                                                             .resizable()
                                                             .scaledToFit()
@@ -392,7 +412,7 @@ struct PostCreateView: View {
                                                             .foregroundStyle(Color(.label))
                                                     }
                                                 }
-                                                
+
                                                 Image(systemName: "xmark")
                                                     .resizable()
                                                     .scaledToFit()
@@ -409,6 +429,7 @@ struct PostCreateView: View {
                                                             if idx < media.count {
                                                                 withAnimation {
                                                                     _ = media.remove(at: idx)
+                                                                    viewModel.isMediaChanged = true
                                                                 }
                                                             }
                                                         }
@@ -417,14 +438,14 @@ struct PostCreateView: View {
                                         }
                                     }
                                 }
-                                
+
                                 if viewModel.isCoverLoading {
                                     ZStack(alignment: .topTrailing) {
                                         ZStack {
                                             RoundedRectangle(cornerRadius: 20)
                                                 .frame(width: 100, height: 100)
                                                 .foregroundStyle(Color(.secondarySystemBackground))
-                                            
+
                                             LoadingIndicator(
                                                 animation: .circleRunner,
                                                 color: Color(.label),
@@ -432,7 +453,7 @@ struct PostCreateView: View {
                                                 speed: .fast
                                             )
                                         }
-                                        
+
                                         Image(systemName: "xmark")
                                             .resizable()
                                             .scaledToFit()
@@ -445,19 +466,19 @@ struct PostCreateView: View {
                                             .onTapGesture {
                                                 viewModel.imagePickerTask?.cancel()
                                                 viewModel.imagePickerTask = nil
-                                                
+
                                                 withAnimation {
                                                     viewModel.isCoverLoading = false
                                                 }
                                             }
-                                        
+
                                     }
                                 }
                             }
                         }
                         .frame(width: UIScreen.main.bounds.width - 32)
                         .scrollClipDisabled()
-                        
+
                         ZStack {
                             TextEditor(text: $viewModel.text)
                                 .focused($isTEFocused)
@@ -469,7 +490,7 @@ struct PostCreateView: View {
                                 )
                                 .frame(minHeight: 300)
                                 .padding(.bottom, 5)
-                            
+
                             Text(NSLocalizedString("whatsNewLabel", comment: ""))
                                 .font(.system(size: 18))
                                 .foregroundStyle(Color.gray)
@@ -483,17 +504,17 @@ struct PostCreateView: View {
                     .onAppear {
                         isTEFocused = true
                     }
-                    
+
                 }
                 .onAppear {
                     viewModel.text = title
                     viewModel.oldMediaCount = media.compactMap { $0 }.count
                     viewModel.selectedMediaPosition = rootMediaPosition
-                    
+
                     if rootLang != "" {
                         viewModel.selectedLanguage = rootLang == "en" ? 1 : 0
                     }
-                    
+
                     viewModel.isPremiumPost = rootIsPremium == true ? 1 : 0
                 }
 //                .popup(isPresented: $viewModel.isConfirmationPopupPresented) {
@@ -586,13 +607,13 @@ struct PostCreateView: View {
                                 dismiss()
                             }
                     }
-                    
+
                     if isLocalizing {
                         ToolbarItem(placement: .principal) {
                             Text((rootLang == "en" ? "RU" : "EN") + " \(NSLocalizedString("localizationLabel", comment: ""))")
                         }
                     }
-                    
+
                     ToolbarItem(placement: .topBarTrailing) {
                         if viewModel.isLoading {
                             LoadingIndicator(
@@ -613,6 +634,7 @@ struct PostCreateView: View {
                                 }
                                 .tint(Color(.label))
                                 .buttonStyle(.glassProminent)
+                                .disabled(!canPublishPost)
                             } else {
                                 Button {
                                     VibrationsService.shared.lightImpact()
@@ -624,15 +646,16 @@ struct PostCreateView: View {
                                         .padding(.horizontal, 10)
                                         .padding(.vertical, 5)
                                         .background(
-                                            viewModel.text.isEmpty || viewModel.isCoverLoading
+                                            !canPublishPost
                                             ? Color.gray
                                             : Color(.label)
                                         )
                                         .clipShape(Capsule())
-                                    
+
                                 }
-                                .disabled(viewModel.text.isEmpty || viewModel.isCoverLoading)
+                                .disabled(!canPublishPost)
                                 .animation(.default, value: viewModel.text)
+                                .animation(.default, value: media.compactMap { $0 }.count)
                             }
                         }
                     }
@@ -640,10 +663,10 @@ struct PostCreateView: View {
                 .onChange(of: viewModel.addingMode) {
                     uploadPost()
                 }
-                
+
                 VStack {
                     Spacer()
-                    
+
                     HStack {
                         if #available(iOS 26, *) {
                             Image(systemName: "gearshape.fill")
@@ -667,9 +690,9 @@ struct PostCreateView: View {
                                     viewModel.isPostSettingsPopupPresented = true
                                 }
                         }
-                        
+
                         Spacer()
-                        
+
                         PhotosPicker(selection: $viewModel.imageItem, matching: .any(of: [.images, .videos])) {
                             if #available(iOS 26.0, *) {
                                 Image(systemName: "photo.badge.plus.fill")
@@ -695,17 +718,17 @@ struct PostCreateView: View {
                                     do {
                                         try Task.checkCancellation()
                                         guard let item = viewModel.imageItem else { return }
-                                        
+
                                         withAnimation {
                                             viewModel.isCoverLoading = true
                                         }
-                                        
+
                                         defer {
                                             withAnimation {
                                                 viewModel.isCoverLoading = false
                                             }
                                         }
-                                        
+
                                         try Task.checkCancellation()
                                         guard let data = try? await item.loadTransferable(type: Data.self) else {
                                             print("⚠️ Невозможно загрузить данные из файла")
@@ -716,6 +739,7 @@ struct PostCreateView: View {
                                             print("🖼 Обложка — изображение")
                                             withAnimation {
                                                 media.append(MediaKind(image: image))
+                                                viewModel.isMediaChanged = true
                                             }
                                             return
                                         }
@@ -728,17 +752,17 @@ struct PostCreateView: View {
                                         let asset = AVAsset(url: tempURL)
                                         let duration = try await asset.load(.duration)
                                         let secondsDuration = CMTimeGetSeconds(duration)
-                                        
+
                                         try Task.checkCancellation()
                                         guard secondsDuration <= 120 else {
                                             withAnimation {
                                                 viewModel.errorText = NSLocalizedString("durationCoverErrorLabel", comment: "")
                                                 viewModel.isErrorPopupPresented = true
                                             }
-                                            
+
                                             return
                                         }
-                                        
+
                                         try Task.checkCancellation()
 
                                         // 1) Транскодим в 720p (сжатая версия)
@@ -757,6 +781,7 @@ struct PostCreateView: View {
                                         withAnimation {
                                             viewModel.isCoverLoading = false
                                             media.append(MediaKind(videoURL: compressedURL, videoPreview: thumbnail))
+                                            viewModel.isMediaChanged = true
                                         }
 
                                         try? FileManager.default.removeItem(at: tempURL)
@@ -781,18 +806,18 @@ struct PostCreateView: View {
                 }
                 .task {
                     let ava = await MediaManager.shared.getAvatar(authorId: authorId, lastVersion: lastVersionOfAvatar)
-                    
+
                     withAnimation {
                         viewModel.avatarImage = ava
                     }
-                    
+
                     if isLocalizing {
                         viewModel.selectedLanguage = rootLang == "en" ? 1 : 0
                     } else if let currentLanguage = currentEditingPost?.originalLanguage {
                         viewModel.selectedLanguage = currentLanguage == "ru" ? 1 : 0
                     }
                 }
-                
+
             }
             .navigationBarTitleDisplayMode(.inline)
         }

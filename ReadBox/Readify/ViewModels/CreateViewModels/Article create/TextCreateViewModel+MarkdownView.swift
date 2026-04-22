@@ -421,7 +421,8 @@ final class TextCreateViewModel: ObservableObject {
         uploadingLanguage: String,
         items: [MediaKind],
         oldMediaCount: Int,
-        isPremiumPost: Bool
+        isPremiumPost: Bool,
+        shouldRefreshDateCreated: Bool
     ) async throws {
         let textFixed = text
             .replacingOccurrences(of: "readbox-links.online", with: "firebasestorage.googleapis.com")
@@ -463,7 +464,8 @@ final class TextCreateViewModel: ObservableObject {
             uploadingLanguage: uploadingLanguage,
             mediaCount: items.count,
             mediaPosition: 0,
-            isPremiumPost: isPremiumPost
+            isPremiumPost: isPremiumPost,
+            shouldRefreshDateCreated: shouldRefreshDateCreated
         )
         
         // удаляем "хвост" старых медиа, если их стало меньше

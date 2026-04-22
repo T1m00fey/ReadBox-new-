@@ -255,6 +255,7 @@ final class CreatedPostsViewModel: ObservableObject {
             title: post.title,
             authorId: post.authorId,
             originalLanguage: post.originalLanguage,
+            dateCreated: post.dateCreated,
             viewsCount: post.viewsCount,
             likesCount: post.likesCount,
             isArchive: post.isArchive,

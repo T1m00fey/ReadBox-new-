@@ -18,6 +18,7 @@ struct SignInView: View {
     @FocusState var isThirdTFFocused: Bool
     
     @Environment(\.dismiss) var dismiss
+    @Environment(\.colorScheme) private var colorScheme
     
     var body: some View {
         NavigationStack {
@@ -32,9 +33,16 @@ struct SignInView: View {
                 VStack {
                     ZStack {
                         RoundedRectangle(cornerRadius: 30)
-                            .foregroundStyle(Color(uiColor: .secondarySystemBackground))
+                            .foregroundStyle(backgroundColor)
                             .frame(width: UIScreen.main.bounds.width - 60, height: 250)
-                            .shadow(radius: 1)
+//                            .shadow(radius: 1)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 30)
+                                    .stroke(
+                                        Color(.secondarySystemBackground),
+                                        lineWidth: 2
+                                    )
+                            )
                         
                         VStack {
                             Text(LocalizedStringKey("signInLabel"))
@@ -245,6 +253,14 @@ struct SignInView: View {
                 isThirdTFFocused = false
             }
         }
+    }
+}
+
+private extension SignInView {
+    var backgroundColor: Color {
+        colorScheme == .dark
+        ? Color(red: 0.08, green: 0.08, blue: 0.085)
+        : Color(red: 0.975, green: 0.975, blue: 0.98)
     }
 }
 

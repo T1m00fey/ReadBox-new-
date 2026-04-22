@@ -19,57 +19,59 @@ struct TextCreateView: View {
     @Binding var title: String
     let text: String
     let isEditing: Bool
+    let wasArchivedBeforeEditing: Bool
     let uploadingLanguage: String
     let oldMediaCount: Int
     let isLocalizing: Bool
     let localizationCount: Int
     let rootId: String
     let isPremiumPost: Bool
+    let shouldSavePublicationLanguage: Bool
     @Binding var media: [MediaKind?]
     @Binding var mediaURLs: [URL]
     @Binding var postsCount: Int
     @Binding var posts: [PrePost]
     @Binding var archivePosts: [PrePost]
-    
+
     @Binding var isCreateViewPresented: Bool
-    
+
     @StateObject private var viewModel = TextCreateViewModel()
     @FocusState var isTEFocused: Bool
-    
+
     @Environment(\.dismiss) var dismiss
-    
+
     @EnvironmentObject var hudService: HUDService
     @EnvironmentObject var changedPostsManager: ChangedPostsManager
-    
+
     private func applyPostsCountDelta(forNewPost newIsArchive: Bool, createdNewPostId: String? = nil) async throws {
         let currentPostId = createdNewPostId ?? id
         let familyId = familyIdentifier(for: currentPostId)
         let hasOtherPublishedVersion = posts.contains {
             ($0.rootId ?? $0.id) == familyId && $0.id != currentPostId
         }
-        
+
         let wasPublishedBefore = (!currentPostId.isEmpty && posts.contains { $0.id == currentPostId }) || hasOtherPublishedVersion
         let willBePublishedAfter = !newIsArchive || hasOtherPublishedVersion
         let delta = (willBePublishedAfter ? 1 : 0) - (wasPublishedBefore ? 1 : 0)
-        
+
         guard delta != 0 else { return }
         postsCount += delta
-                
+
         let userId = try AuthenticationManager.shared.getAuthenticatedUser().uid
-        
+
         try await UserManager.shared.updatePostsCount(userId: userId, postsCount: postsCount)
     }
-    
+
     private func familyIdentifier(for currentPostId: String) -> String {
         if let currentPost = posts.first(where: { $0.id == currentPostId }) ??
             archivePosts.first(where: { $0.id == currentPostId }) {
             return currentPost.rootId ?? currentPost.id
         }
-        
+
         if isLocalizing && !rootId.isEmpty {
             return rootId
         }
-        
+
         return currentPostId
     }
 
@@ -78,9 +80,9 @@ struct TextCreateView: View {
             ZStack {
                 Color(uiColor: .systemBackground)
                     .ignoresSafeArea()
-                
+
                 ScrollView(showsIndicators: false) {
-                    
+
                     VStack {
                         if viewModel.isPreviewShowed {
                             Markdown(
@@ -98,7 +100,7 @@ struct TextCreateView: View {
                             .padding(.vertical, 16)
                             .frame(width: UIScreen.main.bounds.width - 32, alignment: .topLeading)
                             .padding(.horizontal)
-                            
+
                         } else {
                             MarkdownTextView(text: $viewModel.text, selectedRange: $viewModel.selectedRange)
                                 .padding(.horizontal, 16)
@@ -116,9 +118,9 @@ struct TextCreateView: View {
                                     viewModel.text = viewModel.text.replacingOccurrences(of: "contentImages", with: "cont")
                                 }
                         }
-                        
+
                     }
-                    
+
                 }
                 .background(Color(.systemBackground))
                 .onChange(of: isTEFocused) {
@@ -147,13 +149,13 @@ struct TextCreateView: View {
                         .displayMode(.sheet)
                 }
 
-                
+
                 if !viewModel.isPreviewShowed {
                     VStack {
                         Spacer()
-                        
+
                         HStack {
-                            
+
                             if #available(iOS 26.0, *) {
                                 Image(systemName: "photo.on.rectangle.angled")
                                     .font(.system(size: 22))
@@ -176,13 +178,13 @@ struct TextCreateView: View {
                                     }
                                     .popoverTip(AuthorMediaListTip())
                             }
-                            
+
                             ZStack {
                                 RoundedRectangle(cornerRadius: 20)
                                     .foregroundStyle(Color(uiColor: .secondarySystemBackground))
                                     .shadow(radius: 1)
                                     .frame(height: 60)
-                                
+
                                 ScrollView(.horizontal, showsIndicators: false) {
                                     HStack(spacing: 10) {
                                         PhotosPicker(selection: $viewModel.imageItem, matching: .any(of: [.images, .videos])) {
@@ -196,7 +198,7 @@ struct TextCreateView: View {
                                         }
                                         .disabled(viewModel.isImageUploading)
 //                                        .popoverTip(AuthorFileAttachTip())
-                                        
+
                                         Menu(NSLocalizedString("titleLabel", comment: "")) {
                                             ForEach(1..<7) { num in
                                                 Button {
@@ -213,23 +215,23 @@ struct TextCreateView: View {
                                         .background(Color(uiColor: .systemBackground))
                                         .clipShape(RoundedRectangle(cornerRadius: 10))
                                         .shadow(radius: 2)
-                                        
+
                                         ForEach(0..<viewModel.markdownButtons.count, id: \.self) { index in
                                             viewModel.configureMarkdownButton(
                                                 type: viewModel.markdownButtons[index]
                                             )
                                         }
-                                        
+
                                     }
                                     .padding(.vertical, 2)
                                     .padding(.leading, 1)
-                                    
+
                                 }
                                 .background(Color(uiColor: .secondarySystemBackground))
                                 .clipShape(RoundedRectangle(cornerRadius: 10))
                                 .padding(.horizontal, 10)
                             }
-                            
+
 //                            if #available(iOS 26.0, *) {
 //                                Image(systemName: "arrow.right")
 //                                    .font(.system(size: 22))
@@ -240,14 +242,14 @@ struct TextCreateView: View {
 //                                    .onTapGesture {
 //                                        guard !viewModel.isLoading else { return }
 //                                        guard !viewModel.isImageUploading else { return }
-//                                        
+//
 //                                        isTEFocused = false
 //                                        viewModel.isConfirmationViewPresented = true
 //                                    }
 //                            } else {
 //                                Button {
 //                                    guard !viewModel.isLoading else { return }
-//                                    
+//
 //                                    isTEFocused = false
 //                                    viewModel.isConfirmationViewPresented = true
 //                                } label: {
@@ -261,10 +263,10 @@ struct TextCreateView: View {
 //                                }
 //                                .disabled(viewModel.isImageUploading)
 //                            }
-                            
+
                             Button {
                                 guard !viewModel.isLoading else { return }
-                                
+
                                 isTEFocused = false
                                 viewModel.isConfirmationViewPresented = true
                             } label: {
@@ -280,13 +282,13 @@ struct TextCreateView: View {
                         }
                         .frame(width: UIScreen.main.bounds.width - 32)
                         .padding(.bottom, 20)
-                        
+
                     }
                     .onChange(of: viewModel.imageItem) {
                         Task {
                             do {
                                 let url = try await viewModel.insertMedia(with: UUID().uuidString + id)
-                                
+
                                 if url != "" {
                                     withAnimation {
                                         mediaURLs.append(URL(string: url)!)
@@ -301,7 +303,7 @@ struct TextCreateView: View {
                             }
                         }
                     }
-                    
+
                 }
             }
             .fullScreenCover(isPresented: $viewModel.isImageFullScreenPresented) {
@@ -330,28 +332,36 @@ struct TextCreateView: View {
                 isCreateViewPresented = false
                 let newIsArchive = (viewModel.addingMode == 2)
                 let items = media.compactMap { $0 }
- 
+                let shouldRefreshDateCreated = wasArchivedBeforeEditing && !newIsArchive
+
                 if viewModel.addingMode > 0 {
+                    let normalizedTitle = title.normalizedPublicationPlainText
+
                     if isEditing {
                         Task {
                             do {
                                 try await viewModel.updatePost(
                                     id: id,
-                                    title: title,
+                                    title: normalizedTitle,
                                     text: viewModel.text,
                                     isArchive: newIsArchive,
                                     mediaURLs: mediaURLs,
                                     uploadingLanguage: uploadingLanguage,
                                     items: items,
                                     oldMediaCount: oldMediaCount,
-                                    isPremiumPost: isPremiumPost
+                                    isPremiumPost: isPremiumPost,
+                                    shouldRefreshDateCreated: shouldRefreshDateCreated
                                 )
 
                                 try await applyPostsCountDelta(forNewPost: newIsArchive)
 
+                                if shouldSavePublicationLanguage {
+                                    StorageManager.shared.setLastPublicationLanguage(to: uploadingLanguage)
+                                }
+
                                 changedPostsManager.changedPostsIDs.append(id)
                                 hudService.showSuccessPopup(type: .post)
-                                
+
                                 NotificationCenter.default.post(name: .postsDidChange, object: nil)
                             } catch {
                                 hudService.showErrorPopup(with: error.localizedDescription)
@@ -361,7 +371,7 @@ struct TextCreateView: View {
                         Task {
                             do {
                                 let createdPostId = try await viewModel.addNewPost(
-                                    title: title,
+                                    title: normalizedTitle,
                                     text: viewModel.text,
                                     isArchive: newIsArchive,
                                     uploadingLanguage: uploadingLanguage,
@@ -378,9 +388,13 @@ struct TextCreateView: View {
                                     createdNewPostId: createdPostId
                                 )
 
+                                if shouldSavePublicationLanguage {
+                                    StorageManager.shared.setLastPublicationLanguage(to: uploadingLanguage)
+                                }
+
                                 StorageManager.shared.deleteText()
                                 hudService.showSuccessPopup(type: .post)
-                                
+
                                 NotificationCenter.default.post(name: .postsDidChange, object: nil)
                             } catch {
                                 hudService.showErrorPopup(with: error.localizedDescription)
@@ -417,17 +431,17 @@ struct TextCreateView: View {
                 withAnimation {
                     viewModel.navigationTitle = viewModel.getNavigationTitle(isEditing)
                 }
-                
+
                 let savedText = StorageManager.shared.getText()
                 viewModel.text = savedText == "" ? text : savedText
-                
+
                 isTEFocused = false
             }
             .onDisappear {
                 if viewModel.isPreviewShowed {
                     StorageManager.shared.save(text: viewModel.text)
                 }
-                
+
                 isTEFocused = false
             }
             .toolbar {
@@ -440,14 +454,14 @@ struct TextCreateView: View {
                     }
                     .disabled(viewModel.isImageUploading)
                 }
-                
+
                 ToolbarItem(placement: .principal) {
                     if viewModel.isImageUploading {
                         HStack(spacing: 5) {
                             Text(NSLocalizedString("uploadingLabel", comment: ""))
                                 .font(.system(size: 17))
                                 .fontWeight(.semibold)
-                            
+
                             LoadingIndicator(
                                 animation: .circleRunner,
                                 color: Color(.label),
@@ -462,7 +476,7 @@ struct TextCreateView: View {
                             .fontWeight(.semibold)
                     }
                 }
-                
+
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
                         withAnimation {

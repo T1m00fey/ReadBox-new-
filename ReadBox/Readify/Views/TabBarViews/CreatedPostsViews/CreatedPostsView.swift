@@ -86,6 +86,7 @@ struct CreatedPostsView: View {
                             text: viewModel.text,
                             isEditing: viewModel.isEditing,
                             mediaURLs: viewModel.mediaURLs,
+                            isArchived: viewModel.isArchivePresented,
                             isLocalizing: viewModel.isLocalizing,
                             localizationCount: viewModel.localizationCount,
                             isLocalizedVersion: viewModel.createIsLocalizedVersion,
@@ -341,6 +342,23 @@ struct CreatedPostsView: View {
 }
 
 private extension CreatedPostsView {
+    var registrationDateText: String? {
+        guard let date = viewModel.user?.dateCreated else { return nil }
+        return formattedRegistrationDate(date)
+    }
+
+    func formattedRegistrationDate(_ date: Date) -> String {
+        let language = Locale.preferredLanguages.first?.components(separatedBy: "-").first == "ru"
+        ? "ru_RU"
+        : "en_US"
+
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: language)
+        formatter.dateFormat = "d MMMM yyyy"
+
+        return formatter.string(from: date)
+    }
+
     @ViewBuilder
     var toolbarTitleView: some View {
         if !viewModel.isPublicationsLabelVisible {
@@ -503,6 +521,7 @@ private extension CreatedPostsView {
             title: post.title ?? NSLocalizedString("noFoundLabel", comment: ""),
             authorId: post.authorId ?? "",
             authorName: viewModel.user?.name ?? NSLocalizedString("noFoundLabel", comment: ""),
+            dateCreated: post.dateCreated,
             isCheckmark: viewModel.user?.isCheckmark ?? false,
             isArchive: post.isArchive ?? false,
             isShortPost: post.isShortPost ?? false,
@@ -619,7 +638,7 @@ private extension CreatedPostsView {
                             }
                     }
 
-                    VStack {
+                    VStack(spacing: 1) {
                         HStack(spacing: 0) {
                             if viewModel.isLoading {
                                 Text("HelloWorldHello")
@@ -703,6 +722,16 @@ private extension CreatedPostsView {
                     .fontDesign(.rounded)
                     .frame(width: UIScreen.main.bounds.width - 20, alignment: .leading)
                     .padding(.top, 15)
+            }
+
+            if !viewModel.isLoading, let registrationDateText {
+                Text("\(NSLocalizedString("registrationDateLabel", comment: "")): \(registrationDateText)")
+                    .font(.system(size: 14))
+                    .foregroundStyle(Color.gray)
+                    .fontDesign(.rounded)
+                    .lineLimit(1)
+                    .frame(width: UIScreen.main.bounds.width - 20, alignment: .leading)
+                    .padding(.top, viewModel.description.isEmpty ? 15 : 10)
             }
 
             VisibilityTracker(id: "publicationsLabel")

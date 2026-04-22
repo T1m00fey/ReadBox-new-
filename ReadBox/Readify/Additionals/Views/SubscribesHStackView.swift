@@ -89,6 +89,7 @@ struct SubscribeRow: View {
                 
                 Text(channelInfo?.name ?? NSLocalizedString("notFoundLabel", comment: ""))
                     .font(.system(size: 13))
+                    .fontWeight(.semibold)
                     .multilineTextAlignment(.center)
                     .onAppear {
                         if let channelInfo {

@@ -27,4 +27,8 @@ extension String {
             }
         }.joined(separator: "\n")
     }
+
+    var normalizedPublicationPlainText: String {
+        trimmingCharacters(in: .whitespacesAndNewlines)
+    }
 }

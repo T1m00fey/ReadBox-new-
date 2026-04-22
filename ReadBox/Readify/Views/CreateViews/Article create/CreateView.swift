@@ -20,6 +20,7 @@ struct CreateView: View {
     let text: String
     let isEditing: Bool
     let mediaURLs: [URL]
+    let isArchived: Bool
     let isLocalizing: Bool
     let localizationCount: Int
     let isLocalizedVersion: Bool
@@ -86,7 +87,9 @@ struct CreateView: View {
                 handleImageItemChange()
             }
             .onAppear {
-                if isEditing {
+                if isLocalizing {
+                    viewModel.languageSelection = rootLang == "en" ? 1 : 0
+                } else if isEditing {
                     viewModel.languageSelection = rootLang == "en" ? 0 : 1
                     viewModel.isPremiumPostSetting = rootIsPremium == true ? 1 : 0
                 }
@@ -192,6 +195,14 @@ private extension CreateView {
 
     var isLanguageSettingHidden: Bool {
         isLocalizing || isLocalizedVersion || localizationCount > 0
+    }
+
+    var articleUploadingLanguage: String {
+        if isLocalizing {
+            return rootLang == "en" ? "ru" : "en"
+        }
+
+        return viewModel.languageSelection == 0 ? "en" : "ru"
     }
 
     var mediaStripSection: some View {
@@ -301,12 +312,14 @@ private extension CreateView {
             title: $viewModel.titleText,
             text: text,
             isEditing: isEditing,
-            uploadingLanguage: viewModel.languageSelection == 0 ? "en" : "ru",
+            wasArchivedBeforeEditing: isArchived,
+            uploadingLanguage: articleUploadingLanguage,
             oldMediaCount: viewModel.oldMediaCount,
             isLocalizing: isLocalizing,
             localizationCount: localizationCount,
             rootId: rootId,
             isPremiumPost: viewModel.isPremiumPostSetting == 0 ? false : true,
+            shouldSavePublicationLanguage: !isLocalizing && !isLocalizedVersion,
             media: $media,
             mediaURLs: $viewModel.mediaURLs,
             postsCount: $postsCount,
@@ -499,7 +512,7 @@ private extension CreateView {
 
     func openTextCreateStep(requiresIdleCoverLoading: Bool) {
         let isTitleEmpty = viewModel.titleText.isEmpty
-            || viewModel.titleText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            || viewModel.titleText.normalizedPublicationPlainText.isEmpty
             || viewModel.isFirstTapOnTitleTE
 
         let shouldShowError = isTitleEmpty
@@ -512,6 +525,7 @@ private extension CreateView {
                 viewModel.isErrorPopupPresented = true
             }
         } else {
+            viewModel.titleText = viewModel.titleText.normalizedPublicationPlainText
             viewModel.isTextCreateViewPresented = true
         }
     }

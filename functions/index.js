@@ -206,7 +206,10 @@ async function pushToSubscribers({
         body
       },
       data: {
-        articleId
+        type: "new_post",
+        route: "article",
+        articleId,
+        authorId: authorUid
       }
     };
 
@@ -401,8 +404,10 @@ export const notifyPostLiked = onDocumentUpdated(
           },
           data: {
             type: "post_liked",
+            route: "channel",
             articleId,
-            likerId
+            likerId,
+            channelId: likerId
           },
           apns: {
             payload: {
@@ -483,7 +488,9 @@ export const notifyUserSubscribed = onDocumentUpdated(
           },
           data: {
             type: "user_subscribed",
-            subscriberId
+            route: "channel",
+            subscriberId,
+            channelId: subscriberId
           },
           apns: {
             payload: {

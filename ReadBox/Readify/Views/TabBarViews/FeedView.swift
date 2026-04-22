@@ -115,6 +115,7 @@ struct FeedView: View {
                                     title: post.title ?? "",
                                     authorId: post.authorId ?? "",
                                     authorName: viewModel.authorsInfo[post.authorId ?? ""]?.name ?? "",
+                                    dateCreated: post.dateCreated,
                                     isCheckmark: viewModel.authorsInfo[post.authorId ?? ""]?.isCheckmark ?? false,
                                     isArchive: post.isArchive ?? true,
                                     isShortPost: post.isShortPost ?? false,

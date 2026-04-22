@@ -9,10 +9,13 @@ import SwiftUI
 
 struct CommentariesView: View {
     var body: some View {
-        ScrollView {
-            VStack {
-                Text("Комментарии")
-            }
+        VStack {
+            Text("Комментарии")
+                .frame(width: UIScreen.main.bounds.width - 20, alignment: .leading)
+                .font(.system(size: 20))
+                .fontWeight(.semibold)
+            
+            
         }
     }
 }

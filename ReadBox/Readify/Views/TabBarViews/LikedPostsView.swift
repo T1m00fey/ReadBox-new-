@@ -88,6 +88,7 @@ struct LikedPostsView: View {
                                     title: article.title ?? "",
                                     authorId: article.authorId ?? "",
                                     authorName: viewModel.authorsInfo[article.authorId ?? ""]?.name ?? "",
+                                    dateCreated: article.dateCreated,
                                     isCheckmark: viewModel.authorsInfo[article.authorId ?? ""]?.isCheckmark ?? false,
                                     isArchive: article.isArchive ?? false,
                                     isShortPost: article.isShortPost ?? false,

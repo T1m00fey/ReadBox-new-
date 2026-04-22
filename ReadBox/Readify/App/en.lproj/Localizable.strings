@@ -98,6 +98,7 @@
 "subscribeLabel" = "Subscribe +";
 "subscribersCountLabel" = "subscribers";
 "publicationsCountLabel" = "publications";
+"registrationDateLabel" = "Registration date";
 "youSubscribedLabel" = "Subscribed ✓";
 "publicationsLabel" = "Publications";
 "articlesLabel" = "Articles";

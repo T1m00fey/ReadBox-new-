@@ -22,7 +22,6 @@ struct MediaViews: View {
     @Binding var currentIndex: Int
     
     @State private var images: [MediaKind?] = []
-    @State private var aspects: [Int: CGFloat] = [:]
     @State private var redrawTick = 0
     @State private var isLoadingMedia: Bool = false
     
@@ -31,30 +30,12 @@ struct MediaViews: View {
     
     @EnvironmentObject var sessionManager: SessionManager
     @EnvironmentObject var changedPostsManager: ChangedPostsManager
-    
-    private let minAspect: CGFloat = 4.0/5.0
-    private let maxAspect: CGFloat = 1.91/1.0
-    
+
     private let maxImageSizeBytes: Int64 = 100 * 1024 * 1024      // до 4 МБ на фото
     private let maxPreviewSizeBytes: Int64 = 1 * 1024  * 1024      // до 512 КБ на превью видео
 
-    private func clampAspect(_ a: CGFloat) -> CGFloat {
-        min(max(a, minAspect), maxAspect)
-    }
-
-    private func itemHeight(for i: Int, width: CGFloat) -> CGFloat {
-        let a = clampAspect(aspects[i] ?? 1.0)
-        return width / a
-    }
-
-//    private func carouselHeight(for width: CGFloat) -> CGFloat {
-//        let a = clampAspect(aspects.values.max() ?? 1.0)
-//        return width / a
-//    }
-    
     private func carouselHeight(for width: CGFloat) -> CGFloat {
-        let a: CGFloat = 4.0 / 5.0
-        return width / a
+        min(width * 1.12, 450)
     }
     
     private func fetchImages(
@@ -106,10 +87,6 @@ struct MediaViews: View {
                 }
                 if images[i] == nil {
                     images[i] = MediaKind(image: cached)
-                    aspects[i] = max(
-                        0.1,
-                        cached.size.width / max(cached.size.height, 0.1)
-                    )
                 }
             }
 
@@ -133,10 +110,6 @@ struct MediaViews: View {
                     }
                     images[i] = MediaKind(image: ui)
                     StorageManager.shared.saveImage(id: cacheId, image: ui)
-                    aspects[i] = max(
-                        0.1,
-                        ui.size.width / max(ui.size.height, 0.1)
-                    )
                 }
                 gotMainMedia = true
             }
@@ -192,21 +165,6 @@ struct MediaViews: View {
                     Task.detached(priority: .utility) {
                         await VideoCacheManager.shared.warmCache(remoteURL: remoteURL, id: cacheVideoId)
                     }
-                }
-
-                Task.detached(priority: .utility) {
-                    let asset = AVURLAsset(url: remoteURL)
-                    do {
-                        let tracks = try await asset.loadTracks(withMediaType: .video)
-                        if let track = tracks.first {
-                            async let ns = track.load(.naturalSize)
-                            async let tr = track.load(.preferredTransform)
-                            let size = try await ns.applying(tr)
-                            let w = abs(size.width), h = abs(size.height)
-                            guard w > 0, h > 0 else { return }
-                            await MainActor.run { aspects[i] = w / h }
-                        }
-                    } catch { }
                 }
 
             } catch {
@@ -346,61 +304,8 @@ struct MediaViews: View {
                     } else {
                         TabView(selection: $currentIndex) {
                             ForEach(0..<mediaCount, id: \.self) { i in
-                                ZStack {
-                                    if images.count > i {
-                                        if let image = images[i]?.image {
-                                            ZStack(alignment: .top) {
-                                                Image(uiImage: image)
-                                                    .resizable()
-                                                    .scaledToFill()
-                                                    .frame(width: feedW, height: ph)
-                                                    .clipped()
-                                                    .clipShape(RoundedRectangle(cornerRadius: 23))
-                                                    .contentShape(Rectangle())
-                                                    .onTapGesture {
-                                                        withAnimation {
-                                                            zoomableImage = image
-                                                            isZoomableViewPresented = true
-                                                        }
-                                                    }
-                                                
-                                                makeIndicatorView()
-                                            }
-                                            
-                                        } else if let videoURL = images[i]?.videoURL {
-                                            ZStack(alignment: .top) {
-                                                TappableVideoPreview(
-                                                    url: videoURL,
-                                                    cornerRadius: 23,
-                                                    width: feedW,
-                                                    height: ph,
-                                                    placeholder: videoPreviews[i],
-                                                    fillMode: true
-                                                )
-                                                .id(videoURL.absoluteString)
-                                                .frame(width: feedW, height: ph)
-                                                
-                                                makeIndicatorView(isVideo: true)
-                                                
-                                            }
-                                            
-                                        } else {
-                                            makePlaceholderView(
-                                                feedW: feedW,
-                                                height: ph,
-                                                preview: videoPreviews[i]
-                                            )
-                                        }
-                                    } else {
-                                        makePlaceholderView(
-                                            feedW: feedW,
-                                            height: ph,
-                                            preview: videoPreviews[i]
-                                        )
-                                    }
-                                }
-                                .frame(width: feedW, height: ph)
-                                .tag(i)
+                                carouselItem(at: i, feedW: feedW, carouselHeight: ph)
+                                    .tag(i)
                             }
                         }
                         .id(redrawTick)
@@ -496,6 +401,61 @@ struct MediaViews: View {
 }
 
 private extension MediaViews {
+    @ViewBuilder
+    func carouselItem(at index: Int, feedW: CGFloat, carouselHeight: CGFloat) -> some View {
+        ZStack(alignment: .top) {
+            if images.count > index {
+                if let image = images[index]?.image {
+                    ZStack(alignment: .top) {
+                        Image(uiImage: image)
+                            .resizable()
+                            .scaledToFill()
+                            .frame(width: feedW, height: carouselHeight)
+                            .clipped()
+                            .clipShape(RoundedRectangle(cornerRadius: 23))
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                withAnimation {
+                                    zoomableImage = image
+                                    isZoomableViewPresented = true
+                                }
+                            }
+
+                        makeIndicatorView()
+                    }
+                } else if let videoURL = images[index]?.videoURL {
+                    ZStack(alignment: .top) {
+                        TappableVideoPreview(
+                            url: videoURL,
+                            cornerRadius: 23,
+                            width: feedW,
+                            height: carouselHeight,
+                            placeholder: videoPreviews[index],
+                            fillMode: true
+                        )
+                        .id(videoURL.absoluteString)
+                        .frame(width: feedW, height: carouselHeight)
+
+                        makeIndicatorView(isVideo: true)
+                    }
+                } else {
+                    makePlaceholderView(
+                        feedW: feedW,
+                        height: carouselHeight,
+                        preview: videoPreviews[index]
+                    )
+                }
+            } else {
+                makePlaceholderView(
+                    feedW: feedW,
+                    height: carouselHeight,
+                    preview: videoPreviews[index]
+                )
+            }
+        }
+        .frame(width: feedW, height: carouselHeight)
+    }
+
     @ViewBuilder
     func makePlaceholderView(feedW: CGFloat, height: CGFloat, preview: UIImage?) -> some View {
         if let preview {

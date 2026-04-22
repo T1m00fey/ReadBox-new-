@@ -136,7 +136,7 @@ struct ReadView: View {
                                 Image(uiImage: avatar)
                                     .resizable()
                                     .scaledToFill()
-                                    .frame(width: 40, height: 40)
+                                    .frame(width: 45, height: 45)
                                     .clipShape(Circle())
                                     .overlay {
                                         Circle()
@@ -162,6 +162,7 @@ struct ReadView: View {
                                         .multilineTextAlignment(.leading)
                                         .lineLimit(2)
                                         .underline()
+                                    
                                 }
 
                                 if isCheckmark {
@@ -194,15 +195,16 @@ struct ReadView: View {
 
                     if currentMediaPosition == 0 && currentMediaCount > 0 {
                         mediaViews
-                    } else if currentMediaPosition == 1 && !currentTitle.isEmpty {
-                        titleView
-//                            .padding(.top, 10)
-//                            .padding(.bottom, -20)
                     }
+//                    else if currentMediaPosition == 1 && !currentTitle.isEmpty {
+//                        titleView
+////                            .padding(.top, 10)
+////                            .padding(.bottom, -20)
+//                    }
 
                     HStack {
-                        Text(viewModel.getDateCreated(regDate: currentDateCreated))
-                            .font(.system(size: 21))
+                        Text(currentDateCreatedText)
+                            .font(.system(size: 19))
                             .fontWeight(.light)
                             .fontDesign(.rounded)
                             .foregroundStyle(Color.gray)
@@ -379,8 +381,13 @@ struct ReadView: View {
                     }
                     .frame(width: UIScreen.main.bounds.width - 32)
                     .padding(.horizontal)
-                    .padding(.bottom, 20)
-                    .padding(.top, mediaCount == 0 ? -10 : 0)
+                    .padding(.top, mediaCount == 0 || currentMediaPosition == 1 ? -15 : 0)
+                    .padding(.bottom, 10)
+                    
+                    if currentMediaPosition == 1 && !currentTitle.isEmpty {
+                        titleView
+                            .padding(.bottom, 25)
+                    }
 
                     if !currentText.isEmpty {
                         Markdown(
@@ -403,7 +410,7 @@ struct ReadView: View {
                     } else if currentMediaPosition == 0 && currentTitle != "" {
                         titleView
                             .padding(.bottom, 50)
-                            .padding(.top, -15)
+//                            .padding(.top, -15)
                     } else if currentMediaPosition == 1 {
                         mediaViews
                             .padding(.top, -15)
@@ -600,7 +607,7 @@ private extension ReadView {
 
     var titleView: some View {
         Text(currentTitleAttributedString)
-            .font(.system(size: 18))
+            .font(.system(size: 17))
 //            .fontDesign(.rounded)
             .frame(width: UIScreen.main.bounds.width - 32, alignment: .leading)
             .hiddenReadContentOnScreenshots(currentIsPremiumPost)
@@ -633,6 +640,10 @@ private extension ReadView {
         currentPostToRead?.dateCreated ?? dateCreated
     }
 
+    var currentDateCreatedText: String {
+        formattedReadDate(currentDateCreated)
+    }
+
     var currentLikesCount: Int {
         currentPrePost?.likesCount ?? likesCount
     }
@@ -659,6 +670,62 @@ private extension ReadView {
 
     var currentIsPremiumPost: Bool {
         currentPrePost?.isPremiumPost ?? isPremiumPost
+    }
+
+    func formattedReadDate(_ date: Date) -> String {
+        let now = Date()
+        let seconds = max(0, Int(now.timeIntervalSince(date)))
+        let minute = 60
+        let hour = 60 * minute
+        let day = 24 * hour
+
+        if seconds < hour {
+            return relativeReadDate(value: max(1, seconds / minute), ruForms: ("минуту", "минуты", "минут"), enUnit: "minute")
+        } else if seconds < day {
+            return relativeReadDate(value: seconds / hour, ruForms: ("час", "часа", "часов"), enUnit: "hour")
+        } else if seconds < 31 * day {
+            return relativeReadDate(value: seconds / day, ruForms: ("день", "дня", "дней"), enUnit: "day")
+        }
+
+        if Calendar.current.isDate(date, equalTo: now, toGranularity: .year) {
+            return formattedReadDate(date, format: isRussianLanguage ? "d MMMM" : "MMM d")
+        }
+
+        return formattedReadDate(date, format: "dd.MM.yy")
+    }
+
+    func relativeReadDate(value: Int, ruForms: (one: String, few: String, many: String), enUnit: String) -> String {
+        if isRussianLanguage {
+            return "\(value) \(russianPlural(value, one: ruForms.one, few: ruForms.few, many: ruForms.many)) назад"
+        }
+
+        return "\(value) \(enUnit)\(value == 1 ? "" : "s") ago"
+    }
+
+    func russianPlural(_ value: Int, one: String, few: String, many: String) -> String {
+        let mod100 = value % 100
+        let mod10 = value % 10
+
+        if (11...14).contains(mod100) {
+            return many
+        } else if mod10 == 1 {
+            return one
+        } else if (2...4).contains(mod10) {
+            return few
+        } else {
+            return many
+        }
+    }
+
+    func formattedReadDate(_ date: Date, format: String) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: isRussianLanguage ? "ru_RU" : "en_US")
+        formatter.dateFormat = format
+        return formatter.string(from: date)
+    }
+
+    var isRussianLanguage: Bool {
+        StorageManager.shared.getLanguage() == "ru"
     }
 
     var currentRootId: String {

@@ -239,11 +239,10 @@ struct ChannelView: View {
                         }
 
                         do {
-                            try await viewModel.getAuthorDescription(id: authorId)
-                            try await viewModel.getSubscribersCount(authorId: authorId)
-                            try await viewModel.getPostsCount(authorId: authorId)
+                            try await viewModel.loadAuthorInfo(authorId: authorId)
                         } catch {
                             withAnimation {
+                                viewModel.isAuthorInfoLoading = false
                                 viewModel.errorText = error.localizedDescription
                                 viewModel.isErrorPopupPresented = true
                             }
@@ -304,11 +303,10 @@ struct ChannelView: View {
                         }
 
                         do {
-                            try await viewModel.getAuthorDescription(id: authorId)
-                            try await viewModel.getSubscribersCount(authorId: authorId)
-                            try await viewModel.getPostsCount(authorId: authorId)
+                            try await viewModel.loadAuthorInfo(authorId: authorId)
                         } catch {
                             withAnimation {
+                                viewModel.isAuthorInfoLoading = false
                                 viewModel.errorText = error.localizedDescription
                                 viewModel.isErrorPopupPresented = true
                             }
@@ -346,6 +344,23 @@ struct ChannelView: View {
 
 
 private extension ChannelView {
+    var registrationDateText: String? {
+        guard let date = viewModel.authorDateCreated else { return nil }
+        return formattedRegistrationDate(date)
+    }
+
+    func formattedRegistrationDate(_ date: Date) -> String {
+        let language = Locale.preferredLanguages.first?.components(separatedBy: "-").first == "ru"
+        ? "ru_RU"
+        : "en_US"
+
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: language)
+        formatter.dateFormat = "d MMMM yyyy"
+
+        return formatter.string(from: date)
+    }
+
     @ViewBuilder
     var publicationsSection: some View {
         if viewModel.isLoading {
@@ -395,6 +410,7 @@ private extension ChannelView {
             title: post.title ?? NSLocalizedString("notFoundLabel", comment: ""),
             authorId: post.authorId ?? "",
             authorName: authorName,
+            dateCreated: post.dateCreated,
             isCheckmark: isCheckmark,
             isArchive: false,
             isShortPost: post.isShortPost ?? false,
@@ -659,7 +675,7 @@ private extension ChannelView {
                             }
                     }
 
-                    VStack {
+                    VStack(spacing: 1) {
                         HStack(spacing: 0) {
                             Text(authorName)
                                 .font(.system(size: 24))
@@ -675,7 +691,7 @@ private extension ChannelView {
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
 
-                        if viewModel.isLoading {
+                        if viewModel.isAuthorInfoLoading {
                             HStack {
                                 Text("100000 \(NSLocalizedString("subscribersCountLabel", comment: ""))")
                                     .font(.system(size: 14))
@@ -766,12 +782,22 @@ private extension ChannelView {
                     .padding(.top, 15)
             }
 
-            if !viewModel.isLoading && viewModel.authorDescription != "" {
+            if !viewModel.isAuthorInfoLoading && viewModel.authorDescription != "" {
                 Text(channelDescriptionAttributedString)
                     .font(.system(size: 18))
                     .fontDesign(.rounded)
                     .frame(width: UIScreen.main.bounds.width - 20, alignment: .leading)
                     .padding(.top, 15)
+            }
+
+            if !viewModel.isAuthorInfoLoading, let registrationDateText {
+                Text("\(NSLocalizedString("registrationDateLabel", comment: "")): \(registrationDateText)")
+                    .font(.system(size: 14))
+                    .foregroundStyle(Color.gray)
+                    .fontDesign(.rounded)
+                    .lineLimit(1)
+                    .frame(width: UIScreen.main.bounds.width - 20, alignment: .leading)
+                    .padding(.top, viewModel.authorDescription.isEmpty ? 15 : 10)
             }
 
             channelPostsTabsView

@@ -22,11 +22,16 @@ struct WelcomeView: View {
                         .fontDesign(.rounded)
                         .frame(width: UIScreen.main.bounds.width - 40, alignment: .leading)
                     
-                    Text(NSLocalizedString("welcomeLabel", comment: ""))
-                        .font(.system(size: 28))
-                        .fontWeight(.light)
-                        .fontDesign(.rounded)
-                        .frame(width: UIScreen.main.bounds.width - 40, alignment: .leading)
+                    HStack {
+                        Text(NSLocalizedString("welcomeLabel", comment: ""))
+                            .font(.system(size: 26))
+                            .fontWeight(.light)
+                            .fontDesign(.rounded)
+                            .frame(width: UIScreen.main.bounds.width - 150, alignment: .leading)
+                            .padding(.leading, 20)
+                        
+                        Spacer()
+                    }
                 }
                 
                 Spacer()
@@ -36,7 +41,7 @@ struct WelcomeView: View {
                         SignInView(isWelcomeViewPresented: $isSignInViewPreseted)
                     } label: {
                         Text(NSLocalizedString("signInLabel", comment: ""))
-                            .font(.system(size: 24))
+                            .font(.system(size: 23))
                             .fontWeight(.light)
                             .fontDesign(.rounded)
                             .frame(width: UIScreen.main.bounds.width - 40)
@@ -54,7 +59,7 @@ struct WelcomeView: View {
                         SignUpView(isWelcomeViewPresented: $isSignInViewPreseted)
                     } label: {
                         Text(NSLocalizedString("signUpLabel", comment: ""))
-                            .font(.system(size: 24))
+                            .font(.system(size: 23))
                             .fontWeight(.light)
                             .fontDesign(.rounded)
                             .frame(width: UIScreen.main.bounds.width - 40)

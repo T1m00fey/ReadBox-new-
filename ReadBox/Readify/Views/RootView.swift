@@ -42,24 +42,24 @@ struct RootView: View {
     @State private var isNotificationPopupPresented = false
     @State private var isConfirmationPopupPresented = false
     @State private var isPremiumViewPresented = false
-    
+
     @State private var selectedTab = TabType.feed
     @State private var bottomPaddingForHUD: CGFloat = 60
-    
+
     @State private var isVersionPopupPresented = false
     @State private var relevantVersion: AppVersion? = nil
     @State private var isUpdatePopupDidPresented = false
     @State private var isUpdateBlur = false
-    
+
     @StateObject var hudService = HUDService()
     @StateObject var sessionManager = SessionManager()
     @StateObject var changedPostsManager = ChangedPostsManager()
     @StateObject var sub = SubscriptionManager()
-    
+
     @Environment(\.dismiss) var dismiss
-    
+
     private var screenWidth = UIScreen.main.bounds.width
-    
+
     var body: some View {
 //        NavigationStack {
             ZStack(alignment: .bottom) {
@@ -75,7 +75,7 @@ struct RootView: View {
                         .tabItem {
                             Label("", systemImage: "house.fill")
                         }
-                        
+
                         LikedPostsView(
                             isWelcomeViewPresented: $isWelcomeViewPresented,
                             isPremiumViewPresented: $isPremiumViewPresented
@@ -84,13 +84,13 @@ struct RootView: View {
                         .tabItem {
                             Label("", systemImage: "hand.thumbsup.fill")
                         }
-                        
+
                         SubscribesView(isPremiumViewPresented: $isPremiumViewPresented)
                             .tag(TabType.subscribes)
                             .tabItem {
                                 Label("", systemImage: "person.crop.rectangle.stack")
                             }
-                        
+
                         CreatedPostsView(
                             isWelcomeViewPresented: $isWelcomeViewPresented,
                             isConfirmationPopupPresented: $isConfirmationPopupPresented
@@ -99,7 +99,7 @@ struct RootView: View {
                         .tabItem {
                             Label("", systemImage: "person.fill")
                         }
-                        
+
                         //                    ProfileView(
                         //                        isWelcomeViewPresented: $isWelcomeViewPresented
                         //                    )
@@ -157,39 +157,39 @@ struct RootView: View {
                     Task {
                         let authUser = try? AuthenticationManager.shared.getAuthenticatedUser()
                         let user = try? await UserManager.shared.getUser(userId: authUser?.uid ?? "")
-                        
+
                         try? await UserManager.shared.set(
                             fcmToken: StorageManager.shared.getFcmToken(),
                             to: user?.userId ?? ""
                         )
-                        
+
                         if let appVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String {
                             try? await UserManager.shared.set(
                                 appVersion: appVersion,
                                 to: user?.userId ?? ""
                             )
                         }
-                        
+
                         try? await UserManager.shared.setOriginalLanguage(to: user?.userId ?? "")
-                        
+
                         if StorageManager.shared.getLanguage() == "en" && !(user?.subscribes?.contains (
                             "qDWmcGOLPGVAzJth2I8G2cwcp9x1"
                         ) ?? true) {
-                            
+
                             try? await UserManager.shared.un_subscribeUser(
                                 on: "qDWmcGOLPGVAzJth2I8G2cwcp9x1",
                                 isNeedToSubscribe: true
                             )
-                            
+
                         } else if StorageManager.shared.getLanguage() == "ru" && !(user?.subscribes?.contains(
                             "se8Any2drmcQg1sFoLXYXo4ttYt2"
                         ) ?? true) {
-                            
+
                             try? await UserManager.shared.un_subscribeUser(
                                 on: "se8Any2drmcQg1sFoLXYXo4ttYt2",
                                 isNeedToSubscribe: true
                             )
-                            
+
                         }
                     }
                 }
@@ -200,14 +200,14 @@ struct RootView: View {
                     if let authUser = try? AuthenticationManager.shared.getAuthenticatedUser() {
                         isWelcomeViewPresented = false
                         user = try? await UserManager.shared.getUser(userId: authUser.uid)
-                        
+
                         try? await UserManager.shared.set(
                             fcmToken: StorageManager.shared.getFcmToken(),
                             to: user?.userId ?? ""
                         )
-                        
+
                         try? await UserManager.shared.setOriginalLanguage(to: user?.userId ?? "")
-                        
+
                         if let appVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String {
                             try? await UserManager.shared.set(
                                 appVersion: appVersion,
@@ -218,70 +218,33 @@ struct RootView: View {
                         isWelcomeViewPresented = true
                     }
                 }
-                
+
                 checkAppVersion()
+                handlePendingNotificationArticleIfNeeded()
+                handlePendingNotificationChannelIfNeeded()
             }
             .onOpenURL { url in
                 isLoadingPopupPresented = true
-                
+
                 isReadViewPresented = false
                 isChannelViewPresented = false
                 isPremiumViewPresented = false
-                
+
                 let type = url.absoluteString.components(separatedBy: "/")[3]
                 var index = ""
-                
+
 #if DEBUG
                 print("url: \(url)")
                 print("type: \(type)")
 #endif
-                
+
                 if type == "posts" {
                     if let components = URLComponents(url: url, resolvingAgainstBaseURL: false) {
                         if let indexParam = components.queryItems?.first(where: { $0.name == "index" })?.value {
                             index = indexParam
-                            
+
                             Task {
-                                do {
-                                    prePost = try await ArticlesManager.shared.getPrePost(id: index)
-                                    authorName = try await UserManager.shared.getAuthorName(id: prePost?.authorId ?? "")
-                                    isCheckmark = try await UserManager.shared.getIsCheckmarkStatus(id: prePost?.authorId ?? "")
-                                    lastVersionOfAvatar = try? await UserManager.shared.getAvatarVersion(id: prePost?.authorId ?? "")
-                                    authorId = prePost?.authorId ?? ""
-                                    
-                                    let authUser = try AuthenticationManager.shared.getAuthenticatedUser()
-                                    user = try? await UserManager.shared.getUser(userId: authUser.uid)
-                                    
-                                    if let user {
-                                        likedPosts = user.likedPosts ?? []
-                                        
-                                        if let isPremiumPost = prePost?.isPremiumPost,
-                                           isPremiumPost,
-                                           !sub.hasPremium,
-                                           user.userId != prePost?.authorId {
-                                            isLoadingPopupPresented = false
-                                            isPremiumViewPresented = true
-                                        } else {
-                                            postToRead = try await ArticlesManager.shared.getPostToRead(id: index)
-                                            isLoadingPopupPresented = false
-
-                                            if prePost != nil && postToRead != nil && authorName != nil && authorId != "" {
-                                                try? await countLinkedArticleViewIfNeeded(prePost, viewer: user)
-                                                isReadViewPresented = true
-                                            }
-                                        }
-                                    } else {
-                                        postToRead = try await ArticlesManager.shared.getPostToRead(id: index)
-                                        isLoadingPopupPresented = false
-
-                                        if prePost != nil && postToRead != nil && authorName != nil && authorId != "" {
-                                            try? await countLinkedArticleViewIfNeeded(prePost, viewer: nil)
-                                            isReadViewPresented = true
-                                        }
-                                    }
-                                } catch {
-                                    print("URL ERROR: \(error.localizedDescription)")
-                                }
+                                await openArticleFromExternalRoute(id: index, shouldCountView: true)
                             }
                         } else {
                             print("Index parameter not found.")
@@ -291,16 +254,16 @@ struct RootView: View {
                     if let components = URLComponents(url: url, resolvingAgainstBaseURL: false) {
                         if let indexParam = components.queryItems?.first(where: { $0.name == "index" })?.value {
                             authorId = indexParam
-                            
+
                             Task {
                                 do {
                                     authorName = try? await UserManager.shared.getAuthorName(id: authorId)
                                     isCheckmark = try? await UserManager.shared.getIsCheckmarkStatus(id: authorId)
                                     lastVersionOfAvatar = try? await UserManager.shared.getAvatarVersion(id: authorId)
-                                    
+
                                     let authUser = try AuthenticationManager.shared.getAuthenticatedUser()
                                     user = try? await UserManager.shared.getUser(userId: authUser.uid)
-                                    
+
                                     if user != nil && authorName != nil {
                                         isLoadingPopupPresented = false
                                         isChannelViewPresented = true
@@ -309,13 +272,17 @@ struct RootView: View {
                                     print("URL ERROR: \(error.localizedDescription)")
                                 }
                             }
-                            
+
                         } else {
                             print("Index parameter not found.")
                         }
                     }
                 }
-                
+
+            }
+            .onReceive(NotificationCenter.default.publisher(for: Notification.Name("didReceiveRemoteNotification"))) { notification in
+                guard let userInfo = notification.userInfo else { return }
+                handleRemoteNotification(userInfo)
             }
             .onChange(of: isNotificationPopupPresented) {
                 if !isNotificationPopupPresented {
@@ -414,6 +381,171 @@ struct RootView: View {
 
 
 private extension RootView {
+    func handleRemoteNotification(_ userInfo: [AnyHashable: Any]) {
+        if let channelId = channelIdToOpen(from: userInfo) {
+            StorageManager.shared.deletePendingNotificationChannelId()
+
+            Task {
+                await openChannelFromExternalRoute(id: channelId)
+            }
+            return
+        }
+
+        guard let type = userInfo["type"] as? String,
+              type == "new_post",
+              let articleId = userInfo["articleId"] as? String,
+              !articleId.isEmpty else {
+            return
+        }
+
+        StorageManager.shared.deletePendingNotificationArticleId()
+
+        Task {
+            await openArticleFromExternalRoute(id: articleId, shouldCountView: true)
+        }
+    }
+
+    func channelIdToOpen(from userInfo: [AnyHashable: Any]) -> String? {
+        guard let route = userInfo["route"] as? String,
+              route == "channel",
+              let channelId = userInfo["channelId"] as? String,
+              !channelId.isEmpty else {
+            return nil
+        }
+
+        return channelId
+    }
+
+    func handlePendingNotificationArticleIfNeeded() {
+        guard let articleId = StorageManager.shared.getPendingNotificationArticleId(),
+              !articleId.isEmpty else {
+            return
+        }
+
+        StorageManager.shared.deletePendingNotificationArticleId()
+
+        Task {
+            await openArticleFromExternalRoute(id: articleId, shouldCountView: true)
+        }
+    }
+
+    func handlePendingNotificationChannelIfNeeded() {
+        guard let channelId = StorageManager.shared.getPendingNotificationChannelId(),
+              !channelId.isEmpty else {
+            return
+        }
+
+        StorageManager.shared.deletePendingNotificationChannelId()
+
+        Task {
+            await openChannelFromExternalRoute(id: channelId)
+        }
+    }
+
+    func openChannelFromExternalRoute(id channelId: String) async {
+        await MainActor.run {
+            isLoadingPopupPresented = true
+            isReadViewPresented = false
+            isChannelViewPresented = false
+            isPremiumViewPresented = false
+        }
+
+        do {
+            guard let authUser = try? AuthenticationManager.shared.getAuthenticatedUser() else {
+                await MainActor.run {
+                    isLoadingPopupPresented = false
+                }
+                return
+            }
+
+            let loadedAuthorName = try? await UserManager.shared.getAuthorName(id: channelId)
+            let loadedIsCheckmark = try? await UserManager.shared.getIsCheckmarkStatus(id: channelId)
+            let loadedLastVersionOfAvatar = try? await UserManager.shared.getAvatarVersion(id: channelId)
+            let loadedUser = try? await UserManager.shared.getUser(userId: authUser.uid)
+
+            await MainActor.run {
+                authorId = channelId
+                authorName = loadedAuthorName
+                isCheckmark = loadedIsCheckmark
+                lastVersionOfAvatar = loadedLastVersionOfAvatar
+                user = loadedUser
+                isLoadingPopupPresented = false
+
+                if authorName != nil {
+                    isChannelViewPresented = true
+                }
+            }
+        }
+    }
+
+    func openArticleFromExternalRoute(id articleId: String, shouldCountView: Bool) async {
+        await MainActor.run {
+            isLoadingPopupPresented = true
+            isReadViewPresented = false
+            isChannelViewPresented = false
+            isPremiumViewPresented = false
+        }
+
+        do {
+            let loadedPrePost = try await ArticlesManager.shared.getPrePost(id: articleId)
+            let loadedAuthorName = try await UserManager.shared.getAuthorName(id: loadedPrePost.authorId ?? "")
+            let loadedIsCheckmark = try await UserManager.shared.getIsCheckmarkStatus(id: loadedPrePost.authorId ?? "")
+            let loadedLastVersionOfAvatar = try? await UserManager.shared.getAvatarVersion(id: loadedPrePost.authorId ?? "")
+            let loadedAuthorId = loadedPrePost.authorId ?? ""
+
+            guard let authUser = try? AuthenticationManager.shared.getAuthenticatedUser() else {
+                await MainActor.run {
+                    isLoadingPopupPresented = false
+                }
+                return
+            }
+
+            let loadedUser = try? await UserManager.shared.getUser(userId: authUser.uid)
+
+            await MainActor.run {
+                prePost = loadedPrePost
+                authorName = loadedAuthorName
+                isCheckmark = loadedIsCheckmark
+                lastVersionOfAvatar = loadedLastVersionOfAvatar
+                authorId = loadedAuthorId
+                user = loadedUser
+                likedPosts = loadedUser?.likedPosts ?? []
+            }
+
+            if let loadedUser,
+               loadedPrePost.isPremiumPost ?? false,
+               !sub.hasPremium,
+               loadedUser.userId != loadedPrePost.authorId {
+                await MainActor.run {
+                    isLoadingPopupPresented = false
+                    isPremiumViewPresented = true
+                }
+                return
+            }
+
+            let loadedPostToRead = try await ArticlesManager.shared.getPostToRead(id: articleId)
+
+            if shouldCountView {
+                try? await countLinkedArticleViewIfNeeded(loadedPrePost, viewer: loadedUser)
+            }
+
+            await MainActor.run {
+                postToRead = loadedPostToRead
+                isLoadingPopupPresented = false
+
+                if authorName != nil && authorId != "" {
+                    isReadViewPresented = true
+                }
+            }
+        } catch {
+            await MainActor.run {
+                isLoadingPopupPresented = false
+            }
+
+            print("OPEN ARTICLE ERROR: \(error.localizedDescription)")
+        }
+    }
+
     func countLinkedArticleViewIfNeeded(_ post: PrePost?, viewer: DBUser?) async throws {
         guard let post else { return }
         guard post.authorId != viewer?.userId else { return }
@@ -424,22 +556,22 @@ private extension RootView {
     func checkAppVersion() {
         Task {
             let version = try? await VersionManager.shared.getRelevantVersion()
-            
+
             await MainActor.run {
                 self.relevantVersion = version
-                
+
                 guard let version = version,
                       let currentVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String
                 else {
                     self.isUpdateBlur = false
                     return
                 }
-                
+
                 if version.appVersion != currentVersion && !self.isUpdatePopupDidPresented {
                     self.isUpdatePopupDidPresented = true
                     self.isNotificationPopupPresented = false
                     self.isLoadingPopupPresented = false
-                    
+
                     let isCritical = version.isCritical ?? false
                     withAnimation {
                         self.isUpdateBlur = isCritical

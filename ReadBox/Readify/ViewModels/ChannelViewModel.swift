@@ -40,8 +40,10 @@ final class ChannelViewModel: ObservableObject {
     @Published var isReadViewPresented = false
     @Published var subscribersCount = 0
     @Published var authorDescription = ""
+    @Published var isAuthorInfoLoading = true
     @Published var isSubscribed: Bool? = nil
     @Published var postsCount = 0
+    @Published var authorDateCreated: Date? = nil
     @Published var views: [String] = []
     @Published var isLoadingPopupPresented = false
     @Published var isLoadingShowing = true
@@ -128,6 +130,22 @@ final class ChannelViewModel: ObservableObject {
     
     func getPostsCount(authorId: String) async throws {
         postsCount = try await UserManager.shared.getPostsCount(authorId: authorId)
+    }
+
+    func getAuthorDateCreated(authorId: String) async throws {
+        authorDateCreated = try await UserManager.shared.getUser(userId: authorId)?.dateCreated
+    }
+
+    func loadAuthorInfo(authorId: String) async throws {
+        isAuthorInfoLoading = true
+
+        let author = try await UserManager.shared.getUser(userId: authorId)
+
+        authorDescription = author?.authorDescription ?? ""
+        subscribersCount = author?.subscribersCount ?? 0
+        postsCount = author?.postsCount ?? 0
+        authorDateCreated = author?.dateCreated
+        isAuthorInfoLoading = false
     }
     
     func getAuthorDescription(id: String) async throws {

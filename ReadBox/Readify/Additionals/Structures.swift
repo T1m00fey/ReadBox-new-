@@ -190,6 +190,7 @@ struct PrePost: Identifiable, Codable, Equatable, Hashable {
     let title: String?
     let authorId: String?
     let originalLanguage: String?
+    let dateCreated: Date?
     let viewsCount: Int?
     let likesCount: Int?
     var isArchive: Bool?
@@ -220,6 +221,7 @@ struct PrePost: Identifiable, Codable, Equatable, Hashable {
         self.title = title
         self.authorId = authorId
         self.originalLanguage = data?["original_language"] as? String
+        self.dateCreated = (data?["date_created"] as? Timestamp)?.dateValue() ?? data?["date_created"] as? Date
         self.viewsCount = viewsCount
         self.likesCount = likesCount
         self.isArchive = isArchive
@@ -238,6 +240,7 @@ struct PrePost: Identifiable, Codable, Equatable, Hashable {
         title: String?,
         authorId: String?,
         originalLanguage: String? = nil,
+        dateCreated: Date? = nil,
         viewsCount: Int?,
         likesCount: Int?,
         isArchive: Bool? = nil,
@@ -254,6 +257,7 @@ struct PrePost: Identifiable, Codable, Equatable, Hashable {
         self.title = title
         self.authorId = authorId
         self.originalLanguage = originalLanguage
+        self.dateCreated = dateCreated
         self.viewsCount = viewsCount
         self.likesCount = likesCount
         self.isArchive = isArchive
@@ -273,6 +277,7 @@ struct PrePost: Identifiable, Codable, Equatable, Hashable {
         case likesCount = "likes_count"
         case authorId = "author_id"
         case originalLanguage = "original_language"
+        case dateCreated = "date_created"
         case viewsCount = "views_count"
         case isArchive = "is_archive"
         case isShortPost = "is_short_post"

@@ -16,6 +16,7 @@ struct ArticleView: View {
     let title: String
     let authorId: String
     let authorName: String
+    let dateCreated: Date?
     let isCheckmark: Bool
     let isArchive: Bool
     let isShortPost: Bool
@@ -58,6 +59,7 @@ struct ArticleView: View {
         title: String,
         authorId: String,
         authorName: String,
+        dateCreated: Date? = nil,
         isCheckmark: Bool,
         isArchive: Bool,
         isShortPost: Bool,
@@ -83,6 +85,7 @@ struct ArticleView: View {
         self.title = title
         self.authorId = authorId
         self.authorName = authorName
+        self.dateCreated = dateCreated
         self.isCheckmark = isCheckmark
         self.isArchive = isArchive
         self.isShortPost = isShortPost
@@ -168,22 +171,35 @@ struct ArticleView: View {
                 }
 
                 HStack(spacing: 5) {
-                    HStack(spacing: 0) {
-                        Text(authorName)
-                            .font(.system(size: 18))
-//                            .font(.custom("Mulish", size: 18))
-                            .lineLimit(1)
-                            .underline()
-                            .onTapGesture {
-                                selectedAuthorId = authorId
-                                isChannelViewPresented = true
-                            }
+                    VStack(spacing: 1) {
+                        HStack(spacing: 0) {
+                            Text(authorName)
+                                .font(.system(size: 16))
+                            //                            .font(.custom("Mulish", size: 18))
+                                .lineLimit(1)
+//                                .underline()
+//                                .bold()
+                                .fontWeight(.semibold)
+                                .onTapGesture {
+                                    selectedAuthorId = authorId
+                                    isChannelViewPresented = true
+                                }
 
-                        if isCheckmark {
-                            Image(systemName: "checkmark.seal.fill")
-                                .foregroundStyle(Color.blue)
-                                .font(.system(size: 14))
-                                .padding(.top, 1)
+                            if isCheckmark {
+                                Image(systemName: "checkmark.seal.fill")
+                                    .foregroundStyle(Color.blue)
+                                    .font(.system(size: 14))
+                                    .padding(.top, 1)
+                            }
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+
+                        if let articleDateText {
+                            Text("\(articleDateText)")
+                                .font(.system(size: 11))
+                                .foregroundStyle(Color.gray)
+                                .lineLimit(1)
+                                .frame(maxWidth: .infinity, alignment: .leading)
                         }
                     }
 
@@ -219,9 +235,12 @@ struct ArticleView: View {
 //                            .background(Color(.systemGray4))
 //                            .clipShape(RoundedRectangle(cornerRadius: 5))
                         Text("R+")
-                            .font(.custom("PlaywriteIE-Regular", size: 15))
-                            .foregroundStyle(Color(.gray))
-                            .padding(.trailing, isCreatedView ? 0 : -5)
+                            .font(.custom("PlaywriteIE-Regular", size: 12))
+                            .foregroundStyle(Color(.systemGray6))
+                            .frame(height: 15)
+                            .padding(.all, 5)
+                            .background(Color(.systemGray4))
+                            .clipShape(RoundedRectangle(cornerRadius: 5))
 
                     }
 
@@ -286,11 +305,11 @@ struct ArticleView: View {
             }
             .frame(width: UIScreen.main.bounds.width - 42, height: 40, alignment: .leading)
             .padding(.top, 7)
-            .padding(.top, avatarImage != nil ? 5 : 0)
+            .padding(.top, /*avatarImage != nil ? 5 : 0*/ 5)
             .padding(.bottom, 2)
 //            .padding(.vertical, 3)
 
-            if mediaPosition == 1 && isShortPost && !isAccessToPremiumDenied() {
+            if mediaPosition == 1 && isShortPost && hasTitleText && !isAccessToPremiumDenied() {
                 titleSectionView
             }
 
@@ -306,8 +325,7 @@ struct ArticleView: View {
                         currentIndex: $currentIndex
                     )
                     .id("\(id)-\(effectiveMediaCount)")
-                    .padding(.bottom, mediaPosition == 1 && isShortPost && title != "" ? 10 : 0)
-                    .padding(.bottom, title == "" ? -25: 0)
+                    .padding(.bottom, mediaBottomPadding)
                     .blur(radius: isAccessToPremiumDenied() ? 10 : 0)
                     .clipShape(RoundedRectangle(cornerRadius: 20))
                     .disabled(isAccessToPremiumDenied())
@@ -349,7 +367,7 @@ struct ArticleView: View {
 //                        .padding(.bottom, !isExpanded && title.count >= maxTitleLen && isShortPost ? 10 : 0)
 //                        .padding(.bottom, !isExpanded && title.count >= maxTitleLen ? 17 : 0)
 
-                    if (mediaPosition == 0 || !isShortPost) && !(isShortPost && isAccessToPremiumDenied() && isPremiumPost) {
+                    if hasTitleText && (mediaPosition == 0 || !isShortPost) && !(isShortPost && isAccessToPremiumDenied() && isPremiumPost) {
                         titleSectionView
                             .padding(.top, mediaCount > 0 ? 5 : 0)
                             .padding(.bottom, titleSectionBottomPadding)
@@ -437,13 +455,13 @@ struct ArticleView: View {
                 .foregroundStyle(articleBackgroundColor)
 //                .shadow(radius: 1)
         )
-//        .overlay(
-//            RoundedRectangle(cornerRadius: 23)
-//                .stroke(
-//                    Color(.secondarySystemBackground),
-//                    lineWidth: 2
-//                )
-//        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 23)
+                .stroke(
+                    Color(.secondarySystemBackground),
+                    lineWidth: 2
+                )
+        )
         .onAppear {
             if let user, let likedPosts = user.likedPosts {
                 isLiked = likedPosts.contains(id)
@@ -518,6 +536,11 @@ private extension ArticleView {
         : Color(red: 0.975, green: 0.975, blue: 0.98)
     }
 
+    var articleDateText: String? {
+        guard let dateCreated else { return nil }
+        return formattedArticleDate(dateCreated)
+    }
+
     var titleSectionView: some View {
         ZStack(alignment: .bottomTrailing) {
             titleView
@@ -555,6 +578,22 @@ private extension ArticleView {
 
     var shouldShowExpandButton: Bool {
         !isExpanded && title.count >= maxTitleLen
+    }
+
+    var hasTitleText: Bool {
+        !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    var mediaBottomPadding: CGFloat {
+        if mediaPosition == 1 && isShortPost && hasTitleText {
+            return 10
+        }
+
+        if isShortPost && mediaCount == 1 && !hasTitleText {
+            return 10
+        }
+
+        return 0
     }
 
     var titleSectionBottomPadding: CGFloat {
@@ -595,5 +634,61 @@ private extension ArticleView {
                 .foregroundStyle(Color(.gray))
                 .padding(.bottom, -20)
         }
+    }
+
+    func formattedArticleDate(_ date: Date) -> String {
+        let now = Date()
+        let seconds = max(0, Int(now.timeIntervalSince(date)))
+        let minute = 60
+        let hour = 60 * minute
+        let day = 24 * hour
+
+        if seconds < hour {
+            return relativeArticleDate(value: max(1, seconds / minute), ruForms: ("минуту", "минуты", "минут"), enUnit: "minute")
+        } else if seconds < day {
+            return relativeArticleDate(value: seconds / hour, ruForms: ("час", "часа", "часов"), enUnit: "hour")
+        } else if seconds < 31 * day {
+            return relativeArticleDate(value: seconds / day, ruForms: ("день", "дня", "дней"), enUnit: "day")
+        }
+
+        if Calendar.current.isDate(date, equalTo: now, toGranularity: .year) {
+            return formattedDate(date, format: isRussianLanguage ? "d MMMM" : "MMM d")
+        }
+
+        return formattedDate(date, format: "dd.MM.yy")
+    }
+
+    func relativeArticleDate(value: Int, ruForms: (one: String, few: String, many: String), enUnit: String) -> String {
+        if isRussianLanguage {
+            return "\(value) \(russianPlural(value, one: ruForms.one, few: ruForms.few, many: ruForms.many)) назад"
+        }
+
+        return "\(value) \(enUnit)\(value == 1 ? "" : "s") ago"
+    }
+
+    func russianPlural(_ value: Int, one: String, few: String, many: String) -> String {
+        let mod100 = value % 100
+        let mod10 = value % 10
+
+        if (11...14).contains(mod100) {
+            return many
+        } else if mod10 == 1 {
+            return one
+        } else if (2...4).contains(mod10) {
+            return few
+        } else {
+            return many
+        }
+    }
+
+    func formattedDate(_ date: Date, format: String) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: isRussianLanguage ? "ru_RU" : "en_US")
+        formatter.dateFormat = format
+        return formatter.string(from: date)
+    }
+
+    var isRussianLanguage: Bool {
+        StorageManager.shared.getLanguage() == "ru"
     }
 }

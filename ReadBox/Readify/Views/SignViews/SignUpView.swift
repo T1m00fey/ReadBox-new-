@@ -18,6 +18,7 @@ struct SignUpView: View {
     @FocusState var isThirdTFFocused: Bool
     
     @Environment(\.dismiss) var dismiss
+    @Environment(\.colorScheme) private var colorScheme
     
     var body: some View {
         NavigationStack {
@@ -33,9 +34,16 @@ struct SignUpView: View {
                 VStack {
                     ZStack {
                         RoundedRectangle(cornerRadius: 30)
-                            .foregroundStyle(Color(uiColor: .secondarySystemBackground))
+                            .foregroundStyle(backgroundColor)
                             .frame(width: UIScreen.main.bounds.width - 60, height: 330)
-                            .shadow(radius: 1)
+//                            .shadow(radius: 1)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 30)
+                                    .stroke(
+                                        Color(.secondarySystemBackground),
+                                        lineWidth: 2
+                                    )
+                            )
                         
                         VStack {
                             Text(LocalizedStringKey("signUpLabel"))
@@ -203,6 +211,14 @@ struct SignUpView: View {
                     .frame(width: 0, height: 0)
             )
         }
+    }
+}
+
+private extension SignUpView {
+    var backgroundColor: Color {
+        colorScheme == .dark
+        ? Color(red: 0.08, green: 0.08, blue: 0.085)
+        : Color(red: 0.975, green: 0.975, blue: 0.98)
     }
 }
 
