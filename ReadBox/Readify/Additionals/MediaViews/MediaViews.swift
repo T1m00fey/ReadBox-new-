@@ -282,7 +282,7 @@ struct MediaViews: View {
                                 .scaledToFit()
                                 .clipped()
                                 .clipShape(RoundedRectangle(cornerRadius: 23))
-                                .frame(maxWidth: feedW, maxHeight: 400, alignment: .leading)
+                                .frame(maxWidth: feedW, maxHeight: 350, alignment: .leading)
                                 .onTapGesture {
                                     withAnimation {
                                         zoomableImage = image
@@ -297,7 +297,7 @@ struct MediaViews: View {
                                 width: feedW,
                                 placeholder: videoPreviews[0],
                                 fillMode: true,
-                                maxHeight: 450
+                                maxHeight: 400
                             )
                             .id(url.absoluteString)
                         }

@@ -102,9 +102,15 @@
 "youSubscribedLabel" = "Вы подписаны ✓";
 "publicationsLabel" = "Публикации";
 "articlesLabel" = "Статьи";
+"repliesLabel" = "Ответы";
 "archiveLabel" = "Архив";
 "localizedPostsLabel" = "Локализованные";
 "localizedArchivePostsLabel" = "Локализованные (архив)";
+"commentariesLabel" = "Комментарии";
+"commentPlaceholderLabel" = "Написать комментарий...";
+"justNowLabel" = "только что";
+"replyToLabel" = "В ответ";
+"noRepliesAddedLabel" = "Вы еще не оставили ответов";
 "privacyPolicy" = "Политика конфиденциальности";
 "termsOfUse" = "Правила использования";
 "updateLabel" = "Обновить 🔁";

@@ -231,8 +231,18 @@ struct ChannelView: View {
 
                     Task {
                         viewModel.isLoading = true
+                        let avatarVersion: Int
 
-                        let ava = await MediaManager.shared.getAvatar(authorId: authorId, lastVersion: lastVersionOfAvatar)
+                        do {
+                            avatarVersion = try await UserManager.shared.resolveAvatarVersion(
+                                id: authorId,
+                                fallback: lastVersionOfAvatar
+                            )
+                        } catch {
+                            avatarVersion = lastVersionOfAvatar
+                        }
+
+                        let ava = await MediaManager.shared.getAvatar(authorId: authorId, lastVersion: avatarVersion)
 
                         withAnimation {
                             viewModel.avatarImage = ava
@@ -296,7 +306,18 @@ struct ChannelView: View {
                     viewModel.updatePrimaryLanguage(user: user)
 
                     Task {
-                        let ava = await MediaManager.shared.getAvatar(authorId: authorId, lastVersion: lastVersionOfAvatar)
+                        let avatarVersion: Int
+
+                        do {
+                            avatarVersion = try await UserManager.shared.resolveAvatarVersion(
+                                id: authorId,
+                                fallback: lastVersionOfAvatar
+                            )
+                        } catch {
+                            avatarVersion = lastVersionOfAvatar
+                        }
+
+                        let ava = await MediaManager.shared.getAvatar(authorId: authorId, lastVersion: avatarVersion)
 
                         withAnimation {
                             viewModel.avatarImage = ava

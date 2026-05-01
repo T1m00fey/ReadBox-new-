@@ -22,6 +22,7 @@ enum PostOptions {
 enum CreatedPostsSection: Int, CaseIterable {
     case all
     case articles
+    case replies
     case archive
     case localizedPublished
     case localizedArchive
@@ -32,6 +33,8 @@ enum CreatedPostsSection: Int, CaseIterable {
             NSLocalizedString("publicationsLabel", comment: "")
         case .articles:
             NSLocalizedString("articlesLabel", comment: "")
+        case .replies:
+            NSLocalizedString("repliesLabel", comment: "")
         case .archive:
             NSLocalizedString("archiveLabel", comment: "")
         case .localizedPublished:
@@ -49,6 +52,8 @@ final class CreatedPostsViewModel: ObservableObject {
     @Published var articlesIndexes: [String] = []
     @Published var posts: [PrePost] = []
     @Published var archivePosts: [PrePost] = []
+    @Published var replies: [Comment] = []
+    @Published var replyAuthorsInfo: [String: PostAuthorInfo] = [:]
     @Published var isDescriptionPopupPresented = false
     @Published var isReadViewPresented = false
     @Published var isNewNameAlertPresented = false
@@ -56,6 +61,7 @@ final class CreatedPostsViewModel: ObservableObject {
     @Published var isCreateViewPresented = false
     @Published var isArchivePresented = false
     @Published var isArticlesPresented = false
+    @Published var isRepliesPresented = false
     @Published var isLocalizedPostsPresented = false
     @Published var postsNeedToLoad: [String] = []
     @Published var postOption: PostOptions = .nothing
@@ -84,6 +90,7 @@ final class CreatedPostsViewModel: ObservableObject {
     @Published var isPublicationsLabelVisible = true
     @Published var isDeletePostAlertPresented = false
     @Published var pendingDeletePostId = ""
+    @Published var isRepliesLoading = false
 
     @Published var avatarVersion = 0
     @Published var postsCount = 0
@@ -115,6 +122,12 @@ final class CreatedPostsViewModel: ObservableObject {
     var readIsPremiumPost = false
     var readIsLocalizedVersion = false
     var readRootId = ""
+    var readAuthorId = ""
+    var readAuthorName = NSLocalizedString("notFoundLabel", comment: "")
+    var readAuthorIsCheckmark = false
+    var readAuthorAvatarVersion = 0
+    var readReplyAuthorName: String? = nil
+    var readReplyRootPostId: String? = nil
     var isLocalizing = false
     var localizationCount = 0
     var rootLang = ""
@@ -139,6 +152,12 @@ final class CreatedPostsViewModel: ObservableObject {
         readIsPremiumPost = false
         readIsLocalizedVersion = false
         readRootId = ""
+        readAuthorId = ""
+        readAuthorName = NSLocalizedString("notFoundLabel", comment: "")
+        readAuthorIsCheckmark = false
+        readAuthorAvatarVersion = 0
+        readReplyAuthorName = nil
+        readReplyRootPostId = nil
         isLocalizing = false
         localizationCount = 0
         rootLang = ""
@@ -204,14 +223,18 @@ final class CreatedPostsViewModel: ObservableObject {
         withAnimation {
             posts = []
             archivePosts = []
+            replies = []
+            replyAuthorsInfo = [:]
             isArchivePresented = false
             isArticlesPresented = false
+            isRepliesPresented = false
             isLocalizedPostsPresented = false
             postsCount = 0
             isLoadingShowing = true
             isNewPublicationButtonPresented = false
             isAllLoaded = false
             isAllArchivedLoaded = false
+            isRepliesLoading = false
             lastPostSnapshot = nil
             lastArchivedPostSnapshot = nil
             isNeedToReload = false
@@ -496,6 +519,12 @@ final class CreatedPostsViewModel: ObservableObject {
         readIsPremiumPost = post.isPremiumPost ?? false
         readIsLocalizedVersion = post.isLocalizedVersion ?? false
         readRootId = post.rootId ?? ""
+        readAuthorId = user?.userId ?? ""
+        readAuthorName = user?.name ?? NSLocalizedString("notFoundLabel", comment: "")
+        readAuthorIsCheckmark = user?.isCheckmark ?? false
+        readAuthorAvatarVersion = user?.avatarVersion ?? 0
+        readReplyAuthorName = nil
+        readReplyRootPostId = nil
 
         if post.isArchive ?? true {
             image = UIImage()
@@ -526,6 +555,70 @@ final class CreatedPostsViewModel: ObservableObject {
         }
     }
 
+    func openReplyRootPost(_ comment: Comment) {
+        guard let rootPostId = comment.rootPostId, !rootPostId.isEmpty else { return }
+
+        Task {
+            do {
+                isLoadingPopupPresented = true
+
+                let prePost = try await getPrePost(id: rootPostId)
+                let post = try await ArticlesManager.shared.getPostToRead(id: rootPostId)
+                let authorInfo = try await UserManager.shared.getPostAuthorInfo(for: prePost.authorId ?? "")
+
+                title = prePost.title ?? NSLocalizedString("notFoundLabel", comment: "")
+                image = StorageManager.shared.getImage(id: prePost.id) ?? UIImage()
+                likesCount = prePost.likesCount ?? 0
+                id = prePost.id
+                mediaCount = prePost.mediaCount ?? 1
+                mediaVersion = prePost.mediaVersion ?? 1
+                mediaPosition = prePost.mediaPosition ?? 0
+                readArticleLanguage = prePost.originalLanguage ?? ""
+                readIsPremiumPost = prePost.isPremiumPost ?? false
+                readIsLocalizedVersion = prePost.isLocalizedVersion ?? false
+                readRootId = prePost.rootId ?? ""
+                readAuthorId = prePost.authorId ?? ""
+                readAuthorName = authorInfo?.name ?? NSLocalizedString("notFoundLabel", comment: "")
+                readAuthorIsCheckmark = authorInfo?.isCheckmark ?? false
+                readAuthorAvatarVersion = authorInfo?.avatarVersion ?? 0
+                dateCreated = post.dateCreated ?? Date()
+                text = post.text ?? ""
+                mediaURLs = (post.mediaURLs ?? []).compactMap { URL(string: $0) }
+
+                isLoadingPopupPresented = false
+                isReadViewPresented = true
+            } catch {
+                withAnimation {
+                    isLoadingPopupPresented = false
+                    errorText = error.localizedDescription
+                    isErrorPopupPresented = true
+                }
+            }
+        }
+    }
+
+    func openReplyComment(_ comment: Comment) {
+        title = comment.text ?? ""
+        text = ""
+        likesCount = comment.likesCount ?? 0
+        dateCreated = comment.dateCreated ?? Date()
+        id = comment.id
+        mediaCount = 0
+        mediaVersion = 1
+        mediaPosition = 0
+        readArticleLanguage = ""
+        readIsPremiumPost = false
+        readIsLocalizedVersion = false
+        readRootId = ""
+        readAuthorId = comment.authorId ?? (user?.userId ?? "")
+        readAuthorName = user?.name ?? NSLocalizedString("notFoundLabel", comment: "")
+        readAuthorIsCheckmark = user?.isCheckmark ?? false
+        readAuthorAvatarVersion = user?.avatarVersion ?? 0
+        readReplyAuthorName = replyAuthorsInfo[comment.rootAuthorId ?? ""]?.name
+        readReplyRootPostId = comment.rootPostId
+        isReadViewPresented = true
+    }
+
     var publishedPosts: [PrePost] {
         posts.filter { !($0.isLocalizedVersion ?? false) }
     }
@@ -553,6 +646,8 @@ final class CreatedPostsViewModel: ObservableObject {
             regularArchivePosts
         } else if isLocalizedPostsPresented {
             localizedPosts
+        } else if isRepliesPresented {
+            []
         } else if isArticlesPresented {
             articles
         } else {
@@ -575,6 +670,8 @@ final class CreatedPostsViewModel: ObservableObject {
             .archive
         } else if isLocalizedPostsPresented {
             .localizedPublished
+        } else if isRepliesPresented {
+            .replies
         } else if isArticlesPresented {
             .articles
         } else {
@@ -592,6 +689,8 @@ final class CreatedPostsViewModel: ObservableObject {
             publishedPosts
         case .articles:
             articles
+        case .replies:
+            []
         case .archive:
             regularArchivePosts
         case .localizedPublished:
@@ -604,12 +703,14 @@ final class CreatedPostsViewModel: ObservableObject {
     func showAllPosts() {
         isArchivePresented = false
         isArticlesPresented = false
+        isRepliesPresented = false
         isLocalizedPostsPresented = false
     }
 
     func showArticles() {
         isArchivePresented = false
         isArticlesPresented = true
+        isRepliesPresented = false
         isLocalizedPostsPresented = false
     }
 
@@ -628,19 +729,57 @@ final class CreatedPostsViewModel: ObservableObject {
     func showArchivePosts() {
         isArchivePresented = true
         isArticlesPresented = false
+        isRepliesPresented = false
+        isLocalizedPostsPresented = false
+    }
+
+    func showReplies() {
+        isArchivePresented = false
+        isArticlesPresented = false
+        isRepliesPresented = true
         isLocalizedPostsPresented = false
     }
 
     func showLocalizedPosts() {
         isArchivePresented = false
         isArticlesPresented = false
+        isRepliesPresented = false
         isLocalizedPostsPresented = true
     }
 
     func showLocalizedArchivePosts() {
         isArchivePresented = true
         isArticlesPresented = false
+        isRepliesPresented = false
         isLocalizedPostsPresented = true
+    }
+
+    func loadRepliesIfNeeded() async {
+        guard replies.isEmpty, !isRepliesLoading else { return }
+        guard let authorId = user?.userId, !authorId.isEmpty else { return }
+
+        isRepliesLoading = true
+
+        do {
+            replies = try await CommentariesManager.shared.getCommentaries(authorId: authorId)
+            let replyAuthorIds = Set(
+                replies
+                    .compactMap { $0.rootAuthorId }
+                    .filter { !$0.isEmpty }
+            )
+
+            for replyAuthorId in replyAuthorIds where replyAuthorsInfo[replyAuthorId] == nil {
+                if let info = try await UserManager.shared.getPostAuthorInfo(for: replyAuthorId) {
+                    replyAuthorsInfo[replyAuthorId] = info
+                }
+            }
+
+            isRepliesLoading = false
+        } catch {
+            isRepliesLoading = false
+            errorText = error.localizedDescription
+            isErrorPopupPresented = true
+        }
     }
 
     func updatePresentedSectionIfNeeded() {

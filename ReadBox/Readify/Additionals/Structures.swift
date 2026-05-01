@@ -12,7 +12,7 @@ struct MediaKind {
     let videoURL: URL?
     let image: UIImage?
     let videoPreview: UIImage?
-    
+
     init(
         videoURL: URL? = nil,
         image: UIImage? = nil,
@@ -26,7 +26,7 @@ struct MediaKind {
 
 struct AuthorName: Codable {
     let name: String?
-    
+
     enum CodingKeys: String, CodingKey {
         case name
     }
@@ -34,7 +34,7 @@ struct AuthorName: Codable {
 
 struct SubscribersCount : Codable {
     let subscribersCount: Int?
-    
+
     enum CodingKeys: String, CodingKey {
         case subscribersCount = "subscribers_count"
     }
@@ -42,7 +42,7 @@ struct SubscribersCount : Codable {
 
 struct PostsCount: Codable {
     let postsCount: Int?
-    
+
     enum CodingKeys: String, CodingKey {
         case postsCount = "posts_count"
     }
@@ -50,7 +50,7 @@ struct PostsCount: Codable {
 
 struct IsCheckmark: Codable {
     let isCheckmark: Bool?
-    
+
     enum CodingKeys: String, CodingKey {
         case isCheckmark = "is_checkmark"
     }
@@ -58,7 +58,7 @@ struct IsCheckmark: Codable {
 
 struct AuthorDescription: Codable {
     let authorDescription: String?
-    
+
     enum CodingKeys: String, CodingKey {
         case authorDescription = "author_description"
     }
@@ -79,7 +79,7 @@ struct DBUser: Codable, Equatable {
     let appVersion: String?
     let originalLanguage: String?
     let avatarVersion: Int?
-    
+
     init(auth: AuthDataResultModel) {
         self.userId = auth.uid
         self.name = ""
@@ -96,7 +96,7 @@ struct DBUser: Codable, Equatable {
         self.originalLanguage = ""
         self.avatarVersion = 0
     }
-    
+
     init(
         userId: String,
         name: String? = nil,
@@ -129,7 +129,7 @@ struct DBUser: Codable, Equatable {
         self.originalLanguage = originalLanguage
         self.avatarVersion = avatarVersion
     }
-    
+
     enum CodingKeys: String, CodingKey {
         case userId = "id"
         case name = "name"
@@ -153,10 +153,10 @@ struct ChannelInfo: Codable {
     let name: String?
     let isCheckmark: Bool?
     let avatarVersion: Int?
-    
+
     init?(document: DocumentSnapshot) {
         let data = document.data()
-        
+
         guard
             let id = data?["id"] as? String,
             let name = data?["name"] as? String,
@@ -164,13 +164,13 @@ struct ChannelInfo: Codable {
         else {
             return nil
         }
-        
+
         self.id = id
         self.name = name
         self.isCheckmark = isCheckmark
         self.avatarVersion = data?["avatarVersion"] as? Int
     }
-    
+
     enum CodingKeys: String, CodingKey {
         case id = "id"
         case name = "name"
@@ -202,10 +202,10 @@ struct PrePost: Identifiable, Codable, Equatable, Hashable {
     let isLocalizedVersion: Bool?
     let rootId: String?
     let isPremiumPost: Bool?
-    
+
     init?(document: DocumentSnapshot) {
         let data = document.data()
-        
+
         guard
             let id = data?["id"] as? String,
             let title = data?["title"] as? String,
@@ -216,7 +216,7 @@ struct PrePost: Identifiable, Codable, Equatable, Hashable {
         else {
             return nil
         }
-        
+
         self.id = id
         self.title = title
         self.authorId = authorId
@@ -234,7 +234,7 @@ struct PrePost: Identifiable, Codable, Equatable, Hashable {
         self.rootId = data?["root_id"] as? String
         self.isPremiumPost = data?["is_premium_post"] as? Bool
     }
-    
+
     init(
         id: String,
         title: String?,
@@ -270,7 +270,7 @@ struct PrePost: Identifiable, Codable, Equatable, Hashable {
         self.rootId = rootId
         self.isPremiumPost = isPremiumPost
     }
-    
+
     enum CodingKeys: String, CodingKey {
         case id = "id"
         case title = "title"
@@ -295,7 +295,7 @@ struct PostToRead: Codable {
     let dateCreated: Date?
     let text: String?
     let mediaURLs: [String]?
-    
+
     enum CodingKeys: String, CodingKey {
         case dateCreated = "date_created"
         case text = "text"
@@ -307,7 +307,7 @@ struct PostAuthorInfo: Codable {
     let name: String?
     let isCheckmark: Bool?
     let avatarVersion: Int?
-    
+
     enum CodingKeys: String, CodingKey {
         case name = "name"
         case isCheckmark = "is_checkmark"
@@ -317,7 +317,7 @@ struct PostAuthorInfo: Codable {
 
 struct ViewsCount: Codable {
     let viewsCount: Int
-    
+
     enum CodingKeys: String, CodingKey {
         case viewsCount = "views_count"
     }
@@ -325,7 +325,7 @@ struct ViewsCount: Codable {
 
 struct TopArticlesIndexes: Codable {
     let topArticlesIndexes: [String]?
-    
+
     enum CodingKeys: String, CodingKey {
         case topArticlesIndexes = "top_articles_indexes"
     }
@@ -333,7 +333,7 @@ struct TopArticlesIndexes: Codable {
 
 struct OriginalLanguage: Codable {
     let originalLanguage: String?
-    
+
     enum CodingKeys: String, CodingKey {
         case originalLanguage = "original_language"
     }
@@ -341,7 +341,7 @@ struct OriginalLanguage: Codable {
 
 struct MaxIndex: Codable {
     let maxIndex: String
-    
+
     enum CodingKeys: String, CodingKey {
         case maxIndex = "max_index"
     }
@@ -349,7 +349,7 @@ struct MaxIndex: Codable {
 
 struct isArchive: Codable {
     let isArchive: Bool?
-    
+
     enum CodingKeys: String, CodingKey {
         case isArchive = "is_archive"
     }
@@ -357,7 +357,7 @@ struct isArchive: Codable {
 
 struct AuthorId: Codable {
     let authorId: String?
-    
+
     enum CodingKeys: String, CodingKey {
         case authorId = "author_id"
     }
@@ -365,7 +365,7 @@ struct AuthorId: Codable {
 
 struct LikesCount: Codable {
     let likesCount: Int?
-    
+
     enum CodingKeys: String, CodingKey {
         case likesCount = "likes_count"
     }
@@ -373,7 +373,7 @@ struct LikesCount: Codable {
 
 struct MediaURLs: Codable {
     let mediaURLs: [String]?
-    
+
     enum CodingKeys: String, CodingKey {
         case mediaURLs = "media_URLs"
     }
@@ -382,7 +382,7 @@ struct MediaURLs: Codable {
 struct AppVersion: Codable {
     let appVersion: String?
     let isCritical: Bool?
-    
+
     enum CodingKeys: String, CodingKey {
         case appVersion = "app_version"
         case isCritical = "is_critical"
@@ -391,7 +391,7 @@ struct AppVersion: Codable {
 
 struct AvatarVersion: Codable {
     let avatarVersion: Int
-    
+
     enum CodingKeys: String, CodingKey {
         case avatarVersion = "avatar_version"
     }
@@ -399,7 +399,7 @@ struct AvatarVersion: Codable {
 
 struct LocalizationCount: Codable {
     let localizationCount: Int
-    
+
     enum CodingKeys: String, CodingKey {
         case localizationCount = "localization_count"
     }
@@ -407,9 +407,39 @@ struct LocalizationCount: Codable {
 
 struct IsPremiumAuthor: Codable {
     let isPremiumAuthor: Bool?
-    
+
     enum CodingKeys: String, CodingKey {
         case isPremiumAuthor = "is_premium_author"
+    }
+}
+
+struct Comment: Identifiable, Codable {
+    let id: String
+    let text: String?
+    let dateCreated: Date?
+    let authorId: String?
+    let rootAuthorId: String?
+    let rootPostId: String?
+    let viewsCount: Int?
+    let likesCount: Int?
+
+    enum CodingKeys: String, CodingKey {
+        case id = "id"
+        case text = "text"
+        case dateCreated = "date_created"
+        case authorId = "author_id"
+        case rootAuthorId = "root_author_id"
+        case rootPostId = "root_post_id"
+        case viewsCount = "views_count"
+        case likesCount = "likes_count"
+    }
+}
+
+struct CommentsCount: Codable {
+    let commentsCount: Int
+
+    enum CodingKeys: String, CodingKey {
+        case commentsCount = "comments_count"
     }
 }
 

@@ -8,6 +8,18 @@
 import Foundation
 import FirebaseFirestore
 
+private actor AvatarVersionCache {
+    private var values: [String: Int] = [:]
+
+    func get(_ id: String) -> Int? {
+        values[id]
+    }
+
+    func set(_ version: Int, for id: String) {
+        values[id] = version
+    }
+}
+
 final class UserManager {
     
     static let shared = UserManager()
@@ -24,6 +36,7 @@ final class UserManager {
         let decoder = Firestore.Decoder()
         return decoder
     }()
+    private let avatarVersionCache = AvatarVersionCache()
     
     private func userDocument(userId: String) -> DocumentReference? {
         if userId != "" {
@@ -42,7 +55,13 @@ final class UserManager {
     }
     
     func getUser(userId: String) async throws -> DBUser? {
-        try await userDocument(userId: userId)?.getDocument(as: DBUser.self)
+        let user = try await userDocument(userId: userId)?.getDocument(as: DBUser.self)
+
+        if let avatarVersion = user?.avatarVersion {
+            await avatarVersionCache.set(avatarVersion, for: userId)
+        }
+
+        return user
     }
 
     func set(fcmToken: String, to userId: String) async throws {
@@ -83,20 +102,45 @@ final class UserManager {
     
     func getAvatarVersion(id: String) async throws -> Int? {
         if id != "" {
-            return try await userDocument(userId: id)?.getDocument(as: AvatarVersion.self).avatarVersion ?? 0
+            let avatarVersion = try await userDocument(userId: id)?.getDocument(as: AvatarVersion.self).avatarVersion ?? 0
+            await avatarVersionCache.set(avatarVersion, for: id)
+            return avatarVersion
         } else { return nil }
     }
     
     func setAvatarVersion(id: String, lastVersion: Int) async throws {
+        let newVersion = lastVersion + 1
         let data: [String: Any] = [
-            "avatar_version": lastVersion + 1
+            "avatar_version": newVersion
         ]
         
         try await userDocument(userId: id)?.updateData(data)
+        await avatarVersionCache.set(newVersion, for: id)
     }
     
     func getPostAuthorInfo(for id: String) async throws -> PostAuthorInfo? {
-        try await userDocument(userId: id)?.getDocument(as: PostAuthorInfo.self)
+        let info = try await userDocument(userId: id)?.getDocument(as: PostAuthorInfo.self)
+
+        if let avatarVersion = info?.avatarVersion {
+            await avatarVersionCache.set(avatarVersion, for: id)
+        }
+
+        return info
+    }
+
+    func resolveAvatarVersion(id: String, fallback: Int? = nil) async throws -> Int {
+        guard !id.isEmpty else { return fallback ?? 0 }
+
+        if let cachedVersion = await avatarVersionCache.get(id) {
+            return cachedVersion
+        }
+
+        if let fallback, fallback > 0 {
+            await avatarVersionCache.set(fallback, for: id)
+            return fallback
+        }
+
+        return try await getAvatarVersion(id: id) ?? 0
     }
     
     func getAuthorName(id: String) async throws -> String? {

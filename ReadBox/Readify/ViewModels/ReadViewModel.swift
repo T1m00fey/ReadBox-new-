@@ -25,6 +25,10 @@ final class ReadViewModel: ObservableObject {
     @Published var selectedImageURL: URL? = nil
     @Published var isSubscribeLoading = false
     @Published var isOriginalArticleLoading = false
+    @Published var commentaries: [Comment] = []
+    @Published var isCommentariesLoading = false
+    @Published var isCommentSending = false
+    @Published var commentAuthorsInfo: [String: PostAuthorInfo] = [:]
     
     let vibrationsService = VibrationsService.shared
     
@@ -38,6 +42,97 @@ final class ReadViewModel: ObservableObject {
     
     func updateLikes(at article: String, likesCount: Int) async throws {
         try await ArticlesManager.shared.updateLikes(at: article, likesCount: likesCount)
+    }
+
+    func loadCommentaries(rootPostId: String) async {
+        guard !rootPostId.isEmpty else { return }
+
+        await MainActor.run {
+            commentaries = []
+            isCommentariesLoading = true
+        }
+
+        do {
+            let commentaries = try await CommentariesManager.shared.getCommentaries(rootPostId: rootPostId)
+
+            await MainActor.run {
+                withAnimation {
+                    self.commentaries = commentaries
+                    self.isCommentariesLoading = false
+                }
+            }
+
+            await loadCommentAuthorsIfNeeded(for: commentaries)
+        } catch {
+            await MainActor.run {
+                withAnimation {
+                    self.isCommentariesLoading = false
+                    self.errorText = error.localizedDescription
+                    self.isErrorPopupPresented = true
+                }
+            }
+        }
+    }
+
+    func sendComment(rootPostId: String, rootAuthorId: String, authorId: String, text: String) async throws {
+        guard !rootPostId.isEmpty, !rootAuthorId.isEmpty, !authorId.isEmpty, !text.isEmpty else { return }
+
+        await MainActor.run {
+            isCommentSending = true
+        }
+
+        do {
+            let comment = try await CommentariesManager.shared.createComment(
+                rootPostId: rootPostId,
+                rootAuthorId: rootAuthorId,
+                authorId: authorId,
+                text: text
+            )
+
+            try? await ArticlesManager.shared.updateCommentsCount(at: rootPostId, isPlus: true)
+
+            await MainActor.run {
+                withAnimation {
+                    commentaries.append(comment)
+                    isCommentSending = false
+                }
+            }
+
+            await loadCommentAuthorsIfNeeded(for: [comment])
+        } catch {
+            await MainActor.run {
+                withAnimation {
+                    isCommentSending = false
+                }
+            }
+
+            throw error
+        }
+    }
+
+    func loadCommentAuthorsIfNeeded(for commentaries: [Comment]) async {
+        let authorIds = Array(Set(
+            commentaries
+                .flatMap { [$0.authorId, $0.rootAuthorId] }
+                .compactMap { $0 }
+                .filter { !$0.isEmpty }
+        ))
+
+        let unloadedAuthorIds = await MainActor.run {
+            authorIds.filter { commentAuthorsInfo[$0] == nil }
+        }
+
+        guard !unloadedAuthorIds.isEmpty else { return }
+
+        for authorId in unloadedAuthorIds {
+            let info = try? await UserManager.shared.getPostAuthorInfo(for: authorId)
+
+            await MainActor.run {
+                if let info {
+                    commentAuthorsInfo[authorId] = info
+                }
+            }
+        }
     }
     
 //    func fetchImages(_ id: String, _ mediaCount: Int) {

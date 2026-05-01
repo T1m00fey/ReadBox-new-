@@ -276,12 +276,25 @@ final class ArticlesManager {
         let data: [String: Any] = [
             "media_URLs": FieldValue.arrayRemove([url])
         ]
-        
         try await articleDocument(id: id).updateData(data)
     }
-    
+
     func deleteImage(url: URL) async throws {
         let ref = Storage.storage().reference(forURL: url.absoluteString)
         try await ref.delete()
+    }
+
+    func getCommsCount(at id: String) async throws -> Int {
+        try await articleDocument(id: id).getDocument(as: CommentsCount.self).commentsCount
+    }
+
+    func updateCommentsCount(at postId: String, isPlus: Bool) async throws {
+        let commentsCount = try await articleDocument(id: postId).getDocument(as: CommentsCount.self).commentsCount
+
+        let data: [String: Any] = [
+            "comments_count": isPlus ? commentsCount + 1 : commentsCount - 1
+        ]
+
+        try await articleDocument(id: postId).updateData(data)
     }
 }

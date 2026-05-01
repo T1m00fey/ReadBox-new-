@@ -102,9 +102,15 @@
 "youSubscribedLabel" = "Subscribed ✓";
 "publicationsLabel" = "Publications";
 "articlesLabel" = "Articles";
+"repliesLabel" = "Replies";
 "archiveLabel" = "Archive";
 "localizedPostsLabel" = "Localized";
 "localizedArchivePostsLabel" = "Localized (Archive)";
+"commentariesLabel" = "Comments";
+"commentPlaceholderLabel" = "Write a comment...";
+"justNowLabel" = "just now";
+"replyToLabel" = "Replying to";
+"noRepliesAddedLabel" = "You haven't left any replies yet";
 "privacyPolicy" = "Privacy policy";
 "termsOfUse" = "Terms of use";
 "updateLabel" = "Update 🔁";

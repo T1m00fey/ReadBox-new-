@@ -30,6 +30,8 @@ struct ArticleView: View {
     let isPremiumPost: Bool
     let viewsCount: Int
     let likesCount: Int
+    let replyAuthorName: String?
+    let onReplyTap: (() -> Void)?
 
     @Binding var user: DBUser?
     @Binding var isZoomableViewPresented: Bool
@@ -73,6 +75,8 @@ struct ArticleView: View {
         isPremiumPost: Bool,
         viewsCount: Int = 0,
         likesCount: Int = 0,
+        replyAuthorName: String? = nil,
+        onReplyTap: (() -> Void)? = nil,
         user: Binding<DBUser?>,
         isZoomableViewPresented: Binding<Bool>,
         zoomableImage: Binding<UIImage?>,
@@ -99,6 +103,8 @@ struct ArticleView: View {
         self.isPremiumPost = isPremiumPost
         self.viewsCount = viewsCount
         self.likesCount = likesCount
+        self.replyAuthorName = replyAuthorName
+        self.onReplyTap = onReplyTap
         self._user = user
         self._isZoomableViewPresented = isZoomableViewPresented
         self._zoomableImage = zoomableImage
@@ -147,165 +153,177 @@ struct ArticleView: View {
     var body: some View {
 
         VStack {
-            HStack {
-                if let avatarImage {
-                    Image(uiImage: avatarImage)
-                        .resizable()
-                        .scaledToFill()
-                        .frame(width: 40, height: 40)
-                        .clipShape(Circle())
-                        .overlay(
-                            Circle()
-                                .stroke(
-                                    Color(.label),
-                                    lineWidth: 0.1
-                                )
-                        )
+            VStack(alignment: .leading, spacing: 4) {
+                if let replyTitle {
+                    Text(replyTitle)
+                        .font(.system(size: 12))
+                        .foregroundStyle(Color.gray)
+                        .lineLimit(1)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.top, replyTitleTopPadding)
+                        .padding(.bottom, replyTitleBottomPadding)
                         .onTapGesture {
-                            withAnimation {
-                                zoomableImage = avatarImage
-                                isZoomableViewPresented = true
-                            }
+                            onReplyTap?()
                         }
-                        .id("\(id)")
                 }
 
-                HStack(spacing: 5) {
-                    VStack(spacing: 1) {
-                        HStack(spacing: 0) {
-                            Text(authorName)
-                                .font(.system(size: 16))
-                            //                            .font(.custom("Mulish", size: 18))
-                                .lineLimit(1)
+                HStack {
+                    if let avatarImage {
+                        Image(uiImage: avatarImage)
+                            .resizable()
+                            .scaledToFill()
+                            .frame(width: 40, height: 40)
+                            .clipShape(Circle())
+                            .overlay(
+                                Circle()
+                                    .stroke(
+                                        Color(.label),
+                                        lineWidth: 0.1
+                                    )
+                            )
+                            .onTapGesture {
+                                withAnimation {
+                                    zoomableImage = avatarImage
+                                    isZoomableViewPresented = true
+                                }
+                            }
+                            .id("\(id)")
+                    }
+
+                    HStack(spacing: 5) {
+                        VStack(spacing: 1) {
+                            HStack(spacing: 0) {
+                                Text(authorName)
+                                    .font(.system(size: 16))
+                                //                            .font(.custom("Mulish", size: 18))
+                                    .lineLimit(1)
 //                                .underline()
 //                                .bold()
-                                .fontWeight(.semibold)
-                                .onTapGesture {
-                                    selectedAuthorId = authorId
-                                    isChannelViewPresented = true
-                                }
+                                    .fontWeight(.semibold)
+                                    .onTapGesture {
+                                        selectedAuthorId = authorId
+                                        isChannelViewPresented = true
+                                    }
 
-                            if isCheckmark {
-                                Image(systemName: "checkmark.seal.fill")
-                                    .foregroundStyle(Color.blue)
-                                    .font(.system(size: 14))
-                                    .padding(.top, 1)
+                                if isCheckmark {
+                                    Image(systemName: "checkmark.seal.fill")
+                                        .foregroundStyle(Color.blue)
+                                        .font(.system(size: 14))
+                                        .padding(.top, 1)
+                                }
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+
+                            if let articleDateText {
+                                Text("\(articleDateText)")
+                                    .font(.system(size: 11))
+                                    .foregroundStyle(Color.gray)
+                                    .lineLimit(1)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
                             }
                         }
-                        .frame(maxWidth: .infinity, alignment: .leading)
 
-                        if let articleDateText {
-                            Text("\(articleDateText)")
-                                .font(.system(size: 11))
-                                .foregroundStyle(Color.gray)
-                                .lineLimit(1)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                        }
-                    }
+                        Spacer()
 
-                    Spacer()
-
-                    if isLocalizedVersion {
-                        Image("translateIcon")
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: 15)
-                            .foregroundStyle(Color(.systemGray6))
-                            .padding(.all, 5)
-                            .background(Color(.systemGray4))
-                            .clipShape(RoundedRectangle(cornerRadius: 5))
-                    }
-
-                    if !isShortPost {
-                        Text(NSLocalizedString("articleLabel", comment: ""))
-                            .font(.system(size: 12))
-                            .foregroundStyle(Color(.systemGray6))
-                            .padding(.all, 5)
-                            .background(Color(.systemGray4))
-                            .clipShape(RoundedRectangle(cornerRadius: 5))
-                    }
-
-                    if isPremiumPost {
-//                        Image(systemName: "plus")
-//                            .resizable()
-//                            .scaledToFit()
-//                            .frame(width: 15)
-//                            .foregroundStyle(Color(.label))
-//                            .padding(.all, 5)
-//                            .background(Color(.systemGray4))
-//                            .clipShape(RoundedRectangle(cornerRadius: 5))
-                        Text("R+")
-                            .font(.custom("PlaywriteIE-Regular", size: 12))
-                            .foregroundStyle(Color(.systemGray6))
-                            .frame(height: 15)
-                            .padding(.all, 5)
-                            .background(Color(.systemGray4))
-                            .clipShape(RoundedRectangle(cornerRadius: 5))
-
-                    }
-
-                    if isCreatedView {
-                        Menu {
-                            Button {
-                                postOption = .editing
-                                selectedId = id
-                            } label: {
-                                Label(NSLocalizedString("editingLabel", comment: ""), systemImage: "pencil")
-                            }
-
-                            Button {
-                                selectedId = id
-
-                                if isArchive {
-                                    postOption = .publish
-                                } else {
-                                    postOption = .toArchive
-                                }
-
-                            } label: {
-                                if isArchive {
-                                    Label(NSLocalizedString("publishLabel", comment: ""), systemImage: "paperplane")
-                                } else {
-                                    Label(NSLocalizedString("saveToArchiveLabel", comment: ""), systemImage: "archivebox")
-                                }
-                            }
-
-                            if locCount == 0 && !isLocalizedVersion {
-                                Button {
-                                    postOption = .localize
-                                    selectedId = id
-                                } label: {
-                                    Label(NSLocalizedString("toLocalizeMenuActionLabel", comment: ""), systemImage: "globe")
-                                }
-                            }
-
-                            Button {
-                                postOption = .delete
-                                selectedId = id
-
-
-                                StorageManager.shared.deleteImage(id: id)
-                            } label: {
-                                Label(NSLocalizedString("deleteLabel", comment: ""), systemImage: "xmark.circle")
-                            }
-                        } label: {
-                            Image(systemName: "ellipsis")
+                        if isLocalizedVersion {
+                            Image("translateIcon")
                                 .resizable()
                                 .scaledToFit()
-                                .frame(width: 15, height: 15)
-                                .foregroundStyle(Color(.gray))
+                                .frame(width: 15)
+                                .foregroundStyle(Color(.systemGray6))
                                 .padding(.all, 5)
                                 .background(Color(.systemGray4))
                                 .clipShape(RoundedRectangle(cornerRadius: 5))
                         }
 
-                    }
+                        if !isShortPost {
+                            Text(NSLocalizedString("articleLabel", comment: ""))
+                                .font(.system(size: 12))
+                                .foregroundStyle(Color(.systemGray6))
+                                .padding(.all, 5)
+                                .background(Color(.systemGray4))
+                                .clipShape(RoundedRectangle(cornerRadius: 5))
+                        }
 
+                        if isPremiumPost {
+    //                        Image(systemName: "plus")
+    //                            .resizable()
+    //                            .scaledToFit()
+    //                            .frame(width: 15)
+    //                            .foregroundStyle(Color(.label))
+    //                            .padding(.all, 5)
+    //                            .background(Color(.systemGray4))
+    //                            .clipShape(RoundedRectangle(cornerRadius: 5))
+                            Text("R+")
+                                .font(.custom("PlaywriteIE-Regular", size: 12))
+                                .foregroundStyle(Color(.systemGray6))
+                                .frame(height: 15)
+                                .padding(.all, 5)
+                                .background(Color(.systemGray4))
+                                .clipShape(RoundedRectangle(cornerRadius: 5))
+
+                        }
+
+                        if isCreatedView {
+                            Menu {
+                                Button {
+                                    postOption = .editing
+                                    selectedId = id
+                                } label: {
+                                    Label(NSLocalizedString("editingLabel", comment: ""), systemImage: "pencil")
+                                }
+
+                                Button {
+                                    selectedId = id
+
+                                    if isArchive {
+                                        postOption = .publish
+                                    } else {
+                                        postOption = .toArchive
+                                    }
+
+                                } label: {
+                                    if isArchive {
+                                        Label(NSLocalizedString("publishLabel", comment: ""), systemImage: "paperplane")
+                                    } else {
+                                        Label(NSLocalizedString("saveToArchiveLabel", comment: ""), systemImage: "archivebox")
+                                    }
+                                }
+
+                                if locCount == 0 && !isLocalizedVersion {
+                                    Button {
+                                        postOption = .localize
+                                        selectedId = id
+                                    } label: {
+                                        Label(NSLocalizedString("toLocalizeMenuActionLabel", comment: ""), systemImage: "globe")
+                                    }
+                                }
+
+                                Button {
+                                    postOption = .delete
+                                    selectedId = id
+
+
+                                    StorageManager.shared.deleteImage(id: id)
+                                } label: {
+                                    Label(NSLocalizedString("deleteLabel", comment: ""), systemImage: "xmark.circle")
+                                }
+                            } label: {
+                                Image(systemName: "ellipsis")
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(width: 15, height: 15)
+                                    .foregroundStyle(Color(.gray))
+                                    .padding(.all, 5)
+                                    .background(Color(.systemGray4))
+                                    .clipShape(RoundedRectangle(cornerRadius: 5))
+                            }
+                        }
+                    }
                 }
             }
             .frame(width: UIScreen.main.bounds.width - 42, height: 40, alignment: .leading)
-            .padding(.top, 7)
-            .padding(.top, /*avatarImage != nil ? 5 : 0*/ 5)
+            .padding(.top, authorSectionTopPadding)
             .padding(.bottom, 2)
 //            .padding(.vertical, 3)
 
@@ -369,7 +387,7 @@ struct ArticleView: View {
 
                     if hasTitleText && (mediaPosition == 0 || !isShortPost) && !(isShortPost && isAccessToPremiumDenied() && isPremiumPost) {
                         titleSectionView
-                            .padding(.top, mediaCount > 0 ? 5 : 0)
+                            .padding(.top, titleSectionTopPadding)
                             .padding(.bottom, titleSectionBottomPadding)
                     }
 
@@ -470,13 +488,22 @@ struct ArticleView: View {
         .onAppear {
             effectiveMediaCount = mediaCount
         }
-        .task {
-            if avatarImage == nil {
-                let ava = await MediaManager.shared.getAvatar(authorId: authorId, lastVersion: lastVersionOfAvatar)
+        .task(id: "\(authorId)_\(lastVersionOfAvatar)") {
+            let avatarVersion: Int
 
-                withAnimation {
-                    avatarImage = ava
-                }
+            do {
+                avatarVersion = try await UserManager.shared.resolveAvatarVersion(
+                    id: authorId,
+                    fallback: lastVersionOfAvatar
+                )
+            } catch {
+                avatarVersion = lastVersionOfAvatar
+            }
+
+            let ava = await MediaManager.shared.getAvatar(authorId: authorId, lastVersion: avatarVersion)
+
+            withAnimation {
+                avatarImage = ava
             }
         }
         .hiddenOnScreenshots(isPremiumPost)
@@ -584,6 +611,26 @@ private extension ArticleView {
         !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
+    var isTextOnlyPost: Bool {
+        mediaCount == 0 && hasTitleText
+    }
+
+    var hasReplyTitle: Bool {
+        replyTitle != nil
+    }
+
+    var authorSectionTopPadding: CGFloat {
+        isTextOnlyPost && hasReplyTitle ? 16 : 12
+    }
+
+    var replyTitleTopPadding: CGFloat {
+        isTextOnlyPost && hasReplyTitle ? 5 : 0
+    }
+    
+    var replyTitleBottomPadding: CGFloat {
+        hasReplyTitle ? 5 : 0
+    }
+
     var mediaBottomPadding: CGFloat {
         if mediaPosition == 1 && isShortPost && hasTitleText {
             return 10
@@ -600,6 +647,14 @@ private extension ArticleView {
         shouldShowExpandButton ? 0 : (isShortPost ? 10 : 20)
     }
 
+    var titleSectionTopPadding: CGFloat {
+        if mediaCount > 0 {
+            return 5
+        }
+
+        return isTextOnlyPost && hasReplyTitle ? 8 : 0
+    }
+
     var titleAttributedString: AttributedString {
         var attributedString = title.markdownAttributedStringPreservingLineBreaks
 
@@ -609,6 +664,14 @@ private extension ArticleView {
         }
 
         return attributedString
+    }
+
+    var replyTitle: String? {
+        let name = replyAuthorName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+
+        guard !name.isEmpty else { return nil }
+
+        return "\(NSLocalizedString("replyToLabel", comment: "")) \(name)"
     }
 
     var titleView: some View {

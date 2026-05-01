@@ -107,21 +107,23 @@ struct CreatedPostsView: View {
                             text: viewModel.text,
                             dateCreated: viewModel.dateCreated,
                             likesCount: viewModel.likesCount,
-                            authorId: viewModel.user?.userId ?? "",
-                            authorName: viewModel.user?.name ??  NSLocalizedString("notFoundLabel", comment: ""),
-                            isCheckmark: viewModel.user?.isCheckmark ?? false,
+                            authorId: viewModel.readAuthorId,
+                            authorName: viewModel.readAuthorName,
+                            isCheckmark: viewModel.readAuthorIsCheckmark,
                             isArchive: false,
                             mediaCount: viewModel.mediaCount,
                             mediaVersion: viewModel.mediaVersion,
                             mediaPosition: viewModel.mediaPosition,
-                            lastVersionOfAvatar: viewModel.avatarVersion,
+                            lastVersionOfAvatar: viewModel.readAuthorAvatarVersion,
                             articleLanguage: viewModel.readArticleLanguage,
                             isPremiumPost: viewModel.readIsPremiumPost,
                             user: $viewModel.user,
                             isChannelViewPresented: .constant(false),
                             isPresented: $viewModel.isReadViewPresented,
                             isLocalizedVersion: viewModel.readIsLocalizedVersion,
-                            rootId: viewModel.readRootId
+                            rootId: viewModel.readRootId,
+                            replyAuthorName: viewModel.readReplyAuthorName,
+                            replyRootPostId: viewModel.readReplyRootPostId
                         )
                         .environmentObject(sessionManager)
                         .environmentObject(changedPostsManager)
@@ -393,6 +395,11 @@ private extension CreatedPostsView {
             Task {
                 await viewModel.loadArticlesUntilAvailableIfNeeded()
             }
+        case .replies:
+            viewModel.showReplies()
+            Task {
+                await viewModel.loadRepliesIfNeeded()
+            }
         case .archive:
             viewModel.showArchivePosts()
         case .localizedPublished:
@@ -476,27 +483,108 @@ private extension CreatedPostsView {
 
     @ViewBuilder
     func createdPostsSectionContent(for section: CreatedPostsSection) -> some View {
-        let posts = viewModel.posts(for: section)
+        if section == .replies {
+            repliesSectionContent
+        } else {
+            let posts = viewModel.posts(for: section)
 
-        if viewModel.isLoadingShowing {
-            ForEach(0..<4) { num in
-                loadingPostPlaceholder(index: num)
-            }
-            .padding(.top, 20)
-        } else if viewModel.posts.count > 0 || viewModel.archivePosts.count > 0 {
-            if !posts.isEmpty {
-                ForEach(posts) { post in
-                    postRow(post, section: section, sectionPosts: posts)
+            if viewModel.isLoadingShowing {
+                ForEach(0..<4) { num in
+                    loadingPostPlaceholder(index: num)
                 }
                 .padding(.top, 20)
-            } else {
-                noPostsView(for: section)
+            } else if viewModel.posts.count > 0 || viewModel.archivePosts.count > 0 {
+                if !posts.isEmpty {
+                    ForEach(posts) { post in
+                        postRow(post, section: section, sectionPosts: posts)
+                    }
                     .padding(.top, 20)
+                } else {
+                    noPostsView(for: section)
+                        .padding(.top, 20)
+                }
+            } else {
+                emptyPublicationsView
+                    .frame(width: UIScreen.main.bounds.width - 32)
+                    .padding(.top, 150)
             }
+        }
+    }
+
+    @ViewBuilder
+    var repliesSectionContent: some View {
+        if viewModel.isRepliesLoading {
+            ForEach(0..<4, id: \.self) { num in
+                ArticleView(
+                    id: "\(num)",
+                    title: "Hello, World!",
+                    authorId: viewModel.user?.userId ?? "",
+                    authorName: viewModel.user?.name ?? "Hello",
+                    dateCreated: Date(),
+                    isCheckmark: viewModel.user?.isCheckmark ?? false,
+                    isArchive: false,
+                    isShortPost: true,
+                    mediaCount: 0,
+                    mediaVersion: 1,
+                    mediaPosition: 0,
+                    lastVersionOfAvatar: viewModel.user?.avatarVersion ?? 0,
+                    locCount: 0,
+                    isLocalizedVersion: false,
+                    isPremiumPost: false,
+                    viewsCount: 10,
+                    likesCount: 10,
+                    replyAuthorName: "Hello",
+                    onReplyTap: {},
+                    user: $viewModel.user,
+                    isZoomableViewPresented: $viewModel.isZoomableImageViewPresented,
+                    zoomableImage: $viewModel.zoomableImage,
+                    selectedAuthorId: .constant(""),
+                    isChannelViewPresented: .constant(false)
+                )
+                .redacted(reason: .placeholder)
+                .shimmering()
+            }
+            .padding(.top, 20)
+        } else if !viewModel.replies.isEmpty {
+            ForEach(viewModel.replies) { reply in
+                ArticleView(
+                    id: reply.id,
+                    title: reply.text ?? "",
+                    authorId: reply.authorId ?? "",
+                    authorName: viewModel.user?.name ?? NSLocalizedString("notFoundLabel", comment: ""),
+                    dateCreated: reply.dateCreated,
+                    isCheckmark: viewModel.user?.isCheckmark ?? false,
+                    isArchive: false,
+                    isShortPost: true,
+                    mediaCount: 0,
+                    mediaVersion: 1,
+                    mediaPosition: 0,
+                    lastVersionOfAvatar: viewModel.user?.avatarVersion ?? 0,
+                    locCount: 0,
+                    isLocalizedVersion: false,
+                    isPremiumPost: false,
+                    viewsCount: reply.viewsCount ?? 0,
+                    likesCount: reply.likesCount ?? 0,
+                    replyAuthorName: viewModel.replyAuthorsInfo[reply.rootAuthorId ?? ""]?.name,
+                    onReplyTap: {
+                        viewModel.openReplyRootPost(reply)
+                    },
+                    user: $viewModel.user,
+                    isZoomableViewPresented: $viewModel.isZoomableImageViewPresented,
+                    zoomableImage: $viewModel.zoomableImage,
+                    selectedAuthorId: .constant(""),
+                    isChannelViewPresented: .constant(false)
+                )
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    viewModel.openReplyComment(reply)
+                }
+                .padding(.bottom, reply.id == viewModel.replies.last?.id ? 70 : 0)
+            }
+            .padding(.top, 20)
         } else {
-            emptyPublicationsView
-                .frame(width: UIScreen.main.bounds.width - 32)
-                .padding(.top, 150)
+            noPostsView(for: .replies)
+                .padding(.top, 20)
         }
     }
 
@@ -564,7 +652,34 @@ private extension CreatedPostsView {
 
     @ViewBuilder
     func noPostsView(for section: CreatedPostsSection) -> some View {
-        if section == .articles || section == .archive || section == .localizedPublished || section == .localizedArchive {
+        if section == .replies {
+            VStack(spacing: 20) {
+                Text(LocalizedStringKey("noRepliesAddedLabel"))
+                    .font(.system(size: 26))
+                    .bold()
+                    .fontDesign(.rounded)
+                    .foregroundStyle(Color.gray)
+                    .multilineTextAlignment(.center)
+                    .frame(width: UIScreen.main.bounds.width - 32)
+
+                Text(NSLocalizedString("toPublicationsLabel", comment: ""))
+                    .frame(width: UIScreen.main.bounds.width - 10, height: 50, alignment: .center)
+                    .font(.system(size: 22))
+                    .fontDesign(.rounded)
+                    .background(Color(uiColor: .secondarySystemBackground))
+                    .foregroundStyle(Color(uiColor: .label))
+                    .clipShape(RoundedRectangle(cornerRadius: 15))
+                    .shadow(radius: 1)
+                    .padding(.bottom, 10)
+                    .onTapGesture {
+                        withAnimation {
+                            viewModel.showAllPosts()
+                            VibrationsService.shared.softImpact()
+                        }
+                    }
+                    .frame(width: UIScreen.main.bounds.width - 32)
+            }
+        } else if section == .articles || section == .archive || section == .localizedPublished || section == .localizedArchive {
             VStack(spacing: 20) {
                 Text(LocalizedStringKey("noArticlesAddedLabel"))
                     .font(.system(size: 26))
