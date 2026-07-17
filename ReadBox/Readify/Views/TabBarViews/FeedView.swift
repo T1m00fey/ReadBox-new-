@@ -17,27 +17,28 @@ struct FeedView: View {
     @Binding var selectedTab: TabType
     @Binding var isConfirmationViewPresented: Bool
     @Binding var isPremiumViewPresented: Bool
-    
+    @State private var isNotificationsViewPresented = false
+
     @StateObject var viewModel = FeedViewModel()
-    
+
     @EnvironmentObject var subManager: SubscriptionManager
     @EnvironmentObject var sessionManager: SessionManager
     @EnvironmentObject var changedPostsManager: ChangedPostsManager
-    
+
     var body: some View {
         NavigationStack {
-            
+
             ZStack {
-                
+
                 ScrollView(showsIndicators: false) {
-                    
+
                     LazyVStack {
-                        
+
                         Text("")
                         VisibilityTracker(id: "headerTracker")
-                        
+
                         TabView {
-                            
+
                             if viewModel.isLoadingShowing {
                                 ForEach(0..<1) { num in
                                     TopArticleView(
@@ -62,6 +63,12 @@ struct FeedView: View {
                                             .tabItem {}
                                             .onAppear {
                                                 viewModel.onPostAppearing(post: post)
+                                                AnalyticsManager.shared.logFeedImpression(
+                                                    publicationId: post.id,
+                                                    authorId: post.authorId ?? "",
+                                                    contentType: (post.isShortPost ?? false) ? "post" : "article",
+                                                    source: "top_feed"
+                                                )
                                             }
                                             .onTapGesture {
                                                 if let isPremiumPost = post.isPremiumPost,
@@ -74,13 +81,13 @@ struct FeedView: View {
                                             }
                                     }
                                 }
-                                
+
                             }
                         }
                         .tabViewStyle(.page)
                         .frame(height: 270)
                         .padding(.top, 30)
-                        
+
                         if viewModel.isLoadingShowing {
                             ForEach(0..<2) { num in
                                 ArticleView(
@@ -126,7 +133,15 @@ struct FeedView: View {
                                     locCount: post.localizationCount ?? 0,
                                     isLocalizedVersion: post.isLocalizedVersion ?? false,
                                     isPremiumPost: post.isPremiumPost ?? false,
-                                    user: $viewModel.user,
+                                    onCommentTap: {
+                                        if let isPremiumPost = post.isPremiumPost,
+                                           isPremiumPost && !subManager.hasPremium,
+                                           post.authorId != viewModel.user?.userId {
+                                            isPremiumViewPresented = true
+                                        } else {
+                                            viewModel.tapGestureHandler(on: post, openComments: true)
+                                        }
+                                    }, user: $viewModel.user,
                                     isZoomableViewPresented: $viewModel.isZoomableImageViewPresented,
                                     zoomableImage: $viewModel.zoomableImage,
                                     selectedAuthorId: $viewModel.authorId,
@@ -135,6 +150,12 @@ struct FeedView: View {
                                 .onAppear {
                                     print("👀 VIEW \(post.id)")
                                     viewModel.onPostAppearing(post: post)
+                                    AnalyticsManager.shared.logFeedImpression(
+                                        publicationId: post.id,
+                                        authorId: post.authorId ?? "",
+                                        contentType: (post.isShortPost ?? false) ? "post" : "article",
+                                        source: "main_feed"
+                                    )
                                 }
                                 .onTapGesture {
                                     if let isPremiumPost = post.isPremiumPost, (isPremiumPost && !subManager.hasPremium), (post.authorId != viewModel.user?.userId) {
@@ -144,10 +165,10 @@ struct FeedView: View {
                                     }
                                 }
                                 .padding(.top, 10)
-                                
+
                             }
                         }
-                        
+
                     }
                 }
                 .refreshable {
@@ -157,13 +178,13 @@ struct FeedView: View {
                         viewModel.isReadViewPresented = false
                     }
                 }
-                
+
                 VStack {
                     headerView
-                    
+
                     Spacer()
                 }.ignoresSafeArea()
-                
+
             }
             .makePopupsForFeedView(
                 viewModel: viewModel,
@@ -195,21 +216,22 @@ struct FeedView: View {
             .onAppear {
                 if viewModel.isLoading {
                     viewModel.isLoading = false
-                    
+
                     Task {
                         viewModel.isLoading = true
                     }
                 }
-                
+
                 viewModel.primaryLanguage = StorageManager.shared.getLanguage() ?? "en"
-                
+
                 if viewModel.user == nil {
                     Task {
                         try? await viewModel.loadUser()
                     }
                 }
-                
+
                 viewModel.getViews()
+
             }
             .navigationDestination(isPresented: $viewModel.isReadViewPresented, destination: {
                 ReadView(
@@ -232,7 +254,8 @@ struct FeedView: View {
                     isChannelViewPresented: $viewModel.isChannelViewPresented,
                     isPresented: $viewModel.isReadViewPresented,
                     isLocalizedVersion: viewModel.isLocalizedVersion,
-                    rootId: viewModel.rootId
+                    rootId: viewModel.rootId,
+                    openCommentsOnAppear: viewModel.shouldOpenCommentsOnRead
                 )
                 .environmentObject(sessionManager)
                 .environmentObject(changedPostsManager)
@@ -256,7 +279,13 @@ struct FeedView: View {
                     ZoomableImageView(image: image)
                 }
             })
-            
+            .navigationDestination(isPresented: $isNotificationsViewPresented) {
+                NotificationsView()
+                    .environmentObject(sessionManager)
+                    .environmentObject(changedPostsManager)
+                    .environmentObject(subManager)
+            }
+
         }
     }
 }
@@ -280,6 +309,7 @@ private extension FeedView {
                         Text("ReadBox")
                             .font(.system(size: 32))
                             .fontWeight(.light)
+                            .tracking(-0.63)
                             .popoverTip(LanguageSwitchTip())
                         
                         Text(viewModel.primaryLanguage.uppercased())
@@ -311,22 +341,38 @@ private extension FeedView {
                     }
                     
                     Spacer()
-                    
+
+                    notificationsButton
+
                     Image(systemName: "plus")
                         .resizable()
                         .scaledToFit()
                         .frame(width: 20)
                         .onTapGesture {
                             VibrationsService.shared.lightImpact()
-                            
+
                             selectedTab = .create
                             isConfirmationViewPresented = true
                         }
                 }
                 .frame(width: UIScreen.main.bounds.width - 32, alignment: .leading)
                 .padding(.top, 30)
-                
+
             }
         }
+    }
+
+    var notificationsButton: some View {
+        Button {
+            VibrationsService.shared.lightImpact()
+            isNotificationsViewPresented = true
+        } label: {
+            Image(systemName: "bell")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 19)
+        }
+        .buttonStyle(.plain)
+        .padding(.trailing, 14)
     }
 }

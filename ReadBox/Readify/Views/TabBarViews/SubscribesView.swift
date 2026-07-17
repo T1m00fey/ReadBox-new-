@@ -30,10 +30,12 @@ final class SubscribesViewModel: ObservableObject {
     @Published var lastDocument: DocumentSnapshot? = nil
     @Published var isLargeHeaderVisible = true
     @Published var primaryLanguage = "en"
+    @Published var shouldOpenCommentsOnRead = false
+    @Published var views: [String] = []
 
     private let db = Firestore.firestore()
     private let inQueryLimit = 30
-    
+
     var title = ""
     var dateCreated = Date()
     var text = ""
@@ -48,21 +50,29 @@ final class SubscribesViewModel: ObservableObject {
     var isLocalizedVersion = false
     var rootId = ""
 
+    func getViews() {
+        views = StorageManager.shared.getViews()
+    }
+
+    func saveViews() {
+        StorageManager.shared.save(views: views)
+    }
+
     func loadUser() async throws {
         let auth = try AuthenticationManager.shared.getAuthenticatedUser()
         self.user = try await UserManager.shared.getUser(userId: auth.uid)
     }
-    
+
     func updatePrimaryLanguage() {
         let fallbackLanguage = Locale.preferredLanguages.first?.components(separatedBy: "-").first == "ru"
         ? "ru"
         : "en"
-        
+
         let userLanguage = user?.originalLanguage?.trimmingCharacters(in: .whitespacesAndNewlines)
-        
+
         primaryLanguage = (userLanguage?.isEmpty == false ? userLanguage : nil) ?? fallbackLanguage
     }
-    
+
     func refresh() async {
         withAnimation {
             isLoading = true
@@ -75,21 +85,21 @@ final class SubscribesViewModel: ObservableObject {
             errorText = ""
             isErrorPopupPresented = false
         }
-        
+
         do {
             try await loadUser()
             updatePrimaryLanguage()
-            
+
             guard let subscribes = user?.subscribes, !subscribes.isEmpty else {
                 withAnimation {
                     isLoading = false
                 }
                 return
             }
-            
+
             try await getChannels()
             try await getArticles()
-            
+
             withAnimation {
                 isLoading = false
             }
@@ -139,7 +149,7 @@ final class SubscribesViewModel: ObservableObject {
             self.channels = channels
         }
     }
-    
+
     func getArticles() async throws {
         let ids = Array((user?.subscribes ?? []).prefix(inQueryLimit))
         guard !ids.isEmpty else {
@@ -148,21 +158,21 @@ final class SubscribesViewModel: ObservableObject {
             }
             return
         }
-        
+
         var query = db.collection("articles")
             .whereField("author_id", in: ids)
             .whereField("is_archive", isEqualTo: false)
             .order(by: "date_created", descending: true)
             .limit(to: 20)
-        
+
         if let last = lastDocument {
             query = query.start(afterDocument: last)
         }
-        
+
         do {
             let snapshot = try await query.getDocuments()
             let newPosts = snapshot.documents.compactMap { PrePost(document: $0) }
-            
+
             withAnimation {
                 allPosts.append(contentsOf: newPosts)
                 articles = localizedPosts(from: allPosts)
@@ -176,13 +186,13 @@ final class SubscribesViewModel: ObservableObject {
             throw error
         }
     }
-    
+
     private func localizedPosts(from posts: [PrePost]) -> [PrePost] {
         var bestPostsByRoot: [String: (post: PrePost, index: Int)] = [:]
-        
+
         for (index, post) in posts.enumerated() {
             let rootKey = post.rootId ?? post.id
-            
+
             if let current = bestPostsByRoot[rootKey] {
                 if localizationPriority(for: post) < localizationPriority(for: current.post) {
                     bestPostsByRoot[rootKey] = (post, index)
@@ -191,50 +201,50 @@ final class SubscribesViewModel: ObservableObject {
                 bestPostsByRoot[rootKey] = (post, index)
             }
         }
-        
+
         return bestPostsByRoot
             .values
             .sorted { $0.index < $1.index }
             .map(\.post)
     }
-    
+
     private func localizationPriority(for post: PrePost) -> Int {
         if post.originalLanguage == primaryLanguage {
             return 0
         }
-        
+
         if !(post.isLocalizedVersion ?? false) {
             return 1
         }
-        
+
         return 2
     }
-    
+
     func getPostToRead(id: String) {
         Task {
             do {
                 let post = try await ArticlesManager.shared.getPostToRead(id: id)
-                
+
                 dateCreated = post.dateCreated ?? Date()
                 text = post.text ?? NSLocalizedString("notFoundLabel", comment: "")
             } catch {
                 dateCreated = Date()
                 text = ""
             }
-            
+
             isLoadingPopupPresented = false
             isReadViewPresented = true
         }
     }
-    
+
     func onPostAppearing(_ post: PrePost) {
         guard let authorId = post.authorId else { return }
-        
+
         if !authorsInfo.keys.contains(authorId) {
             Task {
                 do {
                     let info = try await UserManager.shared.getPostAuthorInfo(for: authorId)
-                    
+
                     withAnimation {
                         authorsInfo[authorId] = info
                     }
@@ -246,7 +256,7 @@ final class SubscribesViewModel: ObservableObject {
                 }
             }
         }
-        
+
         if articles.last == post && lastDocument != nil {
             Task {
                 do {
@@ -257,8 +267,8 @@ final class SubscribesViewModel: ObservableObject {
             }
         }
     }
-    
-    func tapGestureHandler(on post: PrePost) {
+
+    func tapGestureHandler(on post: PrePost, openComments: Bool = false) {
         title = post.title ?? NSLocalizedString("notFoundLabel", comment: "")
         likesCount = post.likesCount ?? 0
         id = post.id
@@ -271,20 +281,38 @@ final class SubscribesViewModel: ObservableObject {
         isPremiumPost = post.isPremiumPost ?? false
         isLocalizedVersion = post.isLocalizedVersion ?? false
         rootId = post.rootId ?? ""
-        
+        shouldOpenCommentsOnRead = openComments
+
+        Task {
+            await countPostViewIfNeeded(post)
+        }
+
         isLoadingPopupPresented = true
         getPostToRead(id: post.id)
+    }
+
+    func countPostViewIfNeeded(_ post: PrePost) async {
+        guard post.authorId != user?.userId else { return }
+        guard !views.contains(post.id) else { return }
+
+        do {
+            try await ArticlesManager.shared.updateViews(at: post.id)
+            views.append(post.id)
+            saveViews()
+        } catch {
+            print("SUBSCRIBES VIEW COUNT ERROR: \(error.localizedDescription)")
+        }
     }
 }
 
 struct SubscribesView: View {
     @StateObject private var viewModel = SubscribesViewModel()
     @Binding var isPremiumViewPresented: Bool
-    
+
     @EnvironmentObject var sessionManager: SessionManager
     @EnvironmentObject var changedPostsManager: ChangedPostsManager
     @EnvironmentObject var subManager: SubscriptionManager
-    
+
     var body: some View {
         NavigationStack {
             ZStack {
@@ -292,7 +320,7 @@ struct SubscribesView: View {
                     LazyVStack {
                         Text("")
                         VisibilityTracker(id: "subscribesHeader")
-                        
+
                         SubscribesHStackView(
                             isLoading: $viewModel.isLoading,
                             channels: $viewModel.channels,
@@ -302,7 +330,7 @@ struct SubscribesView: View {
                         )
                         .padding(.top, 30)
                         .padding(.bottom, -40)
-                        
+
                         if viewModel.isLoading {
                             ForEach(0..<3) { num in
                                 ArticleView(
@@ -348,7 +376,15 @@ struct SubscribesView: View {
                                     locCount: post.localizationCount ?? 0,
                                     isLocalizedVersion: post.isLocalizedVersion ?? false,
                                     isPremiumPost: post.isPremiumPost ?? false,
-                                    user: $viewModel.user,
+                                    onCommentTap: {
+                                        if let isPremiumPost = post.isPremiumPost,
+                                           isPremiumPost && !subManager.hasPremium,
+                                           post.authorId != viewModel.user?.userId {
+                                            isPremiumViewPresented = true
+                                        } else {
+                                            viewModel.tapGestureHandler(on: post, openComments: true)
+                                        }
+                                    }, user: $viewModel.user,
                                     isZoomableViewPresented: $viewModel.isZoomableImageViewPresented,
                                     zoomableImage: $viewModel.zoomableImage,
                                     selectedAuthorId: $viewModel.authorId,
@@ -357,6 +393,12 @@ struct SubscribesView: View {
                                 .padding(.top, 10)
                                 .onAppear {
                                     viewModel.onPostAppearing(post)
+                                    AnalyticsManager.shared.logFeedImpression(
+                                        publicationId: post.id,
+                                        authorId: post.authorId ?? "",
+                                        contentType: (post.isShortPost ?? false) ? "post" : "article",
+                                        source: "subscriptions_feed"
+                                    )
                                 }
                                 .onTapGesture {
                                     if let isPremiumPost = post.isPremiumPost,
@@ -374,15 +416,17 @@ struct SubscribesView: View {
                 .refreshable {
                     await viewModel.refresh()
                 }
-                
+
                 VStack {
                     headerView
-                    
+
                     Spacer()
                 }
                 .ignoresSafeArea()
             }
             .onAppear {
+                viewModel.getViews()
+
                 if viewModel.isLoading && viewModel.channels.isEmpty && viewModel.articles.isEmpty {
                     Task {
                         await viewModel.refresh()
@@ -392,7 +436,7 @@ struct SubscribesView: View {
             .onPreferenceChange(VisibilityPreferenceKey.self) { values in
                 if let minY = values["subscribesHeader"] {
                     let isVisible = minY > 60
-                    
+
                     if viewModel.isLargeHeaderVisible != isVisible {
                         withAnimation(.easeInOut(duration: 0.2)) {
                             viewModel.isLargeHeaderVisible = isVisible
@@ -422,7 +466,8 @@ struct SubscribesView: View {
                     isPresented: $viewModel.isReadViewPresented,
                     isLocalizedVersion: viewModel.isLocalizedVersion,
                     rootId: viewModel.rootId,
-                    originalPrePost: originalPost(for: viewModel.id)
+                    originalPrePost: originalPost(for: viewModel.id),
+                    openCommentsOnAppear: viewModel.shouldOpenCommentsOnRead
                 )
                 .environmentObject(sessionManager)
                 .environmentObject(changedPostsManager)
@@ -482,10 +527,10 @@ private extension SubscribesView {
         else {
             return nil
         }
-        
+
         return viewModel.allPosts.first { $0.id == rootId }
     }
-    
+
     var headerView: some View {
         ZStack {
             if viewModel.isLargeHeaderVisible {
@@ -497,12 +542,12 @@ private extension SubscribesView {
                     .frame(width: UIScreen.main.bounds.width, height: 120)
                     .foregroundStyle(.thinMaterial)
             }
-            
+
             HStack(spacing: 5) {
                 Text(NSLocalizedString("subscribesLabel", comment: ""))
                     .font(.system(size: 32))
                     .fontWeight(.light)
-                
+
                 if viewModel.isLoading {
                     LoadingIndicator(
                         animation: .circleRunner,

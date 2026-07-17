@@ -29,9 +29,11 @@ final class LikedPostsViewModel: ObservableObject {
     @Published var zoomableImage: UIImage? = nil
     @Published var authorId = ""
     @Published var isLargeHeaderVisible = true
-    
+    @Published var shouldOpenCommentsOnRead = false
+    @Published var views: [String] = []
+
     @Published var lastDocument: DocumentSnapshot? = nil
-    
+
     var title = ""
     var image = UIImage()
     var dateCreated = Date()
@@ -47,59 +49,67 @@ final class LikedPostsViewModel: ObservableObject {
     var isPremiumPost = false
     var isLocalizedVersion = false
     var rootId = ""
-    
+
+    func getViews() {
+        views = StorageManager.shared.getViews()
+    }
+
+    func saveViews() {
+        StorageManager.shared.save(views: views)
+    }
+
     private var db = Firestore.firestore()
-    
+
     func getPostToRead(id: String) {
         Task {
             do {
                 let post = try await ArticlesManager.shared.getPostToRead(id: id)
-                
+
                 dateCreated = post.dateCreated ?? Date()
                 text = post.text ?? NSLocalizedString("notFoundLabel", comment: "")
             } catch {
                 dateCreated = Date()
                 text = ""
             }
-            
+
             isLoadingPopupPresented = false
             isReadViewPresented = true
         }
     }
-    
+
     func getPrePost(id: String) async throws -> PrePost {
         try await ArticlesManager.shared.getPrePost(id: id)
     }
-    
+
     func getAuthorName(id: String) async throws -> String {
         try await UserManager.shared.getUser(userId: id)?.name ?? ""
     }
-    
+
     func getAuthorIsCheckmarkStatus(id: String) async throws -> Bool {
         try await UserManager.shared.getUser(userId: id)?.isCheckmark ?? false
     }
-    
+
     func loadUser() async throws {
         let authDataResult = try AuthenticationManager.shared.getAuthenticatedUser()
         let user = try await UserManager.shared.getUser(userId: authDataResult.uid)
-        
+
         self.user = user
     }
-    
+
     func reload() {
         withAnimation {
             isLoading = true
             isLoadingShowed = true
         }
-        
-        
+
+
         withAnimation {
             likedPosts = []
             articles = []
             user = nil
             authorsInfo = [:]
         }
-        
+
         Task {
             try? await loadUser()
         }
@@ -168,7 +178,7 @@ final class LikedPostsViewModel: ObservableObject {
             Task {
                 do {
                     let info = try await UserManager.shared.getPostAuthorInfo(for: post.authorId ?? "")
-                    
+
                     withAnimation {
                         authorsInfo[post.authorId ?? ""] = info
                     }
@@ -180,15 +190,15 @@ final class LikedPostsViewModel: ObservableObject {
                 }
             }
         }
-        
+
         if post == articles.last && lastDocument != nil {
             Task {
                 try? await getArticles()
             }
         }
     }
-    
-    func tapGestureHandler(on post: PrePost) {
+
+    func tapGestureHandler(on post: PrePost, openComments: Bool = false) {
         title = post.title ?? NSLocalizedString("notFoundLabel", comment: "")
         image = StorageManager.shared.getImage(id: post.id) ?? UIImage()
         likesCount = post.likesCount ?? 0
@@ -202,26 +212,31 @@ final class LikedPostsViewModel: ObservableObject {
         isPremiumPost = post.isPremiumPost ?? false
         isLocalizedVersion = post.isLocalizedVersion ?? false
         rootId = post.rootId ?? ""
-        
+        shouldOpenCommentsOnRead = openComments
+
+        Task {
+            await countPostViewIfNeeded(post)
+        }
+
         if user != nil {
             if likedPosts == [] {
                 likedPosts = user?.likedPosts ?? []
             }
-            
+
             if userId == "" {
                 userId = user?.userId ?? ""
             }
-            
+
             Task {
                 do {
                     isLoadingPopupPresented = true
                     getPostToRead(id: post.id)
-                    
+
                     if post.isArchive ?? true {
                         image = UIImage()
                         text = ""
                     }
-                    
+
                     isLoadingPopupPresented = false
                     isReadViewPresented = true
                 }
@@ -232,7 +247,20 @@ final class LikedPostsViewModel: ObservableObject {
                 isErrorPopupPresented = true
             }
         }
-        
+
         isLoadingPopupPresented = false
+    }
+
+    func countPostViewIfNeeded(_ post: PrePost) async {
+        guard post.authorId != user?.userId else { return }
+        guard !views.contains(post.id) else { return }
+
+        do {
+            try await ArticlesManager.shared.updateViews(at: post.id)
+            views.append(post.id)
+            saveViews()
+        } catch {
+            print("LIKED POSTS VIEW COUNT ERROR: \(error.localizedDescription)")
+        }
     }
 }

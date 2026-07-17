@@ -150,7 +150,13 @@ private extension CreateView {
                 .scrollContentBackground(.hidden)
                 .background(Color(uiColor: .secondarySystemBackground))
                 .clipShape(RoundedRectangle(cornerRadius: 20))
-                .shadow(radius: 1)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 20)
+                        .stroke(
+                            Color(.systemGray5),
+                            lineWidth: 2
+                        )
+                )
                 .focused($isTitleTEFocused)
                 .padding(.horizontal)
                 .onChange(of: isTitleTEFocused) {
@@ -318,7 +324,7 @@ private extension CreateView {
             isLocalizing: isLocalizing,
             localizationCount: localizationCount,
             rootId: rootId,
-            isPremiumPost: viewModel.isPremiumPostSetting == 0 ? false : true,
+            isPremiumPost: viewModel.isPremiumPostSetting != 0,
             shouldSavePublicationLanguage: !isLocalizing && !isLocalizedVersion,
             media: $media,
             mediaURLs: $viewModel.mediaURLs,
@@ -477,7 +483,7 @@ private extension CreateView {
                 let secondsDuration = CMTimeGetSeconds(duration)
 
                 try Task.checkCancellation()
-                guard secondsDuration <= 120 else {
+                guard secondsDuration <= 600 else {
                     withAnimation {
                         viewModel.errorText = NSLocalizedString("durationCoverErrorLabel", comment: "")
                         viewModel.isErrorPopupPresented = true

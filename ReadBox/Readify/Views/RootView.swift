@@ -61,9 +61,8 @@ struct RootView: View {
     private var screenWidth = UIScreen.main.bounds.width
 
     var body: some View {
-//        NavigationStack {
-            ZStack(alignment: .bottom) {
-                if let _ = try? AuthenticationManager.shared.getAuthenticatedUser() {
+        ZStack(alignment: .bottom) {
+            if (try? AuthenticationManager.shared.getAuthenticatedUser()) != nil {
                     TabView(selection: $selectedTab) {
                         FeedView(
                             isWelcomeViewPresented: $isWelcomeViewPresented,
@@ -99,14 +98,6 @@ struct RootView: View {
                         .tabItem {
                             Label("", systemImage: "person.fill")
                         }
-
-                        //                    ProfileView(
-                        //                        isWelcomeViewPresented: $isWelcomeViewPresented
-                        //                    )
-                        //                    .tag(TabType.profile)
-                        //                    .tabItem {
-                        //                        Label("", systemImage: "person.fill")
-                        //                    }
                     }
                     .disabled(isUpdateBlur)
                     .blur(radius: isUpdateBlur ? 5 : 0)
@@ -114,13 +105,12 @@ struct RootView: View {
                     .onAppear {
                         isNotificationPopupPresented = !StorageManager.shared.isNotificationsPopupShowed()
                     }
-                }
             }
+        }
             .environmentObject(sub)
             .environmentObject(hudService)
             .environmentObject(sessionManager)
             .environmentObject(changedPostsManager)
-            .environmentObject(sub)
             .overlay(alignment: .bottom) {
                 if hudService.isLoading {
                     hudService.makeLoadingPopup(screenWidth: screenWidth)
@@ -156,6 +146,9 @@ struct RootView: View {
                 if !isWelcomeViewPresented {
                     Task {
                         let authUser = try? AuthenticationManager.shared.getAuthenticatedUser()
+                        if let authUser {
+                            AnalyticsManager.shared.setAuthenticatedUser(id: authUser.uid)
+                        }
                         let user = try? await UserManager.shared.getUser(userId: authUser?.uid ?? "")
 
                         try? await UserManager.shared.set(
@@ -198,6 +191,7 @@ struct RootView: View {
             .onAppear {
                 Task {
                     if let authUser = try? AuthenticationManager.shared.getAuthenticatedUser() {
+                        AnalyticsManager.shared.setAuthenticatedUser(id: authUser.uid)
                         isWelcomeViewPresented = false
                         user = try? await UserManager.shared.getUser(userId: authUser.uid)
 
@@ -215,6 +209,7 @@ struct RootView: View {
                             )
                         }
                     } else {
+                        AnalyticsManager.shared.clearAuthenticatedUser()
                         isWelcomeViewPresented = true
                     }
                 }
@@ -224,61 +219,7 @@ struct RootView: View {
                 handlePendingNotificationChannelIfNeeded()
             }
             .onOpenURL { url in
-                isLoadingPopupPresented = true
-
-                isReadViewPresented = false
-                isChannelViewPresented = false
-                isPremiumViewPresented = false
-
-                let type = url.absoluteString.components(separatedBy: "/")[3]
-                var index = ""
-
-#if DEBUG
-                print("url: \(url)")
-                print("type: \(type)")
-#endif
-
-                if type == "posts" {
-                    if let components = URLComponents(url: url, resolvingAgainstBaseURL: false) {
-                        if let indexParam = components.queryItems?.first(where: { $0.name == "index" })?.value {
-                            index = indexParam
-
-                            Task {
-                                await openArticleFromExternalRoute(id: index, shouldCountView: true)
-                            }
-                        } else {
-                            print("Index parameter not found.")
-                        }
-                    }
-                } else if type == "authors" {
-                    if let components = URLComponents(url: url, resolvingAgainstBaseURL: false) {
-                        if let indexParam = components.queryItems?.first(where: { $0.name == "index" })?.value {
-                            authorId = indexParam
-
-                            Task {
-                                do {
-                                    authorName = try? await UserManager.shared.getAuthorName(id: authorId)
-                                    isCheckmark = try? await UserManager.shared.getIsCheckmarkStatus(id: authorId)
-                                    lastVersionOfAvatar = try? await UserManager.shared.getAvatarVersion(id: authorId)
-
-                                    let authUser = try AuthenticationManager.shared.getAuthenticatedUser()
-                                    user = try? await UserManager.shared.getUser(userId: authUser.uid)
-
-                                    if user != nil && authorName != nil {
-                                        isLoadingPopupPresented = false
-                                        isChannelViewPresented = true
-                                    }
-                                } catch {
-                                    print("URL ERROR: \(error.localizedDescription)")
-                                }
-                            }
-
-                        } else {
-                            print("Index parameter not found.")
-                        }
-                    }
-                }
-
+                handleOpenURL(url)
             }
             .onReceive(NotificationCenter.default.publisher(for: Notification.Name("didReceiveRemoteNotification"))) { notification in
                 guard let userInfo = notification.userInfo else { return }
@@ -348,23 +289,10 @@ struct RootView: View {
                     .presentationCornerRadius(30)
                     .presentationDragIndicator(.visible)
             })
-            //        .popup(isPresented: $isNotificationPopupPresented) {
-            //            NotificationPermissionView(
-            //                isPopupPresented: $isNotificationPopupPresented,
-            //                route: .requestSystemPrompt
-            //            )
-            //            .shadow(radius: 2)
-            //        } customize: {
-            //            $0
-            //                .type(.toast)
-            //                .appearFrom(.bottomSlide)
-            //                .dragToDismiss(true)
-            //                .displayMode(.overlay)
-            //        }
             .sheet(isPresented: $isNotificationPopupPresented, content: {
                 NotificationPermissionView(
                     isPopupPresented: $isNotificationPopupPresented,
-                    route:.requestSystemPrompt
+                    route: .requestSystemPrompt
                 )
                 .presentationDetents([.height(250)])
                 .presentationCornerRadius(30)
@@ -381,6 +309,42 @@ struct RootView: View {
 
 
 private extension RootView {
+    func handleOpenURL(_ url: URL) {
+        let type = url.pathComponents.dropFirst().first ?? ""
+        let queryItems = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems
+        let index = queryItems?.first(where: { $0.name == "index" })?.value
+        let campaign = queryItems?.first(where: { $0.name == "utm_campaign" })?.value
+
+        AnalyticsManager.shared.logInstallSourceIfNeeded(
+            source: url.host ?? url.scheme ?? "external_link",
+            campaign: campaign
+        )
+
+        guard let index, !index.isEmpty else { return }
+
+        if type == "posts" {
+            AnalyticsManager.shared.logWebToAppOpen(
+                url: url,
+                destination: "article",
+                contentId: index
+            )
+
+            Task {
+                await openArticleFromExternalRoute(id: index, shouldCountView: true)
+            }
+        } else if type == "authors" {
+            AnalyticsManager.shared.logWebToAppOpen(
+                url: url,
+                destination: "author",
+                contentId: index
+            )
+
+            Task {
+                await openChannelFromExternalRoute(id: index)
+            }
+        }
+    }
+
     func handleRemoteNotification(_ userInfo: [AnyHashable: Any]) {
         if let channelId = channelIdToOpen(from: userInfo) {
             StorageManager.shared.deletePendingNotificationChannelId()

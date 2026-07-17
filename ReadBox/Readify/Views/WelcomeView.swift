@@ -9,19 +9,19 @@ import SwiftUI
 
 struct WelcomeView: View {
     @Binding var isSignInViewPreseted: Bool
-    
+
     var body: some View {
         NavigationStack {
             VStack {
                 Spacer()
-                
+
                 VStack(spacing: 1) {
                     Text("ReadBox")
                         .font(.system(size: 32))
                         .fontWeight(.light)
                         .fontDesign(.rounded)
                         .frame(width: UIScreen.main.bounds.width - 40, alignment: .leading)
-                    
+
                     HStack {
                         Text(NSLocalizedString("welcomeLabel", comment: ""))
                             .font(.system(size: 26))
@@ -29,13 +29,13 @@ struct WelcomeView: View {
                             .fontDesign(.rounded)
                             .frame(width: UIScreen.main.bounds.width - 150, alignment: .leading)
                             .padding(.leading, 20)
-                        
+
                         Spacer()
                     }
                 }
-                
+
                 Spacer()
-                
+
                 VStack(spacing: 15) {
                     NavigationLink {
                         SignInView(isWelcomeViewPresented: $isSignInViewPreseted)
@@ -54,7 +54,7 @@ struct WelcomeView: View {
                             )
                     }
 
-                    
+
                     NavigationLink {
                         SignUpView(isWelcomeViewPresented: $isSignInViewPreseted)
                     } label: {
@@ -75,6 +75,9 @@ struct WelcomeView: View {
                 .padding(.bottom, 50)
             }
             .navigationBarBackButtonHidden()
+            .onAppear {
+                AnalyticsManager.shared.logOnboardingStarted(source: "welcome")
+            }
         }
     }
 }

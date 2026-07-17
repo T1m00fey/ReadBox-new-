@@ -26,6 +26,10 @@ final class CommentariesManager {
         try await commentDocument(id: id).getDocument(as: ViewsCount.self).viewsCount
     }
 
+    func getComment(id: String) async throws -> Comment {
+        try await commentDocument(id: id).getDocument(as: Comment.self)
+    }
+
     func getCommentaries(rootPostId: String) async throws -> [Comment] {
         let snapshot = try await commentariesCollection
             .whereField("root_post_id", isEqualTo: rootPostId)
@@ -34,6 +38,27 @@ final class CommentariesManager {
         return snapshot.documents
             .compactMap { try? $0.data(as: Comment.self) }
             .sorted { ($0.dateCreated ?? .distantPast) < ($1.dateCreated ?? .distantPast) }
+    }
+
+    func getCommentariesPage(
+        rootPostId: String,
+        limit: Int,
+        startAfter: DocumentSnapshot? = nil
+    ) async throws -> ([Comment], DocumentSnapshot?) {
+        var query = commentariesCollection
+            .whereField("root_post_id", isEqualTo: rootPostId)
+            .order(by: "date_created")
+            .limit(to: limit)
+
+        if let startAfter {
+            query = query.start(afterDocument: startAfter)
+        }
+
+        let snapshot = try await query.getDocuments()
+        let commentaries = snapshot.documents.compactMap { try? $0.data(as: Comment.self) }
+        let lastDocument = snapshot.documents.count == limit ? snapshot.documents.last : nil
+
+        return (commentaries, lastDocument)
     }
 
     func getCommentaries(authorId: String) async throws -> [Comment] {
@@ -61,6 +86,7 @@ final class CommentariesManager {
             "author_id": authorId,
             "date_created": dateCreated,
             "likes_count": 0,
+            "replies_count": 0,
             "root_author_id": rootAuthorId,
             "root_post_id": rootPostId,
             "text": text,
@@ -77,7 +103,8 @@ final class CommentariesManager {
             rootAuthorId: rootAuthorId,
             rootPostId: rootPostId,
             viewsCount: 0,
-            likesCount: 0
+            likesCount: 0,
+            repliesCount: 0
         )
     }
 
@@ -99,6 +126,30 @@ final class CommentariesManager {
         ]
 
         try await commentDocument(id: id).updateData(data)
+    }
+
+    func updateRepliesCount(at id: String, isPlus: Bool) async throws {
+        if isPlus {
+            let data: [String: Any] = [
+                "replies_count": FieldValue.increment(Int64(1))
+            ]
+
+            try await commentDocument(id: id).updateData(data)
+            return
+        }
+
+        let repliesCount = try await commentDocument(id: id).getDocument(as: Comment.self).repliesCount ?? 0
+        let nextCount = max(0, repliesCount - 1)
+
+        let data: [String: Any] = [
+            "replies_count": nextCount
+        ]
+
+        try await commentDocument(id: id).updateData(data)
+    }
+
+    func deleteComment(id: String) async throws {
+        try await commentDocument(id: id).delete()
     }
 
 }

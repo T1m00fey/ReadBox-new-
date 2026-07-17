@@ -32,9 +32,12 @@ struct ReadView: View {
     let isPremiumPost: Bool
     let isLocalizedVersion: Bool
     let rootId: String
+    let openSource: String
+    let isCommentReadView: Bool
     let originalPrePost: PrePost?
     let replyAuthorName: String?
     let replyRootPostId: String?
+    let openCommentsOnAppear: Bool
 
     @Binding var user: DBUser?
     @Binding var isChannelViewPresented: Bool
@@ -67,6 +70,12 @@ struct ReadView: View {
     @State private var replyRootAuthorName = ""
     @State private var replyRootIsCheckmark = false
     @State private var replyRootLastVersionOfAvatar = 0
+    @State private var didHandleInitialCommentFocus = false
+    @State private var readingStartedAt: Date? = nil
+    @State private var trackedReadingArticleId = ""
+    @State private var readingContentEndMaxY: CGFloat = 0
+    @State private var loggedReadingMilestones: Set<Int> = []
+    @State private var isSharePopupPresented = false
 
     @StateObject var viewModel = ReadViewModel()
 
@@ -99,9 +108,12 @@ struct ReadView: View {
         isPresented: Binding<Bool>,
         isLocalizedVersion: Bool = false,
         rootId: String = "",
+        openSource: String = "unknown",
+        isCommentReadView: Bool = false,
         originalPrePost: PrePost? = nil,
         replyAuthorName: String? = nil,
-        replyRootPostId: String? = nil
+        replyRootPostId: String? = nil,
+        openCommentsOnAppear: Bool = false
     ) {
         self.id = id
         self.title = title
@@ -123,9 +135,12 @@ struct ReadView: View {
         self._isPresented = isPresented
         self.isLocalizedVersion = isLocalizedVersion
         self.rootId = rootId
+        self.openSource = openSource
+        self.isCommentReadView = isCommentReadView
         self.originalPrePost = originalPrePost
         self.replyAuthorName = replyAuthorName
         self.replyRootPostId = replyRootPostId
+        self.openCommentsOnAppear = openCommentsOnAppear
     }
 
     var body: some View {
@@ -133,445 +148,267 @@ struct ReadView: View {
             Color(uiColor: .systemBackground)
                 .ignoresSafeArea()
 
-            ScrollView(showsIndicators: false) {
-                VStack {
-
-                    if !currentText.isEmpty {
-                        Text(currentTitle)
-                            .fontWeight(.light)
-                            .fontDesign(.rounded)
-                            .font(.system(size: 24))
-                            .frame(width: UIScreen.main.bounds.width - 32, alignment: .leading)
-                            .hiddenReadContentOnScreenshots(currentIsPremiumPost)
-
-                        RoundedRectangle(cornerRadius: 0)
-                            .frame(width: UIScreen.main.bounds.width, height: 1)
-                            .foregroundStyle(Color.gray)
-                            .padding(.bottom, 4)
-                    }
-
-                    ZStack {
-                        VisibilityTracker(id: "authorBlock")
-
-                        HStack {
-//                            Text("by")
-//                                .font(.system(size: 20))
-//                                .fontDesign(.rounded)
-//                                .foregroundStyle(Color.gray)
-
-                            if let avatar = viewModel.avatarImage {
-                                Image(uiImage: avatar)
-                                    .resizable()
-                                    .scaledToFill()
-                                    .frame(width: 45, height: 45)
-                                    .clipShape(Circle())
-                                    .overlay {
-                                        Circle()
-                                            .stroke(
-                                                Color(.label),
-                                                lineWidth: 0.1
-                                            )
-                                    }
-                            }
-
-                            VStack(alignment: .leading, spacing: 2) {
-                                if let replyTitle {
-                                    Text(replyTitle)
-                                        .font(.system(size: 12))
-                                        .foregroundStyle(Color.gray)
-                                        .lineLimit(1)
-                                        .onTapGesture {
-                                            openReplyRootPost()
-                                        }
-                                }
-
-                                HStack(spacing: 0) {
-                                    Button {
-                                        withAnimation {
-                                            if authorName != "" {
-                                                isChannelViewPresented = true
-
-                                                isPresented = false
-                                            }
-                                        }
-                                    } label: {
-                                        Text(authorName == "" ? NSLocalizedString("notFoundLabel", comment: "") : authorName)
-                                            .font(.system(size: 18))
-                                            .multilineTextAlignment(.leading)
-                                            .lineLimit(2)
-                                            .underline()
-
-                                    }
-
-                                    if isCheckmark {
-                                        Image(systemName: "checkmark.seal.fill")
-                                            .foregroundStyle(Color.blue)
-                                            .font(.system(size: 14))
-                                            .padding(.top, 1)
-                                    }
-                                }
-                            }
-                        }
-                        .frame(width: UIScreen.main.bounds.width - 32, alignment: .leading)
-                        .padding(.bottom, currentIsShortPost ? 0 : 5)
-                        .padding(.top, viewModel.images.count == 0 ? 10 : 0)
-                    }
-
-//                        if viewModel.image != UIImage() {
-//                            Image(uiImage: viewModel.image)
-//                                .resizable()
-//                                .scaledToFit()
-//                                .frame(width: UIScreen.main.bounds.width - 20)
-//                                .clipShape(RoundedRectangle(cornerRadius: 20))
-//                                .padding(.horizontal)
-//                                .onTapGesture {
-//                                    viewModel.isImageFullscreenPresented = true
-//                                }
-//                        } else if let videoURL = viewModel.videoURL {
-//                            TappableVideoPreview(url: videoURL, cornerRadius: 20, width: UIScreen.main.bounds.width - 20)
-//                                .frame(width: UIScreen.main.bounds.width - 20)
-//                        }
-
-                    if currentMediaPosition == 0 && currentMediaCount > 0 {
-                        mediaViews
-                    }
-//                    else if currentMediaPosition == 1 && !currentTitle.isEmpty {
-//                        titleView
-////                            .padding(.top, 10)
-////                            .padding(.bottom, -20)
-//                    }
-
-                    if !currentIsShortPost {
-                        HStack {
-                            Text(currentDateCreatedText)
-                                .font(.system(size: 19))
-                                .fontWeight(.light)
-                                .fontDesign(.rounded)
-                                .foregroundStyle(Color.gray)
-
-                            Spacer()
-
-                            likeButton
-
-                            if canShowSubscribeButton {
-                                subscribeButton
-                            }
-                        }
-                        .frame(width: UIScreen.main.bounds.width - 32)
-                        .padding(.horizontal)
-                        .padding(.top, mediaCount == 0 || currentMediaPosition == 1 ? -15 : 0)
-                        .padding(.bottom, 10)
-                    }
-
-                    if currentMediaPosition == 1 && !currentTitle.isEmpty {
-                        titleView
-                            .padding(.bottom, currentIsShortPost ? 14 : 25)
-                    }
-
-                    if !currentText.isEmpty {
-                        Markdown(
-                            currentText.replacingOccurrences(of: "\n", with: "  \n").normalizeEmptyLines()
-                        )
-                        .markdownImageProvider(
-                            WebImageProvider(onImageTap: { url in
-                                viewModel.selectedImageURL = url
-                                viewModel.isZoomableViewPresented = true
-                            })
-                        )
-                        .markdownTextStyle(\.text) {
-                            FontSize(CGFloat(viewModel.fontSize))
-                        }
-                        .markdownTheme(.gitHub)
-                        .id("\(currentId)-\(viewModel.fontSize)")
-                        .frame(width: UIScreen.main.bounds.width - 32, alignment: .topLeading)
-                        .padding(.bottom, currentIsShortPost ? 12 : 20)
-                        .hiddenReadContentOnScreenshots(currentIsPremiumPost)
-
-                        if currentMediaPosition == 1 && currentMediaCount > 0 {
-                            mediaViews
-                                .padding(.top, -5)
-                                .padding(.bottom, 20)
-                        }
-                    } else if currentMediaPosition == 0 && currentTitle != "" {
-                        titleView
-                            .padding(.top, currentIsShortPost ? 8 : 0)
-                            .padding(.bottom, currentIsShortPost ? 12 : 20)
-                    } else if currentMediaPosition == 1 {
-                        mediaViews
-                            .padding(.top, -15)
-                            .padding(.bottom, currentIsShortPost ? 12 : 20)
-                    }
-
-                    if currentIsShortPost {
-                        HStack {
-                            Text(currentDateCreatedText)
-                                .font(.system(size: 19))
-                                .fontWeight(.light)
-                                .fontDesign(.rounded)
-                                .foregroundStyle(Color.gray)
-
-                            Spacer()
-
-                            likeButton
-
-                            if canShowSubscribeButton {
-                                subscribeButton
-                            }
-                        }
-                        .frame(width: UIScreen.main.bounds.width - 32)
-                        .padding(.horizontal)
-                        .padding(.bottom, 20)
-                    }
-
-                    commentariesSection
-                }
-
-            }
-            .coordinateSpace(name: "readScroll")
-            .fullScreenCover(isPresented: $viewModel.isZoomableViewPresented) {
-                if let image = viewModel.zoomableImage {
-                    ZoomableImageView(image: image)
-                } else if let url = viewModel.selectedImageURL {
-                    ZoomableImageView(imageURL: url)
-                }
-            }
-            .navigationDestination(isPresented: $isCommentAuthorChannelPresented) {
-                ChannelView(
-                    user: $user,
-                    authorId: commentChannelAuthorId,
-                    authorName: commentChannelAuthorName,
-                    isCheckmark: commentChannelIsCheckmark,
-                    lastVersionOfAvatar: commentChannelLastVersionOfAvatar,
-                    isPremiumViewPresented: $isCommentChannelPremiumViewPresented
-                )
-                .tint(Color(uiColor: .label))
-                .environmentObject(sessionManager)
-                .environmentObject(changedPostsManager)
-                .environmentObject(subManager)
-            }
-            .navigationDestination(isPresented: $isCommentReadViewPresented) {
-                let commentAuthorId = commentToRead?.authorId ?? ""
-                let replyAuthorId = commentToRead?.rootAuthorId ?? authorId
-                let authorInfo = viewModel.commentAuthorsInfo[commentAuthorId]
-                let replyAuthorInfo = viewModel.commentAuthorsInfo[replyAuthorId]
-                let replyAuthorName = replyAuthorInfo?.name ?? authorName
-
-                ReadView(
-                    id: commentToRead?.id ?? "",
-                    title: commentToRead?.text ?? "",
-                    text: "",
-                    dateCreated: commentToRead?.dateCreated ?? Date(),
-                    likesCount: commentToRead?.likesCount ?? 0,
-                    authorId: commentAuthorId,
-                    authorName: authorInfo?.name ?? "",
-                    isCheckmark: authorInfo?.isCheckmark ?? false,
-                    isArchive: false,
-                    mediaCount: 0,
-                    mediaVersion: 1,
-                    mediaPosition: 0,
-                    lastVersionOfAvatar: authorInfo?.avatarVersion ?? 0,
-                    user: $user,
-                    isChannelViewPresented: $isCommentAuthorChannelPresented,
-                    isPresented: $isCommentReadViewPresented,
-                    replyAuthorName: replyAuthorName,
-                    replyRootPostId: commentToRead?.rootPostId
-                )
-                .environmentObject(sessionManager)
-                .environmentObject(changedPostsManager)
-                .environmentObject(subManager)
-            }
-            .navigationDestination(isPresented: $isReplyRootReadViewPresented) {
-                ReadView(
-                    id: replyRootPrePost?.id ?? "",
-                    title: replyRootPrePost?.title ?? "",
-                    text: replyRootPostToRead?.text ?? "",
-                    dateCreated: replyRootPostToRead?.dateCreated ?? Date(),
-                    likesCount: replyRootPrePost?.likesCount ?? 0,
-                    authorId: replyRootPrePost?.authorId ?? "",
-                    authorName: replyRootAuthorName,
-                    isCheckmark: replyRootIsCheckmark,
-                    isArchive: false,
-                    mediaCount: replyRootPrePost?.mediaCount ?? 0,
-                    mediaVersion: replyRootPrePost?.mediaVersion ?? 1,
-                    mediaPosition: replyRootPrePost?.mediaPosition ?? 0,
-                    lastVersionOfAvatar: replyRootLastVersionOfAvatar,
-                    articleLanguage: replyRootPrePost?.originalLanguage ?? "",
-                    isPremiumPost: replyRootPrePost?.isPremiumPost ?? false,
-                    user: $user,
-                    isChannelViewPresented: $isCommentAuthorChannelPresented,
-                    isPresented: $isReplyRootReadViewPresented,
-                    isLocalizedVersion: replyRootPrePost?.isLocalizedVersion ?? false,
-                    rootId: replyRootPrePost?.rootId ?? ""
-                )
-                .environmentObject(sessionManager)
-                .environmentObject(changedPostsManager)
-                .environmentObject(subManager)
-            }
-            .fullScreenCover(isPresented: $isCommentChannelPremiumViewPresented) {
-                PremiumView()
-                    .environmentObject(subManager)
-            }
-            .onPreferenceChange(VisibilityPreferenceKey.self) { values in
-                if let minY = values["authorBlock"] {
-                    let isVisible = minY > -20
-
-                    if viewModel.isAuthorBlockVisible != isVisible {
-                        withAnimation(.easeInOut(duration: 0.2)) {
-                            viewModel.isAuthorBlockVisible = isVisible
-                        }
+            ScrollViewReader { scrollProxy in
+                ScrollView(showsIndicators: false) {
+                    VStack {
+                        titleHeaderSection
+                        authorSection
+                        mediaBeforeContentSection
+                        actionsBeforeContentSection
+                        contentSection
+                        actionsAfterContentSection
+                        VisibilityTracker(id: "readingEnd")
+                        commentariesSection
                     }
                 }
-            }
-            .onAppear {
-                viewedArticleIdsInReadSession.insert(id)
-
-                withAnimation {
-                    if let subscribes = user?.subscribes {
-                        isSubscribed = subscribes.contains(authorId)
+                .coordinateSpace(name: "readScroll")
+                .fullScreenCover(isPresented: $viewModel.isZoomableViewPresented) {
+                    if let image = viewModel.zoomableImage {
+                        ZoomableImageView(image: image)
+                    } else if let url = viewModel.selectedImageURL {
+                        ZoomableImageView(imageURL: url)
                     }
-
-                    viewModel.isPostLiked = (user?.likedPosts ?? []).contains(currentId)
                 }
-
-                viewModel.likesCount = currentLikesCount
-
-                viewModel.fontSize = StorageManager.shared.getFontSize()
-
-                if originalArticleLanguage.isEmpty {
-                    originalArticleLanguage = formattedLanguageCode(originalPrePost?.originalLanguage)
-                }
-            }
-            .task {
-                let avatarVersion: Int
-
-                do {
-                    avatarVersion = try await UserManager.shared.resolveAvatarVersion(
-                        id: authorId,
-                        fallback: lastVersionOfAvatar
+                .navigationDestination(isPresented: $isCommentAuthorChannelPresented) {
+                    ChannelView(
+                        user: $user,
+                        authorId: commentChannelAuthorId,
+                        authorName: commentChannelAuthorName,
+                        isCheckmark: commentChannelIsCheckmark,
+                        lastVersionOfAvatar: commentChannelLastVersionOfAvatar,
+                        isPremiumViewPresented: $isCommentChannelPremiumViewPresented
                     )
-                } catch {
-                    avatarVersion = lastVersionOfAvatar
+                    .tint(Color(uiColor: .label))
+                    .environmentObject(sessionManager)
+                    .environmentObject(changedPostsManager)
+                    .environmentObject(subManager)
                 }
+                .navigationDestination(isPresented: $isCommentReadViewPresented) {
+                    let commentAuthorId = commentToRead?.authorId ?? ""
+                    let replyAuthorId = commentToRead?.rootAuthorId ?? authorId
+                    let authorInfo = viewModel.commentAuthorsInfo[commentAuthorId]
+                    let replyAuthorInfo = viewModel.commentAuthorsInfo[replyAuthorId]
+                    let replyAuthorName = replyAuthorInfo?.name ?? authorName
 
-                let ava = await MediaManager.shared.getAvatar(authorId: authorId, lastVersion: avatarVersion)
-
-                withAnimation {
-                    viewModel.avatarImage = ava
+                    ReadView(
+                        id: commentToRead?.id ?? "",
+                        title: commentToRead?.text ?? "",
+                        text: "",
+                        dateCreated: commentToRead?.dateCreated ?? Date(),
+                        likesCount: commentToRead?.likesCount ?? 0,
+                        authorId: commentAuthorId,
+                        authorName: authorInfo?.name ?? "",
+                        isCheckmark: authorInfo?.isCheckmark ?? false,
+                        isArchive: false,
+                        mediaCount: 0,
+                        mediaVersion: 1,
+                        mediaPosition: 0,
+                        lastVersionOfAvatar: authorInfo?.avatarVersion ?? 0,
+                        user: $user,
+                        isChannelViewPresented: $isCommentAuthorChannelPresented,
+                        isPresented: $isCommentReadViewPresented,
+                        isCommentReadView: true,
+                        replyAuthorName: replyAuthorName,
+                        replyRootPostId: commentToRead?.rootPostId
+                    )
+                    .environmentObject(sessionManager)
+                    .environmentObject(changedPostsManager)
+                    .environmentObject(subManager)
                 }
-            }
-            .task(id: currentRootId) {
-                await loadOriginalArticleLanguageIfNeeded()
-            }
-            .task(id: id) {
-                await loadLocalizedArticleIfNeeded()
-            }
-            .task(id: currentId) {
-                await viewModel.loadCommentaries(rootPostId: currentId)
-            }
-            .onChange(of: viewModel.isZoomableViewPresented) {
-                if !viewModel.isZoomableViewPresented {
-                    viewModel.selectedImageURL = nil
+                .navigationDestination(isPresented: $isReplyRootReadViewPresented) {
+                    ReadView(
+                        id: replyRootPrePost?.id ?? "",
+                        title: replyRootPrePost?.title ?? "",
+                        text: replyRootPostToRead?.text ?? "",
+                        dateCreated: replyRootPostToRead?.dateCreated ?? Date(),
+                        likesCount: replyRootPrePost?.likesCount ?? 0,
+                        authorId: replyRootPrePost?.authorId ?? "",
+                        authorName: replyRootAuthorName,
+                        isCheckmark: replyRootIsCheckmark,
+                        isArchive: false,
+                        mediaCount: replyRootPrePost?.mediaCount ?? 0,
+                        mediaVersion: replyRootPrePost?.mediaVersion ?? 1,
+                        mediaPosition: replyRootPrePost?.mediaPosition ?? 0,
+                        lastVersionOfAvatar: replyRootLastVersionOfAvatar,
+                        articleLanguage: replyRootPrePost?.originalLanguage ?? "",
+                        isPremiumPost: replyRootPrePost?.isPremiumPost ?? false,
+                        user: $user,
+                        isChannelViewPresented: $isCommentAuthorChannelPresented,
+                        isPresented: $isReplyRootReadViewPresented,
+                        isLocalizedVersion: replyRootPrePost?.isLocalizedVersion ?? false,
+                        rootId: replyRootPrePost?.rootId ?? ""
+                    )
+                    .environmentObject(sessionManager)
+                    .environmentObject(changedPostsManager)
+                    .environmentObject(subManager)
                 }
-            }
-            .onChange(of: isCommentArticleAuthorTapRequested) {
-                if isCommentArticleAuthorTapRequested {
-                    let authorId = commentChannelAuthorId
-                    isCommentArticleAuthorTapRequested = false
-                    openCommentAuthorChannel(authorId)
+                .fullScreenCover(isPresented: $isCommentChannelPremiumViewPresented) {
+                    PremiumView()
+                        .environmentObject(subManager)
                 }
-            }
-            .popup(isPresented: $viewModel.isErrorPopupPresented) {
-                Text(viewModel.errorText)
-                    .frame(width: UIScreen.main.bounds.width - 72, alignment: .leading)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 16)
-                    .foregroundStyle(Color.white)
-                    .background(Color.red)
-                    .clipShape(RoundedRectangle(cornerRadius: 20))
-            } customize: {
-                $0
-                    .type(.floater())
-                    .position(.top)
-                    .animation(.bouncy)
-                    .dragToDismiss(true)
-                    .autohideIn(5)
-                    .displayMode(.overlay)
-            }
-            .sheet(isPresented: $viewModel.isFontSettingPopupPresented, content: {
-                FontSettingView(
-                    isPopupPresented: $viewModel.isFontSettingPopupPresented,
-                    selectedFontSize: $viewModel.fontSize,
-                    successText: .constant(""),
-                    isSuccessPopupPresented: .constant(false)
-                )
-                .presentationDetents([.height(300)])
-                .presentationCornerRadius(30)
-                .presentationDragIndicator(.visible)
-            })
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
+                .onPreferenceChange(VisibilityPreferenceKey.self) { values in
+                    if let minY = values["authorBlock"] {
+                        let isVisible = minY > -20
 
-                    Button {
-                        isPresented = false
-                    } label: {
-                        Image(systemName: "arrow.left")
-                    }
-
-                }
-
-                ToolbarItem(placement: .principal) {
-                    if !viewModel.isAuthorBlockVisible {
-                        if #available(iOS 26, *) {
-                            principalToolView
-                                .padding(.all, 10)
-                                .glassEffect(.regular)
-                        } else {
-                            principalToolView
+                        if viewModel.isAuthorBlockVisible != isVisible {
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                viewModel.isAuthorBlockVisible = isVisible
+                            }
                         }
                     }
+
+                    if let contentEndY = values["readingEnd"] {
+                        updateReadingProgress(contentEndY: contentEndY)
+                    }
                 }
+                .onAppear {
+                    viewedArticleIdsInReadSession.insert(id)
 
-                ToolbarItem(placement: .topBarTrailing) {
-                    if viewModel.isOriginalArticleLoading {
-                        ProgressView()
-                    } else if hasExtraToolbarActions {
-                        Menu {
-                            if currentText != "" {
-                                Button {
-                                    viewModel.isFontSettingPopupPresented.toggle()
-                                } label: {
-                                    Label(
-                                        NSLocalizedString("fontLabel", comment: ""),
-                                        systemImage: "book.pages"
-                                    )
-                                }
-                            }
+                    if !isCommentReadView {
+                        startReadingSession(for: currentId)
+                    }
 
-                            if canSwitchArticleLanguage {
-                                originalArticleMenuButton
-                            }
+                    withAnimation {
+                        if let subscribes = user?.subscribes {
+                            isSubscribed = subscribes.contains(authorId)
+                        }
 
-                            if !currentIsArchive {
-                                ShareLink(item: URL(string: "https://readbox-links.online/posts/?index=\(currentId)")!) {
-                                    Label(
-                                        NSLocalizedString("shareLabel", comment: ""),
-                                        systemImage: "arrowshape.turn.up.right"
-                                    )
-                                }
-                            }
+                        viewModel.isPostLiked = (user?.likedPosts ?? []).contains(currentId)
+                    }
+
+                    viewModel.likesCount = currentLikesCount
+
+                    viewModel.fontSize = StorageManager.shared.getFontSize()
+
+                    if originalArticleLanguage.isEmpty {
+                        originalArticleLanguage = formattedLanguageCode(originalPrePost?.originalLanguage)
+                    }
+
+                    focusCommentsIfNeeded(using: scrollProxy)
+                }
+                .task {
+                    let avatarVersion: Int
+
+                    do {
+                        avatarVersion = try await UserManager.shared.resolveAvatarVersion(
+                            id: authorId,
+                            fallback: lastVersionOfAvatar
+                        )
+                    } catch {
+                        avatarVersion = lastVersionOfAvatar
+                    }
+
+                    let ava = await MediaManager.shared.getAvatar(authorId: authorId, lastVersion: avatarVersion)
+
+                    withAnimation {
+                        viewModel.avatarImage = ava
+                    }
+                }
+                .task(id: currentRootId) {
+                    await loadOriginalArticleLanguageIfNeeded()
+                }
+                .task(id: id) {
+                    await loadLocalizedArticleIfNeeded()
+                }
+                .task(id: currentId) {
+                    if !isCommentReadView {
+                        startReadingSession(for: currentId)
+                        logCurrentPublicationOpen()
+                    }
+
+                    await viewModel.loadCommentaries(rootPostId: currentId)
+                }
+                .onChange(of: viewModel.commentaries.count) {
+                    focusCommentsIfNeeded(using: scrollProxy)
+                }
+                .onChange(of: viewModel.isZoomableViewPresented) {
+                    if !viewModel.isZoomableViewPresented {
+                        viewModel.selectedImageURL = nil
+                    }
+                }
+                .onChange(of: isCommentArticleAuthorTapRequested) {
+                    if isCommentArticleAuthorTapRequested {
+                        let authorId = commentChannelAuthorId
+                        isCommentArticleAuthorTapRequested = false
+                        openCommentAuthorChannel(authorId)
+                    }
+                }
+                .onDisappear {
+                    finishReadingSession()
+                }
+                .popup(isPresented: $viewModel.isErrorPopupPresented) {
+                    Text(viewModel.errorText)
+                        .frame(width: UIScreen.main.bounds.width - 72, alignment: .leading)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 16)
+                        .foregroundStyle(Color.white)
+                        .background(Color.red)
+                        .clipShape(RoundedRectangle(cornerRadius: 20))
+                } customize: {
+                    $0
+                        .type(.floater())
+                        .position(.top)
+                        .animation(.bouncy)
+                        .dragToDismiss(true)
+                        .autohideIn(5)
+                        .displayMode(.overlay)
+                }
+                .sheet(isPresented: $viewModel.isFontSettingPopupPresented, content: {
+                    FontSettingView(
+                        isPopupPresented: $viewModel.isFontSettingPopupPresented,
+                        selectedFontSize: $viewModel.fontSize,
+                        successText: .constant(""),
+                        isSuccessPopupPresented: .constant(false)
+                    )
+                    .presentationDetents([.height(300)])
+                    .presentationCornerRadius(30)
+                    .presentationDragIndicator(.visible)
+                })
+                .sheet(isPresented: $isSharePopupPresented) {
+                    if let shareURL {
+                        SharePublicationView(
+                            articleView: shareArticleView,
+                            url: shareURL
+                        )
+                        .presentationCornerRadius(30)
+                        .presentationDragIndicator(.visible)
+                    }
+                }
+                .toolbar {
+                    ToolbarItem(placement: .topBarLeading) {
+
+                        Button {
+                            isPresented = false
                         } label: {
-                            Image(systemName: "ellipsis")
+                            Image(systemName: "arrow.left")
                         }
-                    } else if !currentIsArchive {
-                        ShareLink(item: URL(string: "https://readbox-links.online/posts/?index=\(currentId)")!) {
-                            Image(systemName: "arrowshape.turn.up.right")
+
+                    }
+
+                    ToolbarItem(placement: .principal) {
+                        if !viewModel.isAuthorBlockVisible {
+                            if #available(iOS 26, *) {
+                                principalToolView
+                                    .padding(.all, 10)
+                                    .glassEffect(.regular)
+                            } else {
+                                principalToolView
+                            }
                         }
                     }
-                }
-            }
-            .background(Color(uiColor: .systemBackground))
 
+                    ToolbarItem(placement: .topBarTrailing) {
+                        toolbarTrailingView
+                    }
+                }
+                .background(Color(uiColor: .systemBackground))
+            }
         }
+        .simultaneousGesture(
+            TapGesture().onEnded {
+                dismissCommentKeyboardIfNeeded()
+            }
+        )
         .simultaneousGesture(backSwipeGesture)
         .toolbar(.hidden, for: .tabBar)
         .safeAreaInset(edge: .bottom) {
@@ -586,6 +423,242 @@ struct ReadView: View {
 }
 
 private extension ReadView {
+    @ViewBuilder
+    var titleHeaderSection: some View {
+        if !currentText.isEmpty {
+            Text(currentTitle)
+                .fontWeight(.light)
+                .fontDesign(.rounded)
+                .font(.system(size: 24))
+                .frame(width: UIScreen.main.bounds.width - 32, alignment: .leading)
+                .hiddenReadContentOnScreenshots(currentIsPremiumPost)
+
+            RoundedRectangle(cornerRadius: 0)
+                .frame(width: UIScreen.main.bounds.width - 32, height: 1)
+                .foregroundStyle(Color.gray)
+                .padding(.bottom, 2)
+        }
+    }
+
+    var authorSection: some View {
+        ZStack {
+            VisibilityTracker(id: "authorBlock")
+
+            HStack {
+                if let avatar = viewModel.avatarImage {
+                    Image(uiImage: avatar)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: 45, height: 45)
+                        .clipShape(Circle())
+                        .overlay {
+                            Circle()
+                                .stroke(
+                                    Color(.label),
+                                    lineWidth: 0.1
+                                )
+                        }
+                }
+
+                VStack(alignment: .leading, spacing: 2) {
+                    if let replyTitle {
+                        Text(replyTitle)
+                            .font(.system(size: 12))
+                            .foregroundStyle(Color.gray)
+                            .lineLimit(1)
+                            .onTapGesture {
+                                openReplyRootPost()
+                            }
+                    }
+
+                    VStack(spacing: 1) {
+                        HStack(spacing: 0) {
+                            Button {
+                                if authorName != "" {
+                                    if isCommentReadView {
+                                        openCommentAuthorChannel(authorId)
+                                    } else {
+                                        withAnimation {
+                                            isChannelViewPresented = true
+                                            isPresented = false
+                                        }
+                                    }
+                                }
+                            } label: {
+                                Text(authorName == "" ? NSLocalizedString("notFoundLabel", comment: "") : authorName)
+                                    .font(.system(size: 16))
+                                    .fontWeight(.semibold)
+                                    .multilineTextAlignment(.leading)
+                                    .lineLimit(1)
+                            }
+                            .buttonStyle(.plain)
+
+                            if isCheckmark {
+                                Image(systemName: "checkmark.seal.fill")
+                                    .foregroundStyle(Color.blue)
+                                    .font(.system(size: 14))
+                                    .padding(.top, 1)
+                            }
+
+                            if isReplyReadView {
+                                Text(" · ")
+                                    .font(.system(size: 11))
+                                    .foregroundStyle(Color.gray)
+
+                                Text(currentDateCreatedText)
+                                    .font(.system(size: 11))
+                                    .foregroundStyle(Color.gray)
+                                    .lineLimit(1)
+                            }
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+
+                        if !isReplyReadView {
+                            Text(currentDateCreatedText)
+                                .font(.system(size: 11))
+                                .foregroundStyle(Color.gray)
+                                .lineLimit(1)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                    }
+                }
+            }
+            .frame(width: UIScreen.main.bounds.width - 32, alignment: .leading)
+            .padding(.bottom, currentIsShortPost ? 0 : 5)
+            .padding(.top, viewModel.images.count == 0 ? 10 : 0)
+        }
+    }
+
+    @ViewBuilder
+    var mediaBeforeContentSection: some View {
+        if currentMediaPosition == 0 && currentMediaCount > 0 {
+            mediaViews
+        }
+    }
+
+    @ViewBuilder
+    var actionsBeforeContentSection: some View {
+        if !currentIsShortPost {
+            publicationActionsRow
+                .padding(.top, mediaCount == 0 || currentMediaPosition == 1 ? -15 : 0)
+                .padding(.bottom, 10)
+        }
+    }
+
+    @ViewBuilder
+    var contentSection: some View {
+        if currentMediaPosition == 1 && !currentTitle.isEmpty {
+            titleView
+                .padding(.bottom, currentIsShortPost ? 14 : 25)
+        }
+
+        if !currentText.isEmpty {
+            Markdown(
+                currentText.replacingOccurrences(of: "\n", with: "  \n").normalizeEmptyLines()
+            )
+            .markdownImageProvider(
+                WebImageProvider(onImageTap: { url in
+                    viewModel.selectedImageURL = url
+                    viewModel.isZoomableViewPresented = true
+                })
+            )
+            .markdownTextStyle(\.text) {
+                FontSize(CGFloat(viewModel.fontSize))
+            }
+            .markdownTheme(.gitHub)
+            .id("\(currentId)-\(viewModel.fontSize)")
+            .frame(width: UIScreen.main.bounds.width - 32, alignment: .topLeading)
+            .padding(.bottom, currentIsShortPost ? 12 : 20)
+            .hiddenReadContentOnScreenshots(currentIsPremiumPost)
+
+            if currentMediaPosition == 1 && currentMediaCount > 0 {
+                mediaViews
+                    .padding(.top, -5)
+                    .padding(.bottom, 20)
+            }
+        } else if currentMediaPosition == 0 && currentTitle != "" {
+            titleView
+                .padding(.top, currentIsShortPost ? 8 : 0)
+                .padding(.bottom, currentIsShortPost ? 12 : 20)
+        } else if currentMediaPosition == 1 {
+            mediaViews
+                .padding(.top, -15)
+                .padding(.bottom, currentIsShortPost ? 12 : 20)
+        }
+    }
+
+    @ViewBuilder
+    var actionsAfterContentSection: some View {
+        if currentIsShortPost {
+            publicationActionsRow
+                .padding(.bottom, 20)
+        }
+    }
+
+    var publicationActionsRow: some View {
+        HStack {
+            likesCountMetaView
+
+            Spacer()
+
+            likeButton
+
+            if canShowSubscribeButton {
+                subscribeButton
+            }
+        }
+        .frame(width: UIScreen.main.bounds.width - 32)
+        .padding(.horizontal)
+    }
+
+    @ViewBuilder
+    var toolbarTrailingView: some View {
+        if viewModel.isOriginalArticleLoading {
+            ProgressView()
+        } else if shouldShowToolbarMenu {
+            Menu {
+                toolbarMenuContent
+            } label: {
+                Image(systemName: "ellipsis")
+            }
+        } else if shareURL != nil {
+            Button {
+                presentSharePopup()
+            } label: {
+                Image(systemName: "arrowshape.turn.up.right")
+            }
+        }
+    }
+
+    @ViewBuilder
+    var toolbarMenuContent: some View {
+        if currentText != "" {
+            Button {
+                viewModel.isFontSettingPopupPresented.toggle()
+            } label: {
+                Label(
+                    NSLocalizedString("fontLabel", comment: ""),
+                    systemImage: "book.pages"
+                )
+            }
+        }
+
+        if canSwitchArticleLanguage {
+            originalArticleMenuButton
+        }
+
+        if shareURL != nil {
+            Button {
+                presentSharePopup()
+            } label: {
+                Label(
+                    NSLocalizedString("shareLabel", comment: ""),
+                    systemImage: "arrowshape.turn.up.right"
+                )
+            }
+        }
+    }
+
     var backSwipeGesture: some Gesture {
         DragGesture(minimumDistance: 20, coordinateSpace: .global)
             .onEnded { value in
@@ -657,6 +730,11 @@ private extension ReadView {
                         isPremiumPost: false,
                         viewsCount: comment.viewsCount ?? 0,
                         likesCount: comment.likesCount ?? 0,
+                        onCommentTap: {
+                            withAnimation {
+                                isCommentInputFocused = true
+                            }
+                        },
                         user: $user,
                         isZoomableViewPresented: $viewModel.isZoomableViewPresented,
                         zoomableImage: $viewModel.zoomableImage,
@@ -665,13 +743,26 @@ private extension ReadView {
                     )
                     .id("\(comment.id)-\(avatarVersion)")
                     .contentShape(Rectangle())
+                    .onAppear {
+                        viewModel.loadMoreCommentariesIfNeeded(
+                            currentComment: comment,
+                            rootPostId: currentId
+                        )
+                    }
                     .onTapGesture {
                         guard !isCommentArticleAuthorTapRequested else { return }
                         openCommentReadView(comment)
                     }
                 }
+
+                if viewModel.isLoadingMoreCommentaries {
+                    ProgressView()
+                        .frame(width: UIScreen.main.bounds.width - 20)
+                        .padding(.vertical, 10)
+                }
             }
         }
+        .id("commentsSection")
         .padding(.bottom, 30)
     }
 
@@ -735,6 +826,27 @@ private extension ReadView {
         )
     }
 
+    func focusCommentsIfNeeded(using scrollProxy: ScrollViewProxy) {
+        guard openCommentsOnAppear, !didHandleInitialCommentFocus else { return }
+
+        didHandleInitialCommentFocus = true
+
+        Task { @MainActor in
+            withAnimation(.easeInOut(duration: 0.25)) {
+                scrollProxy.scrollTo("commentsSection", anchor: .bottom)
+            }
+
+            try? await Task.sleep(nanoseconds: 250_000_000)
+            isCommentInputFocused = true
+
+            try? await Task.sleep(nanoseconds: 150_000_000)
+
+            withAnimation(.easeInOut(duration: 0.2)) {
+                scrollProxy.scrollTo("commentsSection", anchor: .bottom)
+            }
+        }
+    }
+
     var currentTitleAttributedString: AttributedString {
         var attributedString = currentTitle.markdownAttributedStringPreservingLineBreaks
 
@@ -773,63 +885,13 @@ private extension ReadView {
         return "\(NSLocalizedString("replyToLabel", comment: "")) \(name)"
     }
 
+    var isReplyReadView: Bool {
+        replyTitle != nil
+    }
+
     var likeButton: some View {
         Button {
-            if viewModel.isPostLiked {
-                withAnimation {
-                    viewModel.isPostLiked.toggle()
-                }
-
-                user?.likedPosts?.removeAll {
-                    currentId == $0
-
-                }
-
-                viewModel.likesCount -= 1
-
-                Task {
-                    do {
-                        viewModel.vibrationsService.lightImpact()
-                        try await viewModel.removeLikedPost(userId: user?.userId ?? "", articleId: currentId)
-                    } catch {
-                        withAnimation {
-                            viewModel.errorText = error.localizedDescription
-                            viewModel.isErrorPopupPresented = true
-                        }
-                    }
-
-                    try? await viewModel.updateLikes(at: currentId, likesCount: viewModel.likesCount)
-                }
-            } else {
-                if currentId != "" {
-                    withAnimation {
-                        viewModel.isPostLiked.toggle()
-                    }
-
-                    viewModel.likesCount += 1
-
-                    user?.likedPosts?.append(currentId)
-
-                    Task {
-                        do {
-                            viewModel.vibrationsService.lightImpact()
-                            try await viewModel.addLikedPost(userId: user?.userId ?? "", articleId: currentId)
-                        } catch {
-                            withAnimation {
-                                viewModel.errorText = error.localizedDescription
-                                viewModel.isErrorPopupPresented = true
-                            }
-                        }
-
-                        try? await viewModel.updateLikes(at: currentId, likesCount: viewModel.likesCount)
-                    }
-                } else {
-                    withAnimation {
-                        viewModel.errorText = NSLocalizedString("addPostToFavoritesLabel", comment: "")
-                        viewModel.isErrorPopupPresented = true
-                    }
-                }
-            }
+            handleLikeButtonTap()
         } label: {
             if #available(iOS 26.0, *) {
                 Image(systemName: viewModel.isPostLiked ? "hand.thumbsup.fill" : "hand.thumbsup")
@@ -907,39 +969,7 @@ private extension ReadView {
             }
         }
         .onTapGesture {
-            if !viewModel.isSubscribeLoading {
-                Task {
-                    do {
-                        withAnimation {
-                            viewModel.isSubscribeLoading = true
-                        }
-
-                        try await viewModel.un_subcribeUser(
-                            on: authorId,
-                            isNeedToSubscribe: !isSubscribed
-                        )
-
-                        withAnimation {
-                            if isSubscribed {
-                                user?.subscribes?.removeAll { $0 == authorId }
-                                viewModel.vibrationsService.lightImpact()
-                            } else {
-                                user?.subscribes?.append(authorId)
-                                viewModel.vibrationsService.successFeedback()
-                            }
-
-                            viewModel.isSubscribeLoading = false
-                            isSubscribed.toggle()
-                        }
-                    } catch {
-                        withAnimation {
-                            viewModel.isSubscribeLoading = false
-                            viewModel.errorText = error.localizedDescription
-                            viewModel.isErrorPopupPresented = true
-                        }
-                    }
-                }
-            }
+            handleSubscribeTap()
         }
     }
 
@@ -961,12 +991,15 @@ private extension ReadView {
                     rootPostId: postId,
                     rootAuthorId: self.authorId,
                     authorId: authorId,
-                    text: text
+                    text: text,
+                    isReplyToComment: isCommentReadView
                 )
 
                 await MainActor.run {
                     viewModel.vibrationsService.successFeedback()
                 }
+
+                AnalyticsManager.shared.logCommentCreated(postId: postId, isReply: isCommentReadView)
             } catch {
                 await MainActor.run {
                     withAnimation {
@@ -977,6 +1010,194 @@ private extension ReadView {
                 }
             }
         }
+    }
+
+    func dismissCommentKeyboardIfNeeded() {
+        guard isCommentInputFocused else { return }
+        isCommentInputFocused = false
+    }
+
+    func handleLikeButtonTap() {
+        if viewModel.isPostLiked {
+            unlikeCurrentPublication()
+        } else {
+            likeCurrentPublication()
+        }
+    }
+
+    func unlikeCurrentPublication() {
+        withAnimation {
+            viewModel.isPostLiked.toggle()
+        }
+
+        user?.likedPosts?.removeAll {
+            currentId == $0
+        }
+
+        viewModel.likesCount -= 1
+
+        Task {
+            do {
+                viewModel.vibrationsService.lightImpact()
+                try await viewModel.removeLikedPost(userId: user?.userId ?? "", articleId: currentId)
+            } catch {
+                withAnimation {
+                    viewModel.errorText = error.localizedDescription
+                    viewModel.isErrorPopupPresented = true
+                }
+            }
+
+            try? await viewModel.updateLikes(at: currentId, likesCount: viewModel.likesCount)
+        }
+    }
+
+    func likeCurrentPublication() {
+        guard currentId != "" else {
+            withAnimation {
+                viewModel.errorText = NSLocalizedString("addPostToFavoritesLabel", comment: "")
+                viewModel.isErrorPopupPresented = true
+            }
+            return
+        }
+
+        withAnimation {
+            viewModel.isPostLiked.toggle()
+        }
+
+        viewModel.likesCount += 1
+        user?.likedPosts?.append(currentId)
+
+        Task {
+            logCurrentPublicationLike()
+
+            do {
+                viewModel.vibrationsService.lightImpact()
+                try await viewModel.addLikedPost(userId: user?.userId ?? "", articleId: currentId)
+            } catch {
+                withAnimation {
+                    viewModel.errorText = error.localizedDescription
+                    viewModel.isErrorPopupPresented = true
+                }
+            }
+
+            try? await viewModel.updateLikes(at: currentId, likesCount: viewModel.likesCount)
+        }
+    }
+
+    func handleSubscribeTap() {
+        guard !viewModel.isSubscribeLoading else { return }
+
+        Task {
+            do {
+                withAnimation {
+                    viewModel.isSubscribeLoading = true
+                }
+
+                try await viewModel.un_subcribeUser(
+                    on: authorId,
+                    isNeedToSubscribe: !isSubscribed
+                )
+
+                withAnimation {
+                    if isSubscribed {
+                        user?.subscribes?.removeAll { $0 == authorId }
+                        viewModel.vibrationsService.lightImpact()
+                        AnalyticsManager.shared.logUnsubscribeAuthor(authorId: authorId)
+                    } else {
+                        user?.subscribes?.append(authorId)
+                        viewModel.vibrationsService.successFeedback()
+                        AnalyticsManager.shared.logSubscribeAuthor(authorId: authorId)
+                    }
+
+                    viewModel.isSubscribeLoading = false
+                    isSubscribed.toggle()
+                }
+            } catch {
+                withAnimation {
+                    viewModel.isSubscribeLoading = false
+                    viewModel.errorText = error.localizedDescription
+                    viewModel.isErrorPopupPresented = true
+                }
+            }
+        }
+    }
+
+    func logCurrentPublicationLike() {
+        AnalyticsManager.shared.logArticleLike(
+            id: currentId,
+            contentType: currentContentType,
+            source: openSource
+        )
+    }
+
+    func logCurrentPublicationShared() {
+        AnalyticsManager.shared.logPublicationShared(
+            id: currentId,
+            contentType: currentContentType,
+            source: openSource
+        )
+    }
+
+    func presentSharePopup() {
+        logCurrentPublicationShared()
+        isSharePopupPresented = true
+    }
+
+    func logCurrentPublicationOpen() {
+        AnalyticsManager.shared.logOpenArticle(
+            id: currentId,
+            contentType: currentContentType,
+            source: openSource
+        )
+    }
+
+    func startReadingSession(for articleId: String) {
+        guard !articleId.isEmpty, !isCommentReadView else { return }
+        guard trackedReadingArticleId != articleId else { return }
+
+        finishReadingSession()
+        trackedReadingArticleId = articleId
+        readingStartedAt = Date()
+        readingContentEndMaxY = 0
+        loggedReadingMilestones = []
+    }
+
+    func updateReadingProgress(contentEndY: CGFloat) {
+        guard !trackedReadingArticleId.isEmpty, !isCommentReadView else { return }
+
+        readingContentEndMaxY = max(readingContentEndMaxY, contentEndY)
+        guard readingContentEndMaxY > 0 else { return }
+
+        let viewportHeight = UIScreen.main.bounds.height
+        let visibleContentBottom = max(0, readingContentEndMaxY - contentEndY + viewportHeight)
+        let progress = min(1, visibleContentBottom / readingContentEndMaxY)
+
+        for milestone in [25, 50, 75, 100] where progress >= CGFloat(milestone) / 100 {
+            guard loggedReadingMilestones.insert(milestone).inserted else { continue }
+
+            AnalyticsManager.shared.logArticleReadMilestone(
+                id: trackedReadingArticleId,
+                percent: milestone,
+                contentType: currentContentType,
+                source: openSource
+            )
+        }
+    }
+
+    func finishReadingSession() {
+        guard let readingStartedAt, !trackedReadingArticleId.isEmpty else { return }
+
+        let seconds = max(1, Int(Date().timeIntervalSince(readingStartedAt).rounded()))
+        AnalyticsManager.shared.logReadingTime(
+            id: trackedReadingArticleId,
+            seconds: seconds,
+            contentType: currentContentType,
+            source: openSource
+        )
+
+        self.readingStartedAt = nil
+        trackedReadingArticleId = ""
+        readingContentEndMaxY = 0
     }
 
     func openCommentReadView(_ comment: Comment) {
@@ -1025,8 +1246,33 @@ private extension ReadView {
 
         Task {
             do {
-                let prePost = try await ArticlesManager.shared.getPrePost(id: replyRootPostId)
-                let postToRead = try await ArticlesManager.shared.getPostToRead(id: replyRootPostId)
+                let resolvedRootPostId: String
+
+                do {
+                    _ = try await ArticlesManager.shared.getPrePost(id: replyRootPostId)
+                    resolvedRootPostId = replyRootPostId
+                } catch {
+                    let legacyComment = try await CommentariesManager.shared.getComment(id: replyRootPostId)
+                    guard let legacyRootPostId = legacyComment.rootPostId, !legacyRootPostId.isEmpty else {
+                        throw error
+                    }
+
+                    resolvedRootPostId = legacyRootPostId
+                }
+
+                let prePost = try await ArticlesManager.shared.getPrePost(id: resolvedRootPostId)
+
+                guard !(prePost.isArchive ?? false) else {
+                    await MainActor.run {
+                        withAnimation {
+                            viewModel.errorText = NSLocalizedString("archiveArticleLabel", comment: "")
+                            viewModel.isErrorPopupPresented = true
+                        }
+                    }
+                    return
+                }
+
+                let postToRead = try await ArticlesManager.shared.getPostToRead(id: resolvedRootPostId)
                 let authorInfo = try await UserManager.shared.getPostAuthorInfo(for: prePost.authorId ?? "")
 
                 await MainActor.run {
@@ -1053,7 +1299,7 @@ private extension ReadView {
     }
 
     var currentText: String {
-        currentPostToRead?.text ?? text
+        return currentPostToRead?.text ?? text
     }
 
     var currentDateCreated: Date {
@@ -1064,12 +1310,44 @@ private extension ReadView {
         formattedReadDate(currentDateCreated)
     }
 
+    @ViewBuilder
+    var likesCountMetaView: some View {
+        Text("\(currentLikesCount) \(likesCountMetaLabelText)")
+            .font(.system(size: 19))
+            .fontWeight(.light)
+            .fontDesign(.rounded)
+            .foregroundStyle(Color.gray)
+    }
+
     var currentIsShortPost: Bool {
         currentText.isEmpty
     }
 
+    var currentContentType: String {
+        currentIsShortPost ? "post" : "article"
+    }
+
     var currentLikesCount: Int {
         currentPrePost?.likesCount ?? likesCount
+    }
+
+    var likesCountMetaLabelText: String {
+        let languageCode = effectiveContentLanguageCode
+        return languageCode == "en" ? "likes" : "лайков"
+    }
+
+    var effectiveContentLanguageCode: String {
+        let currentLanguage = formattedLanguageCode(currentPrePost?.originalLanguage).lowercased()
+        if !currentLanguage.isEmpty {
+            return currentLanguage
+        }
+
+        let providedLanguage = formattedLanguageCode(articleLanguage).lowercased()
+        if !providedLanguage.isEmpty {
+            return providedLanguage
+        }
+
+        return "ru"
     }
 
     var currentIsArchive: Bool {
@@ -1094,6 +1372,46 @@ private extension ReadView {
 
     var currentIsPremiumPost: Bool {
         currentPrePost?.isPremiumPost ?? isPremiumPost
+    }
+
+    var shareURL: URL? {
+        return URL(string: "https://readbox.online/posts/?index=\(currentId)")
+    }
+
+    var shareArticleView: ArticleView {
+        ArticleView(
+            id: currentId,
+            title: currentTitle,
+            authorId: authorId,
+            authorName: authorName,
+            dateCreated: currentDateCreated,
+            isCheckmark: isCheckmark,
+            isArchive: currentIsArchive,
+            isShortPost: currentIsShortPost,
+            mediaCount: currentMediaCount,
+            mediaVersion: currentMediaVersion,
+            mediaPosition: currentMediaPosition,
+            lastVersionOfAvatar: lastVersionOfAvatar,
+            locCount: currentPrePost?.localizationCount ?? 0,
+            isCreatedView: false,
+            isLocalizedVersion: currentIsLocalizedVersion,
+            isPremiumPost: currentIsPremiumPost,
+            likesCount: currentLikesCount,
+            commentsCount: currentPrePost?.commentsCount ?? viewModel.commentaries.count,
+            onCommentTap: {},
+            exportMediaImage: shareMediaImage,
+            user: .constant(user),
+            isZoomableViewPresented: .constant(false),
+            zoomableImage: .constant(nil),
+            selectedAuthorId: .constant(""),
+            isChannelViewPresented: .constant(false)
+        )
+    }
+
+    var shareMediaImage: UIImage? {
+        StorageManager.shared.getImage(id: "\(currentId)_0")
+            ?? StorageManager.shared.getImage(id: "\(currentId)_0_preview")
+            ?? StorageManager.shared.getImage(id: currentId)
     }
 
     func formattedReadDate(_ date: Date) -> String {
@@ -1176,8 +1494,8 @@ private extension ReadView {
         return currentPrePost == nil
     }
 
-    var hasExtraToolbarActions: Bool {
-        currentText != "" || canSwitchArticleLanguage
+    var shouldShowToolbarMenu: Bool {
+        !currentText.isEmpty || canSwitchArticleLanguage
     }
 
     @ViewBuilder
@@ -1536,6 +1854,7 @@ private extension ReadView {
         }
     }
 }
+
 
 private extension View {
     @ViewBuilder

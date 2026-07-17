@@ -229,6 +229,8 @@ struct PostCreateView: View {
 
         Task {
             do {
+                let savedPostId: String
+
                 if currentPostId.isEmpty {
                     let createdPostId = try await viewModel.uploadPost(
                         title: titleText,
@@ -239,8 +241,9 @@ struct PostCreateView: View {
                         isLocalizing: isLocalizing,
                         localizationCount: localizationCount,
                         rootId: rootId,
-                        isPremiumPost: viewModel.isPremiumPost == 0 ? false : true
+                        isPremiumPost: viewModel.isPremiumPost != 0
                     )
+                    savedPostId = createdPostId
 
                     try await updatePostsCountIfNeeded(
                         currentPostId: createdPostId,
@@ -249,6 +252,7 @@ struct PostCreateView: View {
                         author: author
                     )
                 } else {
+                    savedPostId = currentPostId
                     try await viewModel.updatePost(
                         postId: currentPostId,
                         title: titleText,
@@ -257,7 +261,7 @@ struct PostCreateView: View {
                         items: items,
                         mediaPosition: mediaPosition,
                         shouldUpdateMedia: shouldUpdateMedia,
-                        isPremiumPost: viewModel.isPremiumPost == 0 ? false : true,
+                        isPremiumPost: viewModel.isPremiumPost != 0,
                         shouldRefreshDateCreated: shouldRefreshDateCreated
                     )
 
@@ -275,6 +279,22 @@ struct PostCreateView: View {
                     }
                 }
 
+                if currentPostId.isEmpty && isArchive {
+                    AnalyticsManager.shared.logDraftCreated(
+                        id: savedPostId,
+                        contentType: "post",
+                        language: uploadingLanguage,
+                        hasMedia: !items.isEmpty
+                    )
+                } else if (currentPostId.isEmpty && !isArchive) || shouldRefreshDateCreated {
+                    AnalyticsManager.shared.logPostPublished(
+                        id: savedPostId,
+                        destination: "main_feed",
+                        language: uploadingLanguage,
+                        hasMedia: !items.isEmpty
+                    )
+                }
+
                 await MainActor.run {
                     if shouldSavePublicationLanguage {
                         StorageManager.shared.setLastPublicationLanguage(to: uploadingLanguage)
@@ -284,6 +304,13 @@ struct PostCreateView: View {
                     NotificationCenter.default.post(name: .postsDidChange, object: nil)
                 }
             } catch {
+                AnalyticsManager.shared.logPublishFailed(
+                    contentType: "post",
+                    operation: currentPostId.isEmpty ? "create" : "update",
+                    isDraft: isArchive,
+                    error: error
+                )
+
                 await MainActor.run {
                     print("Error: \(error.localizedDescription)")
                     hudService.showErrorPopup(with: error.localizedDescription)
@@ -754,7 +781,7 @@ struct PostCreateView: View {
                                         let secondsDuration = CMTimeGetSeconds(duration)
 
                                         try Task.checkCancellation()
-                                        guard secondsDuration <= 120 else {
+                                        guard secondsDuration <= 600 else {
                                             withAnimation {
                                                 viewModel.errorText = NSLocalizedString("durationCoverErrorLabel", comment: "")
                                                 viewModel.isErrorPopupPresented = true

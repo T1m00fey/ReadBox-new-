@@ -12,27 +12,27 @@ import Shimmer
 struct LikedPostsView: View {
     @Binding var isWelcomeViewPresented: Bool
     @Binding var isPremiumViewPresented: Bool
-    
+
     @StateObject var viewModel = LikedPostsViewModel()
-    
+
     @EnvironmentObject var sessionManager: SessionManager
     @EnvironmentObject var changedPostsManager: ChangedPostsManager
     @EnvironmentObject var subManager: SubscriptionManager
-    
+
     var body: some View {
-        
+
         NavigationStack {
             ZStack {
-                
+
                 ScrollView(showsIndicators: false) {
-                    
+
                     LazyVStack {
-                        
+
                         Text("")
                         VisibilityTracker(id: "likedHeader")
-                        
+
                         if viewModel.isLoadingShowed {
-                            
+
                             ForEach(0..<5) { id in
                                 ArticleView(
                                     id: "-1",
@@ -60,16 +60,16 @@ struct LikedPostsView: View {
                                 .padding(.horizontal)
                                 .shimmering()
                             }
-                            
+
                         } else if viewModel.articles == [] && !viewModel.isLoading {
-                            
+
                             VStack(spacing: 20) {
-                                
+
                                 Image(systemName: "list.bullet.below.rectangle")
                                     .resizable()
                                     .frame(width: 100, height: 100)
                                     .foregroundStyle(Color.gray)
-                                
+
                                 Text(LocalizedStringKey("noArticlesAddedLabel"))
                                     .font(.title)
                                     .bold()
@@ -80,7 +80,7 @@ struct LikedPostsView: View {
                                     .padding(.horizontal, 32)
                             }
                             .frame(height: UIScreen.main.bounds.height - 200, alignment: .center)
-                            
+
                         } else {
                             ForEach(viewModel.articles) { article in
                                 ArticleView(
@@ -99,7 +99,15 @@ struct LikedPostsView: View {
                                     locCount: article.localizationCount ?? 0,
                                     isLocalizedVersion: article.isLocalizedVersion ?? false,
                                     isPremiumPost: article.isPremiumPost ?? false,
-                                    user: $viewModel.user,
+                                    onCommentTap: {
+                                        if let isPremiumPost = article.isPremiumPost,
+                                           isPremiumPost && !subManager.hasPremium,
+                                           article.authorId != viewModel.user?.userId {
+                                            isPremiumViewPresented = true
+                                        } else {
+                                            viewModel.tapGestureHandler(on: article, openComments: true)
+                                        }
+                                    }, user: $viewModel.user,
                                     isZoomableViewPresented: $viewModel.isZoomableViewPresented,
                                     zoomableImage: $viewModel.zoomableImage,
                                     selectedAuthorId: $viewModel.authorId,
@@ -120,7 +128,7 @@ struct LikedPostsView: View {
                                     }
                                 }
                             }
-                            
+
 //                            if viewModel.indexesNeedToLoad.count > 0 && !viewModel.isLoading {
 //                                Button {
 //                                    Task {
@@ -132,7 +140,7 @@ struct LikedPostsView: View {
 //                                                viewModel.errorText = error.localizedDescription
 //                                            }
 //                                        }
-//                                        
+//
 //                                        viewModel.isErrorPopupPresented = true
 //                                    }
 //                                } label: {
@@ -141,7 +149,7 @@ struct LikedPostsView: View {
 //                                            .foregroundStyle(Color(uiColor: .label))
 //                                            .font(.title3)
 //                                            .fontWeight(.light)
-//                                        
+//
 //                                        Text(LocalizedStringKey("loadMore"))
 //                                            .font(.title3)
 //                                            .fontDesign(.rounded)
@@ -155,12 +163,12 @@ struct LikedPostsView: View {
 //                                    .padding(.top, 20)
 //                                }
 //                                .padding(.bottom, 10)
-//                                
+//
 //                            }
                         }
-                        
+
                     }
-                    
+
                 }
                 .refreshable {
                     viewModel.reload()
@@ -186,7 +194,8 @@ struct LikedPostsView: View {
                         isChannelViewPresented: $viewModel.isChannelViewPresented,
                         isPresented: $viewModel.isReadViewPresented,
                         isLocalizedVersion: viewModel.isLocalizedVersion,
-                        rootId: viewModel.rootId
+                        rootId: viewModel.rootId,
+                        openCommentsOnAppear: viewModel.shouldOpenCommentsOnRead
                     )
                     .environmentObject(sessionManager)
                     .environmentObject(changedPostsManager)
@@ -211,30 +220,32 @@ struct LikedPostsView: View {
                     }
                 })
                 .onAppear {
+                    viewModel.getViews()
+
                     if viewModel.isLoading {
                         viewModel.isLoading = false
-                        
+
                         Task {
                             viewModel.isLoading = true
                         }
                     }
-                    
+
                     if viewModel.isNeedToReload {
                         viewModel.reload()
                         viewModel.isNeedToReload = false
                         return
                     }
-                    
+
                     if viewModel.user == nil {
                         Task {
                             try? await viewModel.loadUser()
                         }
                     }
                 }
-                
+
                 VStack {
                     headerView
-                    
+
                     Spacer()
                 }.ignoresSafeArea()
             }
@@ -263,7 +274,7 @@ struct LikedPostsView: View {
                 }
             }
         }
-        
+
     }
 }
 
@@ -279,12 +290,12 @@ private extension LikedPostsView {
                     .frame(width: UIScreen.main.bounds.width, height: 120)
                     .foregroundStyle(.thinMaterial)
             }
-            
+
             HStack {
                 Text(LocalizedStringKey("favoritesLabel"))
                     .font(.system(size: 32))
                     .fontWeight(.light)
-                
+
                 if viewModel.isLoading {
                     LoadingIndicator(
                         animation: .circleRunner,

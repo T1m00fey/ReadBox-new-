@@ -32,19 +32,20 @@ final class FeedViewModel: ObservableObject {
     @Published var views: [String] = []
     @Published var isLoadingPopupPresented = false
     @Published var isLoadingShowing = true
-//    @Published var relevantVersion: AppVersion? = nil
+    //    @Published var relevantVersion: AppVersion? = nil
 //    @Published var isVersionPopupViewPresented = false
 //    @Published var isBlur = false
     @Published var lastDocument: DocumentSnapshot? = nil
     @Published var isZoomableImageViewPresented = false
     @Published var zoomableImage: UIImage? = nil
-    
+    @Published var shouldOpenCommentsOnRead = false
+
     @Published var isLargeHeaderVisible = true
 //    @Published var isUpdatePopupDidPresneted = false
     @Published var authorId = ""
-    
+
     @Published var user: DBUser? = nil
-    
+
     var title = ""
     var image = UIImage()
     var dateCreated = Date()
@@ -60,35 +61,35 @@ final class FeedViewModel: ObservableObject {
     var isPremiumPost = false
     var isLocalizedVersion = false
     var rootId = ""
-    
+
     private var db = Firestore.firestore()
-    
+
     func getViews() {
         views = StorageManager.shared.getViews()
     }
-    
+
     func saveViews() {
         StorageManager.shared.save(views: views)
     }
-    
+
     func loadUser() async throws {
         let authDataResult = try AuthenticationManager.shared.getAuthenticatedUser()
         let user = try await UserManager.shared.getUser(userId: authDataResult.uid)
-        
+
         self.user = user
     }
-    
+
 //    func getRelevantVersion() {
 //        Task {
 //            do {
 //                relevantVersion = try? await VersionManager.shared.getRelevantVersion()
-//                
+//
 //                if let currentVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String, let relevantVersion {
-//                    
+//
 //                    if relevantVersion.appVersion != currentVersion && !isUpdatePopupDidPresneted {
 //                        isVersionPopupViewPresented = true
 //                        isUpdatePopupDidPresneted = true
-//                        
+//
 //                        if let isCritical = relevantVersion.isCritical {
 //                            withAnimation {
 //                                isBlur = isCritical ? true : false
@@ -99,64 +100,64 @@ final class FeedViewModel: ObservableObject {
 //                            isBlur = false
 //                        }
 //                    }
-//                    
+//
 //                }
-//                
+//
 //            }
 //        }
 //    }
-    
+
     func refresh() {
         primaryLanguage = StorageManager.shared.getLanguage() ?? "en"
-        
+
         Task {
             isLoading = true
         }
-        
+
         withAnimation {
             isLoadingShowing = true
-            
+
             topArticlesIndexes = []
             topArticles = []
             articles = []
             authorsInfo = [:]
             lastDocument = nil
             user = nil
-        }                
-        
+        }
+
         Task {
             try? await loadUser()
         }
     }
-    
+
     func getAuthorName(id: String) async throws -> String {
         try await UserManager.shared.getAuthorName(id: id) ?? ""
     }
-    
+
     func getAuthorIsCheckmarkStatus(id: String) async throws -> Bool {
         try await UserManager.shared.getIsCheckmarkStatus(id: id) ?? false
     }
-    
+
     func getMaxIndex() async throws {
         maxIndex = try await ArticlesManager.shared.getMaxIndex() ?? "10"
     }
-    
+
     func getArticle(id: String) async throws -> PrePost {
         try await ArticlesManager.shared.getPrePost(id: id)
     }
-    
+
     func getOriginalLanguageOfArticle(id: String) async throws -> String {
         try await ArticlesManager.shared.getOriginalLanguageOfArticle(id: id)
     }
-    
+
     func getTopArticles() async throws {
         topArticles = []
-        
+
         for index in topArticlesIndexes {
             if index != "" {
                 do {
                     let isArchive = try await ArticlesManager.shared.getIsArchive(of: index)
-                
+
                     if isArchive {
                         withAnimation {
                             topArticles.append(
@@ -177,15 +178,15 @@ final class FeedViewModel: ObservableObject {
                         }
                     } else {
                         let article = try await getArticle(id: index)
-                        
+
                         withAnimation {
                             topArticles.append(article)
                         }
-                        
+
                     }
                 } catch {
                     withAnimation {
-                        
+
                         topArticles.append(
                             PrePost(
                                 id: index,
@@ -201,7 +202,7 @@ final class FeedViewModel: ObservableObject {
                                 isLocalizedVersion: false
                             )
                         )
-                        
+
                     }
                 }
             } else {
@@ -224,20 +225,20 @@ final class FeedViewModel: ObservableObject {
                 }
             }
         }
-        
+
     }
-    
+
     func getTopIndexes() async throws {
         topArticlesIndexes = try await ArticlesManager.shared.getTopArticlesIndexes() ?? ["0"]
     }
-    
+
     func getPostToRead(id: String) async throws {
         let post = try await ArticlesManager.shared.getPostToRead(id: id)
-        
+
         dateCreated = post.dateCreated ?? Date()
         text = post.text ?? NSLocalizedString("notFoundLabel", comment: "")
     }
-    
+
     func getArticles() async throws {
         var query = db.collection("articles")
             .whereField("id", notIn: topArticlesIndexes)
@@ -270,13 +271,13 @@ final class FeedViewModel: ObservableObject {
             throw error
         }
     }
-    
+
     func onPostAppearing(post: PrePost) {
         if !authorsInfo.keys.contains(post.authorId ?? "") {
             Task {
                 do {
                     let info = try await UserManager.shared.getPostAuthorInfo(for: post.authorId ?? "")
-                    
+
                     withAnimation {
                         authorsInfo[post.authorId ?? ""] = info
                     }
@@ -288,7 +289,7 @@ final class FeedViewModel: ObservableObject {
                 }
             }
         }
-        
+
         if articles.last == post && lastDocument != nil {
             Task {
                 do {
@@ -298,7 +299,7 @@ final class FeedViewModel: ObservableObject {
                 }
             }
         }
-        
+
         if user?.userId ?? "" != post.authorId {
             Task {
                 do {
@@ -307,8 +308,8 @@ final class FeedViewModel: ObservableObject {
             }
         }
     }
-    
-    func tapGestureHandler(on post: PrePost) {
+
+    func tapGestureHandler(on post: PrePost, openComments: Bool = false) {
         // 1. Базовые данные для ReadView
         title = post.title ?? NSLocalizedString("notFoundLabel", comment: "")
         image = StorageManager.shared.getImage(id: post.id) ?? UIImage()
@@ -323,11 +324,11 @@ final class FeedViewModel: ObservableObject {
         isPremiumPost = post.isPremiumPost ?? false
         isLocalizedVersion = post.isLocalizedVersion ?? false
         rootId = post.rootId ?? ""
-        
+
         if post.isArchive ?? true {
             image = UIImage()
         }
-        
+
         // 2. Проверка пользователя
         guard let user else {
             withAnimation {
@@ -336,27 +337,29 @@ final class FeedViewModel: ObservableObject {
             }
             return
         }
-        
+
         if likedPosts.isEmpty {
             likedPosts = user.likedPosts ?? []
         }
         if userId.isEmpty {
             userId = user.userId
         }
-        
+
+        shouldOpenCommentsOnRead = openComments
+
         isLoadingPopupPresented = true
-        
+
         Task {
             do {
                 try await getPostToRead(id: post.id)
-                
+
                 await MainActor.run {
                     self.isLoadingPopupPresented = false
                     withAnimation {
                         self.isReadViewPresented = true
                     }
                 }
-                
+
             } catch {
                 await MainActor.run {
                     self.isLoadingPopupPresented = false

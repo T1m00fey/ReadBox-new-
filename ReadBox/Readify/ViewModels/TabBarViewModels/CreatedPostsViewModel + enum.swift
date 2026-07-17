@@ -56,6 +56,7 @@ final class CreatedPostsViewModel: ObservableObject {
     @Published var replyAuthorsInfo: [String: PostAuthorInfo] = [:]
     @Published var isDescriptionPopupPresented = false
     @Published var isReadViewPresented = false
+    @Published var shouldOpenCommentsOnRead = false
     @Published var isNewNameAlertPresented = false
     @Published var isSuccessPopupPresented = false
     @Published var isCreateViewPresented = false
@@ -90,6 +91,7 @@ final class CreatedPostsViewModel: ObservableObject {
     @Published var isPublicationsLabelVisible = true
     @Published var isDeletePostAlertPresented = false
     @Published var pendingDeletePostId = ""
+    @Published var pendingDeleteReplyId = ""
     @Published var isRepliesLoading = false
 
     @Published var avatarVersion = 0
@@ -128,6 +130,7 @@ final class CreatedPostsViewModel: ObservableObject {
     var readAuthorAvatarVersion = 0
     var readReplyAuthorName: String? = nil
     var readReplyRootPostId: String? = nil
+    var isReadingReplyComment = false
     var isLocalizing = false
     var localizationCount = 0
     var rootLang = ""
@@ -158,6 +161,7 @@ final class CreatedPostsViewModel: ObservableObject {
         readAuthorAvatarVersion = 0
         readReplyAuthorName = nil
         readReplyRootPostId = nil
+        isReadingReplyComment = false
         isLocalizing = false
         localizationCount = 0
         rootLang = ""
@@ -167,6 +171,7 @@ final class CreatedPostsViewModel: ObservableObject {
         createIsLocalizedVersion = false
         isDeletePostAlertPresented = false
         pendingDeletePostId = ""
+        pendingDeleteReplyId = ""
     }
 
     func isButtonEnable() {
@@ -399,7 +404,15 @@ final class CreatedPostsViewModel: ObservableObject {
         posts.first { $0.id == id } ?? archivePosts.first { $0.id == id }
     }
 
+    func replyForDeletion(id: String) -> Comment? {
+        replies.first { $0.id == id }
+    }
+
     func deleteAlertMessageKey(for id: String) -> String {
+        if !pendingDeleteReplyId.isEmpty {
+            return "deletePublicationAlertMessage"
+        }
+
         if let post = postForDeletion(id: id),
            shouldShowLocalizedDeleteAlert(for: post) {
             return "deleteLocalizedPostAlertMessage"
@@ -507,7 +520,7 @@ final class CreatedPostsViewModel: ObservableObject {
         lastArchivedPostSnapshot = lastDocument
     }
 
-    func tapGestureHandler(on post: PrePost) {
+    func tapGestureHandler(on post: PrePost, openComments: Bool = false) {
         title = post.title ?? NSLocalizedString("notFoundLabel", comment: "")
         image = StorageManager.shared.getImage(id: post.id) ?? UIImage()
         likesCount = post.likesCount ?? 0
@@ -522,9 +535,11 @@ final class CreatedPostsViewModel: ObservableObject {
         readAuthorId = user?.userId ?? ""
         readAuthorName = user?.name ?? NSLocalizedString("notFoundLabel", comment: "")
         readAuthorIsCheckmark = user?.isCheckmark ?? false
-        readAuthorAvatarVersion = user?.avatarVersion ?? 0
-        readReplyAuthorName = nil
-        readReplyRootPostId = nil
+                readAuthorAvatarVersion = user?.avatarVersion ?? 0
+                readReplyAuthorName = nil
+                readReplyRootPostId = nil
+                isReadingReplyComment = false
+                shouldOpenCommentsOnRead = openComments
 
         if post.isArchive ?? true {
             image = UIImage()
@@ -555,15 +570,39 @@ final class CreatedPostsViewModel: ObservableObject {
         }
     }
 
-    func openReplyRootPost(_ comment: Comment) {
+    func openReplyRootPost(_ comment: Comment, openComments: Bool = false) {
         guard let rootPostId = comment.rootPostId, !rootPostId.isEmpty else { return }
 
         Task {
             do {
                 isLoadingPopupPresented = true
 
-                let prePost = try await getPrePost(id: rootPostId)
-                let post = try await ArticlesManager.shared.getPostToRead(id: rootPostId)
+                let resolvedRootPostId: String
+
+                do {
+                    _ = try await getPrePost(id: rootPostId)
+                    resolvedRootPostId = rootPostId
+                } catch {
+                    let legacyComment = try await CommentariesManager.shared.getComment(id: rootPostId)
+                    guard let legacyRootPostId = legacyComment.rootPostId, !legacyRootPostId.isEmpty else {
+                        throw error
+                    }
+
+                    resolvedRootPostId = legacyRootPostId
+                }
+
+                let prePost = try await getPrePost(id: resolvedRootPostId)
+
+                guard !(prePost.isArchive ?? false) else {
+                    withAnimation {
+                        isLoadingPopupPresented = false
+                        errorText = NSLocalizedString("archiveArticleLabel", comment: "")
+                        isErrorPopupPresented = true
+                    }
+                    return
+                }
+
+                let post = try await ArticlesManager.shared.getPostToRead(id: resolvedRootPostId)
                 let authorInfo = try await UserManager.shared.getPostAuthorInfo(for: prePost.authorId ?? "")
 
                 title = prePost.title ?? NSLocalizedString("notFoundLabel", comment: "")
@@ -584,6 +623,8 @@ final class CreatedPostsViewModel: ObservableObject {
                 dateCreated = post.dateCreated ?? Date()
                 text = post.text ?? ""
                 mediaURLs = (post.mediaURLs ?? []).compactMap { URL(string: $0) }
+                isReadingReplyComment = false
+                shouldOpenCommentsOnRead = openComments
 
                 isLoadingPopupPresented = false
                 isReadViewPresented = true
@@ -597,7 +638,7 @@ final class CreatedPostsViewModel: ObservableObject {
         }
     }
 
-    func openReplyComment(_ comment: Comment) {
+    func openReplyComment(_ comment: Comment, openComments: Bool = false) {
         title = comment.text ?? ""
         text = ""
         likesCount = comment.likesCount ?? 0
@@ -616,6 +657,8 @@ final class CreatedPostsViewModel: ObservableObject {
         readAuthorAvatarVersion = user?.avatarVersion ?? 0
         readReplyAuthorName = replyAuthorsInfo[comment.rootAuthorId ?? ""]?.name
         readReplyRootPostId = comment.rootPostId
+        isReadingReplyComment = true
+        shouldOpenCommentsOnRead = openComments
         isReadViewPresented = true
     }
 
@@ -779,6 +822,42 @@ final class CreatedPostsViewModel: ObservableObject {
             isRepliesLoading = false
             errorText = error.localizedDescription
             isErrorPopupPresented = true
+        }
+    }
+
+    func requestReplyDeletion(_ comment: Comment) {
+        pendingDeleteReplyId = comment.id
+        isDeletePostAlertPresented = true
+    }
+
+    func deleteReply(_ comment: Comment) {
+        Task {
+            do {
+                try await deleteReply(id: comment.id)
+            } catch {
+                await MainActor.run {
+                    withAnimation {
+                        pendingDeleteReplyId = ""
+                        errorText = error.localizedDescription
+                        isErrorPopupPresented = true
+                    }
+                }
+            }
+        }
+    }
+
+    func deleteReply(id: String) async throws {
+        guard let comment = replyForDeletion(id: id) else { return }
+
+        try await CommentariesManager.shared.deleteComment(id: comment.id)
+
+        if let rootPostId = comment.rootPostId, !rootPostId.isEmpty {
+            try? await ArticlesManager.shared.updateCommentsCount(at: rootPostId, isPlus: false)
+        }
+
+        withAnimation {
+            replies.removeAll { $0.id == comment.id }
+            pendingDeleteReplyId = ""
         }
     }
 

@@ -13,6 +13,7 @@ import SwiftfulLoadingIndicators
 enum ChannelPostsSection: Int, CaseIterable {
     case all
     case articles
+    case replies
     case localized
 
     var title: String {
@@ -21,6 +22,8 @@ enum ChannelPostsSection: Int, CaseIterable {
             NSLocalizedString("publicationsLabel", comment: "")
         case .articles:
             NSLocalizedString("articlesLabel", comment: "")
+        case .replies:
+            NSLocalizedString("repliesLabel", comment: "")
         case .localized:
             NSLocalizedString("localizedPostsLabel", comment: "")
         }
@@ -33,6 +36,8 @@ final class ChannelViewModel: ObservableObject {
     @Published var isLoading = true
     @Published var posts: [PrePost] = []
     @Published var allPosts: [PrePost] = []
+    @Published var replies: [Comment] = []
+    @Published var replyAuthorsInfo: [String: PostAuthorInfo] = [:]
     @Published var errorText = ""
     @Published var isErrorPopupPresented = false
     @Published var postOption = PostOptions.nothing
@@ -55,6 +60,18 @@ final class ChannelViewModel: ObservableObject {
     @Published var zoomableImage: UIImage? = nil
     @Published var postToView: PrePost? = nil
     @Published var postToRead: PostToRead? = nil
+    @Published var commentToRead: Comment? = nil
+    @Published var readAuthorId = ""
+    @Published var readAuthorName = ""
+    @Published var readAuthorIsCheckmark = false
+    @Published var readAuthorAvatarVersion = 0
+    @Published var readArticleLanguage = ""
+    @Published var readIsPremiumPost = false
+    @Published var readIsLocalizedVersion = false
+    @Published var readRootId = ""
+    @Published var readReplyAuthorName: String? = nil
+    @Published var readReplyRootPostId: String? = nil
+    @Published var shouldOpenCommentsOnRead = false
     @Published var isDataLoaded = false
     @Published var isSubscribeLoading = false
     @Published var pushRoute: NotificationPushRoute? = nil
@@ -62,7 +79,8 @@ final class ChannelViewModel: ObservableObject {
     @Published var isPublicationsLabelVisible = true
     @Published var primaryLanguage = "en"
     @Published var currentSection: ChannelPostsSection = .all
-    
+    @Published var isRepliesLoading = false
+
     @ViewBuilder
     func buildSubscribeButtonView(_ isSubscribed: Bool) -> some View {
         if isSubscribeLoading {
@@ -93,25 +111,25 @@ final class ChannelViewModel: ObservableObject {
             .frame(maxWidth: .infinity)
         }
     }
-    
+
     func getViews() {
         views = StorageManager.shared.getViews()
     }
-    
+
     func saveViews() {
         StorageManager.shared.save(views: views)
     }
-    
+
     func updatePrimaryLanguage(user: DBUser?) {
         let fallbackLanguage = Locale.preferredLanguages.first?.components(separatedBy: "-").first == "ru"
         ? "ru"
         : "en"
-        
+
         let userLanguage = user?.originalLanguage?.trimmingCharacters(in: .whitespacesAndNewlines)
-        
+
         primaryLanguage = (userLanguage?.isEmpty == false ? userLanguage : nil) ?? fallbackLanguage
     }
-    
+
     func isSubscribed(_ user: DBUser?, on author: String) -> Bool? {
         if user?.userId == author {
             return nil
@@ -119,15 +137,15 @@ final class ChannelViewModel: ObservableObject {
             return user?.subscribes?.contains(author) ?? nil
         }
     }
-    
+
     func un_subscribeUser(on id: String, isNeedToSubscribe: Bool) async throws {
         try await UserManager.shared.un_subscribeUser(on: id, isNeedToSubscribe: isNeedToSubscribe)
     }
-    
+
     func getSubscribersCount(authorId: String) async throws {
         subscribersCount = try await UserManager.shared.getSubscribersCount(authorId: authorId)
     }
-    
+
     func getPostsCount(authorId: String) async throws {
         postsCount = try await UserManager.shared.getPostsCount(authorId: authorId)
     }
@@ -147,31 +165,31 @@ final class ChannelViewModel: ObservableObject {
         authorDateCreated = author?.dateCreated
         isAuthorInfoLoading = false
     }
-    
+
     func getAuthorDescription(id: String) async throws {
         authorDescription = try await UserManager.shared.getAuthorDescription(id: id)
     }
-    
+
     func loadPosts(by authorId: String) async throws {
         guard !isAllLoading else { return }
-        
+
         let (posts, lastDocument) = try await ArticlesManager.shared.getCreatedPosts(
             userId: authorId,
             startAfter: lastDocument
         )
-        
+
         if posts.isEmpty {
-            isAllLoading = true            
+            isAllLoading = true
             withAnimation {
                 isLoading = false
                 isLoadingShowing = false
             }
-            
+
             return
         }
-        
+
         let newPosts = posts.compactMap { $0 }
-        
+
         withAnimation {
             allPosts.append(contentsOf: newPosts)
             self.posts = localizedPosts(from: allPosts)
@@ -179,7 +197,7 @@ final class ChannelViewModel: ObservableObject {
         }
 
         self.lastDocument = lastDocument
-        
+
         withAnimation {
             isLoading = false
         }
@@ -191,6 +209,8 @@ final class ChannelViewModel: ObservableObject {
             posts
         case .articles:
             posts.filter { !($0.isShortPost ?? false) }
+        case .replies:
+            []
         case .localized:
             allPosts.filter { $0.isLocalizedVersion ?? false }
         }
@@ -205,6 +225,11 @@ final class ChannelViewModel: ObservableObject {
     }
 
     func loadCurrentSectionUntilAvailableIfNeeded(authorId: String) async {
+        if currentSection == .replies {
+            await loadRepliesIfNeeded(authorId: authorId)
+            return
+        }
+
         while currentPosts.isEmpty && !isAllLoading {
             do {
                 try await loadPosts(by: authorId)
@@ -215,13 +240,13 @@ final class ChannelViewModel: ObservableObject {
             }
         }
     }
-    
+
     private func localizedPosts(from posts: [PrePost]) -> [PrePost] {
         var bestPostsByRoot: [String: (post: PrePost, index: Int)] = [:]
-        
+
         for (index, post) in posts.enumerated() {
             let rootKey = post.rootId ?? post.id
-            
+
             if let current = bestPostsByRoot[rootKey] {
                 if localizationPriority(for: post) < localizationPriority(for: current.post) {
                     bestPostsByRoot[rootKey] = (post, index)
@@ -230,22 +255,55 @@ final class ChannelViewModel: ObservableObject {
                 bestPostsByRoot[rootKey] = (post, index)
             }
         }
-        
+
         return bestPostsByRoot
             .values
             .sorted { $0.index < $1.index }
             .map(\.post)
     }
-    
+
     private func localizationPriority(for post: PrePost) -> Int {
         if post.originalLanguage == primaryLanguage {
             return 0
         }
-        
+
         if !(post.isLocalizedVersion ?? false) {
             return 1
         }
-        
+
         return 2
+    }
+
+    func loadRepliesIfNeeded(authorId: String) async {
+        guard replies.isEmpty, !isRepliesLoading else { return }
+        guard !authorId.isEmpty else { return }
+
+        isRepliesLoading = true
+
+        do {
+            replies = try await CommentariesManager.shared.getCommentaries(authorId: authorId)
+
+            let replyAuthorIds = Set(
+                replies
+                    .compactMap { $0.rootAuthorId }
+                    .filter { !$0.isEmpty }
+            )
+
+            for replyAuthorId in replyAuthorIds where replyAuthorsInfo[replyAuthorId] == nil {
+                if let info = try await UserManager.shared.getPostAuthorInfo(for: replyAuthorId) {
+                    replyAuthorsInfo[replyAuthorId] = info
+                }
+            }
+
+            isRepliesLoading = false
+            withAnimation {
+                isLoading = false
+                isLoadingShowing = false
+            }
+        } catch {
+            isRepliesLoading = false
+            errorText = error.localizedDescription
+            isErrorPopupPresented = true
+        }
     }
 }

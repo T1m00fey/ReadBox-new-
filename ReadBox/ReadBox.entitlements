@@ -6,8 +6,8 @@
 	<string>development</string>
 	<key>com.apple.developer.associated-domains</key>
 	<array>
-		<string>applinks:readbox-links.online</string>
-		<string>webcredentials:readbox-links.online</string>
+		<string>applinks:readbox.online</string>
+		<string>webcredentials:readbox.online</string>
 	</array>
 </dict>
 </plist>

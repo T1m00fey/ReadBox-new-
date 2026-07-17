@@ -30,8 +30,13 @@ struct ArticleView: View {
     let isPremiumPost: Bool
     let viewsCount: Int
     let likesCount: Int
+    let commentsCount: Int
     let replyAuthorName: String?
     let onReplyTap: (() -> Void)?
+    let onCommentTap: (() -> Void)?
+    let isReplyMenuVisible: Bool
+    let onDeleteReply: (() -> Void)?
+    let exportMediaImage: UIImage?
 
     @Binding var user: DBUser?
     @Binding var isZoomableViewPresented: Bool
@@ -47,6 +52,7 @@ struct ArticleView: View {
     @State private var isLiked = false
     @State private var currentIndex = 0
     @State private var effectiveMediaCount = 0
+    @State private var isSharePopupPresented = false
 
     @State private var images: [MediaKind?] = []
 
@@ -75,8 +81,13 @@ struct ArticleView: View {
         isPremiumPost: Bool,
         viewsCount: Int = 0,
         likesCount: Int = 0,
+        commentsCount: Int = 0,
         replyAuthorName: String? = nil,
         onReplyTap: (() -> Void)? = nil,
+        onCommentTap: (() -> Void)? = nil,
+        isReplyMenuVisible: Bool = false,
+        onDeleteReply: (() -> Void)? = nil,
+        exportMediaImage: UIImage? = nil,
         user: Binding<DBUser?>,
         isZoomableViewPresented: Binding<Bool>,
         zoomableImage: Binding<UIImage?>,
@@ -103,8 +114,13 @@ struct ArticleView: View {
         self.isPremiumPost = isPremiumPost
         self.viewsCount = viewsCount
         self.likesCount = likesCount
+        self.commentsCount = commentsCount
         self.replyAuthorName = replyAuthorName
         self.onReplyTap = onReplyTap
+        self.onCommentTap = onCommentTap
+        self.isReplyMenuVisible = isReplyMenuVisible
+        self.onDeleteReply = onDeleteReply
+        self.exportMediaImage = exportMediaImage
         self._user = user
         self._isZoomableViewPresented = isZoomableViewPresented
         self._zoomableImage = zoomableImage
@@ -112,6 +128,15 @@ struct ArticleView: View {
         self._isChannelViewPresented = isChannelViewPresented
         self._postOption = postOption
         self._selectedId = selectedId
+        self._effectiveMediaCount = State(initialValue: mediaCount)
+        self._isLiked = State(
+            initialValue: user.wrappedValue?.likedPosts?.contains(id) ?? false
+        )
+        self._avatarImage = State(
+            initialValue: StorageManager.shared.getImage(
+                id: "avatar_\(authorId)_\(lastVersionOfAvatar)"
+            )
+        )
     }
 
     private func isAccessToPremiumDenied() -> Bool {
@@ -130,10 +155,8 @@ struct ArticleView: View {
             try await UserManager.shared.removeLikedPost(id: user?.userId ?? "", likedPost: id)
             try await ArticlesManager.shared.updateLikes(at: id, likesCount: likesCount - 1)
 
-            withAnimation {
-                user?.likedPosts?.removeAll {
-                    $0 == id
-                }
+            user?.likedPosts?.removeAll {
+                $0 == id
             }
         } else {
             withAnimation {
@@ -141,12 +164,16 @@ struct ArticleView: View {
             }
             VibrationsService.shared.lightImpact()
 
+            AnalyticsManager.shared.logArticleLike(
+                id: id,
+                contentType: isShortPost ? "post" : "article",
+                source: "unknown"
+            )
+
             try await UserManager.shared.addLikedPost(id: user?.userId ?? "", likedPost: id)
             try await ArticlesManager.shared.updateLikes(at: id, likesCount: likesCount + 1)
 
-            withAnimation {
-                user?.likedPosts?.append(id)
-            }
+            user?.likedPosts?.append(id)
         }
     }
 
@@ -154,47 +181,28 @@ struct ArticleView: View {
 
         VStack {
             VStack(alignment: .leading, spacing: 4) {
-                if let replyTitle {
-                    Text(replyTitle)
-                        .font(.system(size: 12))
-                        .foregroundStyle(Color.gray)
-                        .lineLimit(1)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.top, replyTitleTopPadding)
-                        .padding(.bottom, replyTitleBottomPadding)
-                        .onTapGesture {
-                            onReplyTap?()
-                        }
-                }
-
-                HStack {
-                    if let avatarImage {
-                        Image(uiImage: avatarImage)
-                            .resizable()
-                            .scaledToFill()
-                            .frame(width: 40, height: 40)
-                            .clipShape(Circle())
-                            .overlay(
-                                Circle()
-                                    .stroke(
-                                        Color(.label),
-                                        lineWidth: 0.1
-                                    )
-                            )
-                            .onTapGesture {
-                                withAnimation {
-                                    zoomableImage = avatarImage
-                                    isZoomableViewPresented = true
-                                }
-                            }
-                            .id("\(id)")
+                HStack(alignment: .bottom) {
+                    if shouldReserveAvatarSlot {
+                        avatarSlotView
                     }
 
-                    HStack(spacing: 5) {
-                        VStack(spacing: 1) {
+                    HStack(spacing: authorSectionSpacing) {
+                        VStack(alignment: .leading, spacing: authorTextStackSpacing) {
+                            if let replyTitle {
+                                Text(replyTitle)
+                                    .font(.system(size: replyTitleFontSize))
+                                    .foregroundStyle(Color.gray)
+                                    .lineLimit(1)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .padding(.bottom, isReplyArticleCard ? 0 : 1)
+                                    .onTapGesture {
+                                        onReplyTap?()
+                                    }
+                            }
+
                             HStack(spacing: 0) {
                                 Text(authorName)
-                                    .font(.system(size: 16))
+                                    .font(.system(size: authorNameFontSize))
                                 //                            .font(.custom("Mulish", size: 18))
                                     .lineLimit(1)
 //                                .underline()
@@ -208,20 +216,32 @@ struct ArticleView: View {
                                 if isCheckmark {
                                     Image(systemName: "checkmark.seal.fill")
                                         .foregroundStyle(Color.blue)
-                                        .font(.system(size: 14))
+                                        .font(.system(size: authorCheckmarkFontSize))
                                         .padding(.top, 1)
+                                }
+
+                                if isReplyArticleCard, let articleDateText {
+                                    Text(" · ")
+                                        .font(.system(size: authorDateFontSize))
+                                        .foregroundStyle(Color.gray)
+
+                                    Text(articleDateText)
+                                        .font(.system(size: authorDateFontSize))
+                                        .foregroundStyle(Color.gray)
+                                        .lineLimit(1)
                                 }
                             }
                             .frame(maxWidth: .infinity, alignment: .leading)
 
-                            if let articleDateText {
+                            if !isReplyArticleCard, let articleDateText {
                                 Text("\(articleDateText)")
-                                    .font(.system(size: 11))
+                                    .font(.system(size: authorDateFontSize))
                                     .foregroundStyle(Color.gray)
                                     .lineLimit(1)
                                     .frame(maxWidth: .infinity, alignment: .leading)
                             }
                         }
+                        .offset(y: -1)
 
                         Spacer()
 
@@ -264,42 +284,49 @@ struct ArticleView: View {
 
                         }
 
-                        if isCreatedView {
+                        if (isCreatedView && !isChannelViewPresented) || isReplyMenuVisible {
                             Menu {
-                                Button {
-                                    postOption = .editing
-                                    selectedId = id
-                                } label: {
-                                    Label(NSLocalizedString("editingLabel", comment: ""), systemImage: "pencil")
-                                }
-
-                                Button {
-                                    selectedId = id
-
-                                    if isArchive {
-                                        postOption = .publish
-                                    } else {
-                                        postOption = .toArchive
-                                    }
-
-                                } label: {
-                                    if isArchive {
-                                        Label(NSLocalizedString("publishLabel", comment: ""), systemImage: "paperplane")
-                                    } else {
-                                        Label(NSLocalizedString("saveToArchiveLabel", comment: ""), systemImage: "archivebox")
-                                    }
-                                }
-
-                                if locCount == 0 && !isLocalizedVersion {
+                                if !isReplyMenuVisible {
                                     Button {
-                                        postOption = .localize
+                                        postOption = .editing
                                         selectedId = id
                                     } label: {
-                                        Label(NSLocalizedString("toLocalizeMenuActionLabel", comment: ""), systemImage: "globe")
+                                        Label(NSLocalizedString("editingLabel", comment: ""), systemImage: "pencil")
+                                    }
+
+                                    Button {
+                                        selectedId = id
+
+                                        if isArchive {
+                                            postOption = .publish
+                                        } else {
+                                            postOption = .toArchive
+                                        }
+
+                                    } label: {
+                                        if isArchive {
+                                            Label(NSLocalizedString("publishLabel", comment: ""), systemImage: "paperplane")
+                                        } else {
+                                            Label(NSLocalizedString("saveToArchiveLabel", comment: ""), systemImage: "archivebox")
+                                        }
+                                    }
+
+                                    if locCount == 0 && !isLocalizedVersion {
+                                        Button {
+                                            postOption = .localize
+                                            selectedId = id
+                                        } label: {
+                                            Label(NSLocalizedString("toLocalizeMenuActionLabel", comment: ""), systemImage: "globe")
+                                        }
                                     }
                                 }
 
                                 Button {
+                                    if isReplyMenuVisible {
+                                        onDeleteReply?()
+                                        return
+                                    }
+
                                     postOption = .delete
                                     selectedId = id
 
@@ -333,16 +360,31 @@ struct ArticleView: View {
 
             if mediaCount > 0 {
                 ZStack {
-                    MediaViews(
-                        id: id,
-                        authorId: authorId,
-                        mediaCount: effectiveMediaCount,
-                        mediaVersion: mediaVersion,
-                        zoomableImage: $zoomableImage,
-                        isZoomableViewPresented: $isZoomableViewPresented,
-                        currentIndex: $currentIndex
-                    )
-                    .id("\(id)-\(effectiveMediaCount)")
+                    Group {
+                        if let exportMediaImage {
+                            Image(uiImage: exportMediaImage)
+                                .resizable()
+                                .scaledToFit()
+                                .clipped()
+                                .clipShape(RoundedRectangle(cornerRadius: 23))
+                                .frame(
+                                    maxWidth: UIScreen.main.bounds.width - 25,
+                                    maxHeight: 350,
+                                    alignment: .leading
+                                )
+                        } else {
+                            MediaViews(
+                                id: id,
+                                authorId: authorId,
+                                mediaCount: effectiveMediaCount,
+                                mediaVersion: mediaVersion,
+                                zoomableImage: $zoomableImage,
+                                isZoomableViewPresented: $isZoomableViewPresented,
+                                currentIndex: $currentIndex
+                            )
+                            .id("\(id)-\(effectiveMediaCount)")
+                        }
+                    }
                     .padding(.bottom, mediaBottomPadding)
                     .blur(radius: isAccessToPremiumDenied() ? 10 : 0)
                     .clipShape(RoundedRectangle(cornerRadius: 20))
@@ -396,7 +438,7 @@ struct ArticleView: View {
                             if isShortPost {
                                 Image(systemName: isLiked ? "hand.thumbsup.fill" : "hand.thumbsup")
                                     .foregroundStyle(Color.gray)
-                                    .font(.system(size: 20))
+                                    .font(.system(size: 18))
                                     .onTapGesture {
                                         Task {
                                             do {
@@ -414,18 +456,63 @@ struct ArticleView: View {
                                         .padding(.top, 5)
                                 }
 
-                                ShareLink(item: URL(string: "https://readbox-links.online/posts/?index=\(id)")!) {
-                                    Image(systemName: "arrowshape.turn.up.right")
-                                        .foregroundStyle(Color.gray)
-                                        .font(.system(size: 20))
+                                if let onCommentTap {
+                                    Button(action: onCommentTap) {
+                                        Image(systemName: "bubble.right")
+                                            .foregroundStyle(Color.gray)
+                                            .font(.system(size: 17))
+                                    }
+                                    .buttonStyle(.plain)
+
+                                    if isCreatedView {
+                                        Text("\(commentsCount)")
+                                            .font(.system(size: 14))
+                                            .foregroundStyle(Color.gray)
+                                            .fontDesign(.rounded)
+                                            .padding(.leading, -7)
+                                            .padding(.top, 5)
+                                    }
+                                }
+
+                                if isCreatedView {
+                                    Button {
+                                        presentSharePopup()
+                                    } label: {
+                                        Image(systemName: "arrowshape.turn.up.right")
+                                            .foregroundStyle(Color.gray)
+                                            .font(.system(size: 18))
+                                    }
+                                    .buttonStyle(.plain)
                                 }
                             }
 
                             Spacer()
 
+                            if isShortPost && !isCreatedView {
+                                Button {
+                                    presentSharePopup()
+                                } label: {
+                                    Image(systemName: "arrowshape.turn.up.right")
+                                        .foregroundStyle(Color.gray)
+                                        .font(.system(size: 18))
+                                }
+                                .buttonStyle(.plain)
+                            }
+
                             if isCreatedView {
                                 HStack(spacing: 10) {
                                     if !isShortPost {
+                                        HStack(spacing: 2) {
+                                            Text("\(commentsCount)")
+                                                .font(.system(size: 13))
+                                                .fontDesign(.rounded)
+                                                .foregroundStyle(Color.gray)
+
+                                            Image(systemName: "bubble.right")
+                                                .foregroundStyle(Color.gray)
+                                                .font(.system(size: 15))
+                                        }
+
                                         HStack(spacing: 2) {
                                             Text("\(likesCount)")
                                                 .font(.system(size: 13))
@@ -502,11 +589,68 @@ struct ArticleView: View {
 
             let ava = await MediaManager.shared.getAvatar(authorId: authorId, lastVersion: avatarVersion)
 
-            withAnimation {
-                avatarImage = ava
-            }
+            avatarImage = ava
+        }
+        .sheet(isPresented: $isSharePopupPresented) {
+            SharePublicationView(
+                articleView: shareArticleView,
+                url: shareURL
+            )
+            .presentationCornerRadius(30)
+            .presentationDragIndicator(.visible)
         }
         .hiddenOnScreenshots(isPremiumPost)
+    }
+}
+
+private extension ArticleView {
+    var shareURL: URL {
+        URL(string: "https://readbox.online/posts/?index=\(id)")!
+    }
+
+    var shareArticleView: ArticleView {
+        ArticleView(
+            id: id,
+            title: title,
+            authorId: authorId,
+            authorName: authorName,
+            dateCreated: dateCreated,
+            isCheckmark: isCheckmark,
+            isArchive: isArchive,
+            isShortPost: isShortPost,
+            mediaCount: mediaCount,
+            mediaVersion: mediaVersion,
+            mediaPosition: mediaPosition,
+            lastVersionOfAvatar: lastVersionOfAvatar,
+            locCount: locCount,
+            isCreatedView: false,
+            isLocalizedVersion: isLocalizedVersion,
+            isPremiumPost: isPremiumPost,
+            likesCount: likesCount,
+            commentsCount: commentsCount,
+            onCommentTap: {},
+            exportMediaImage: shareMediaImage,
+            user: .constant(user),
+            isZoomableViewPresented: .constant(false),
+            zoomableImage: .constant(nil),
+            selectedAuthorId: .constant(""),
+            isChannelViewPresented: .constant(false)
+        )
+    }
+
+    var shareMediaImage: UIImage? {
+        StorageManager.shared.getImage(id: "\(id)_0")
+            ?? StorageManager.shared.getImage(id: "\(id)_0_preview")
+            ?? StorageManager.shared.getImage(id: id)
+    }
+
+    func presentSharePopup() {
+        AnalyticsManager.shared.logPublicationShared(
+            id: id,
+            contentType: isShortPost ? "post" : "article",
+            source: "card"
+        )
+        isSharePopupPresented = true
     }
 }
 
@@ -563,6 +707,38 @@ private extension ArticleView {
         : Color(red: 0.975, green: 0.975, blue: 0.98)
     }
 
+    var shouldReserveAvatarSlot: Bool {
+        lastVersionOfAvatar > 0 || avatarImage != nil
+    }
+
+    var avatarSlotView: some View {
+        ZStack {
+            Circle()
+                .fill(Color(.secondarySystemBackground))
+                .overlay(
+                    Circle()
+                        .stroke(Color(.label), lineWidth: 0.1)
+                )
+
+            if let avatarImage {
+                Image(uiImage: avatarImage)
+                    .resizable()
+                    .scaledToFill()
+            }
+        }
+        .frame(width: authorAvatarSize, height: authorAvatarSize)
+        .clipShape(Circle())
+        .contentShape(Circle())
+        .onTapGesture {
+            if let avatarImage {
+                withAnimation {
+                    zoomableImage = avatarImage
+                    isZoomableViewPresented = true
+                }
+            }
+        }
+    }
+
     var articleDateText: String? {
         guard let dateCreated else { return nil }
         return formattedArticleDate(dateCreated)
@@ -611,8 +787,12 @@ private extension ArticleView {
         !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
+    var hasMediaContent: Bool {
+        return mediaCount > 0
+    }
+
     var isTextOnlyPost: Bool {
-        mediaCount == 0 && hasTitleText
+        !hasMediaContent && hasTitleText
     }
 
     var hasReplyTitle: Bool {
@@ -620,15 +800,39 @@ private extension ArticleView {
     }
 
     var authorSectionTopPadding: CGFloat {
-        isTextOnlyPost && hasReplyTitle ? 16 : 12
+        isTextOnlyPost && hasReplyTitle ? 10 : 12
     }
 
-    var replyTitleTopPadding: CGFloat {
-        isTextOnlyPost && hasReplyTitle ? 5 : 0
+    var isReplyArticleCard: Bool {
+        hasReplyTitle
     }
-    
-    var replyTitleBottomPadding: CGFloat {
-        hasReplyTitle ? 5 : 0
+
+    var authorAvatarSize: CGFloat {
+        40
+    }
+
+    var authorSectionSpacing: CGFloat {
+        5
+    }
+
+    var authorTextStackSpacing: CGFloat {
+        isReplyArticleCard ? 0 : 1
+    }
+
+    var authorNameFontSize: CGFloat {
+        16
+    }
+
+    var authorDateFontSize: CGFloat {
+        11
+    }
+
+    var authorCheckmarkFontSize: CGFloat {
+        14
+    }
+
+    var replyTitleFontSize: CGFloat {
+        12
     }
 
     var mediaBottomPadding: CGFloat {
@@ -636,23 +840,23 @@ private extension ArticleView {
             return 10
         }
 
-        if isShortPost && mediaCount == 1 && !hasTitleText {
-            return 10
+        if isShortPost && !hasTitleText {
+            return 5
         }
 
         return 0
     }
 
     var titleSectionBottomPadding: CGFloat {
-        shouldShowExpandButton ? 0 : (isShortPost ? 10 : 20)
+        return shouldShowExpandButton ? 0 : (isShortPost ? 10 : 20)
     }
 
     var titleSectionTopPadding: CGFloat {
-        if mediaCount > 0 {
-            return 5
+        if hasMediaContent {
+            return 6
         }
 
-        return isTextOnlyPost && hasReplyTitle ? 8 : 0
+        return 0
     }
 
     var titleAttributedString: AttributedString {

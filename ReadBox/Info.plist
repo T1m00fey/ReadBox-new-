@@ -8,6 +8,8 @@
 		<string>PlaywriteIE.ttf</string>
 		<string>Borel.ttf</string>
 	</array>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>ReadBox сохраняет выбранную карточку публикации в вашу медиатеку.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>remote-notification</string>

@@ -12,8 +12,6 @@ import FirebaseMessaging
 import UserNotifications
 
 class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate, MessagingDelegate {
-
-    // Вызывается при запуске приложения
     func application(
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
@@ -38,7 +36,7 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         didReceiveRemoteNotification userInfo: [AnyHashable : Any],
         fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void
     ) {
-        print("📨 [App] didReceiveRemoteNotification userInfo = \(userInfo)")
+        print("📨 didReceiveRemoteNotification userInfo = \(userInfo)")
         completionHandler(.noData)
     }
 
@@ -51,6 +49,26 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
                                 withCompletionHandler completionHandler: @escaping () -> Void) {
         let userInfo = response.notification.request.content.userInfo
         print("📨 [UNUserNotificationCenter] didReceive, userInfo = \(userInfo)")
+
+        if let route = userInfo["route"] as? String,
+           route == "channel",
+           let channelId = userInfo["channelId"] as? String,
+           !channelId.isEmpty {
+            AnalyticsManager.shared.logPushOpen(
+                destination: "channel",
+                authorId: channelId,
+                pushStyle: userInfo["push_style"] as? String
+            )
+        } else if let type = userInfo["type"] as? String,
+                  type == "new_post",
+                  let articleId = userInfo["articleId"] as? String,
+                  !articleId.isEmpty {
+            AnalyticsManager.shared.logPushOpen(
+                destination: "article",
+                articleId: articleId,
+                pushStyle: userInfo["push_style"] as? String
+            )
+        }
 
         if let type = userInfo["type"] as? String,
            type == "new_post",
@@ -98,7 +116,7 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
 
 // MARK: - Точка входа в SwiftUI-приложение
 @main
-struct YourApp: App {
+struct ReadifyApp: App {
 
     @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
     @Environment(\.scenePhase) private var scenePhase
@@ -121,6 +139,16 @@ struct YourApp: App {
                         // Пример: очистка кеша Firestore
 //                        let db = Firestore.firestore()
 //                        db.clearPersistence()
+                    }
+                    .task {
+                        await AnalyticsManager.shared.refreshNotificationPermissionStatus(source: "app_launch")
+                    }
+                    .onChange(of: scenePhase) {
+                        guard scenePhase == .active else { return }
+
+                        Task {
+                            await AnalyticsManager.shared.refreshNotificationPermissionStatus(source: "app_active")
+                        }
                     }
 //                    .onChange(of: scenePhase) {
 //                        if scenePhase == .inactive || scenePhase == .background {

@@ -10,7 +10,6 @@ import MarkdownUI
 import PopupView
 import SwiftfulLoadingIndicators
 import _PhotosUI_SwiftUI
-import PopupView
 import FirebaseStorage
 import TipKit
 
@@ -362,8 +361,23 @@ struct TextCreateView: View {
                                 changedPostsManager.changedPostsIDs.append(id)
                                 hudService.showSuccessPopup(type: .post)
 
+                                if shouldRefreshDateCreated {
+                                    AnalyticsManager.shared.logPostPublished(
+                                        id: id,
+                                        destination: "main_feed",
+                                        language: uploadingLanguage,
+                                        hasMedia: !items.isEmpty || !mediaURLs.isEmpty
+                                    )
+                                }
+
                                 NotificationCenter.default.post(name: .postsDidChange, object: nil)
                             } catch {
+                                AnalyticsManager.shared.logPublishFailed(
+                                    contentType: "article",
+                                    operation: "update",
+                                    isDraft: newIsArchive,
+                                    error: error
+                                )
                                 hudService.showErrorPopup(with: error.localizedDescription)
                             }
                         }
@@ -395,8 +409,30 @@ struct TextCreateView: View {
                                 StorageManager.shared.deleteText()
                                 hudService.showSuccessPopup(type: .post)
 
+                                if newIsArchive {
+                                    AnalyticsManager.shared.logDraftCreated(
+                                        id: createdPostId,
+                                        contentType: "article",
+                                        language: uploadingLanguage,
+                                        hasMedia: !items.isEmpty || !mediaURLs.isEmpty
+                                    )
+                                } else {
+                                    AnalyticsManager.shared.logPostPublished(
+                                        id: createdPostId,
+                                        destination: "main_feed",
+                                        language: uploadingLanguage,
+                                        hasMedia: !items.isEmpty || !mediaURLs.isEmpty
+                                    )
+                                }
+
                                 NotificationCenter.default.post(name: .postsDidChange, object: nil)
                             } catch {
+                                AnalyticsManager.shared.logPublishFailed(
+                                    contentType: "article",
+                                    operation: "create",
+                                    isDraft: newIsArchive,
+                                    error: error
+                                )
                                 hudService.showErrorPopup(with: error.localizedDescription)
                             }
                         }

@@ -193,6 +193,7 @@ struct PrePost: Identifiable, Codable, Equatable, Hashable {
     let dateCreated: Date?
     let viewsCount: Int?
     let likesCount: Int?
+    let commentsCount: Int?
     var isArchive: Bool?
     var isShortPost: Bool?
     let mediaCount: Int?
@@ -202,6 +203,10 @@ struct PrePost: Identifiable, Codable, Equatable, Hashable {
     let isLocalizedVersion: Bool?
     let rootId: String?
     let isPremiumPost: Bool?
+
+    var repliesCount: Int {
+        commentsCount ?? 0
+    }
 
     init?(document: DocumentSnapshot) {
         let data = document.data()
@@ -224,6 +229,7 @@ struct PrePost: Identifiable, Codable, Equatable, Hashable {
         self.dateCreated = (data?["date_created"] as? Timestamp)?.dateValue() ?? data?["date_created"] as? Date
         self.viewsCount = viewsCount
         self.likesCount = likesCount
+        self.commentsCount = data?["comments_count"] as? Int
         self.isArchive = isArchive
         self.isShortPost = data?["is_short_post"] as? Bool
         self.mediaCount = data?["media_count"] as? Int
@@ -243,6 +249,7 @@ struct PrePost: Identifiable, Codable, Equatable, Hashable {
         dateCreated: Date? = nil,
         viewsCount: Int?,
         likesCount: Int?,
+        commentsCount: Int? = nil,
         isArchive: Bool? = nil,
         isShortPost: Bool?,
         mediaCount: Int?,
@@ -260,6 +267,7 @@ struct PrePost: Identifiable, Codable, Equatable, Hashable {
         self.dateCreated = dateCreated
         self.viewsCount = viewsCount
         self.likesCount = likesCount
+        self.commentsCount = commentsCount
         self.isArchive = isArchive
         self.isShortPost = isShortPost
         self.mediaCount = mediaCount
@@ -279,6 +287,7 @@ struct PrePost: Identifiable, Codable, Equatable, Hashable {
         case originalLanguage = "original_language"
         case dateCreated = "date_created"
         case viewsCount = "views_count"
+        case commentsCount = "comments_count"
         case isArchive = "is_archive"
         case isShortPost = "is_short_post"
         case mediaCount = "media_count"
@@ -422,6 +431,7 @@ struct Comment: Identifiable, Codable {
     let rootPostId: String?
     let viewsCount: Int?
     let likesCount: Int?
+    let repliesCount: Int?
 
     enum CodingKeys: String, CodingKey {
         case id = "id"
@@ -432,14 +442,45 @@ struct Comment: Identifiable, Codable {
         case rootPostId = "root_post_id"
         case viewsCount = "views_count"
         case likesCount = "likes_count"
+        case repliesCount = "replies_count"
     }
 }
 
 struct CommentsCount: Codable {
-    let commentsCount: Int
+    let commentsCount: Int?
 
     enum CodingKeys: String, CodingKey {
         case commentsCount = "comments_count"
+    }
+}
+
+struct WorldNewsItem: Identifiable, Codable {
+    let id: String
+    let provider: String?
+    let language: String?
+    let title: String?
+    let descriptionText: String?
+    let content: String?
+    let url: String?
+    let imageURL: String?
+    let sourceName: String?
+    let domainURL: String?
+    let publishedAt: Date?
+    let sortIndex: Int?
+
+    enum CodingKeys: String, CodingKey {
+        case id = "id"
+        case provider = "provider"
+        case language = "language"
+        case title = "title"
+        case descriptionText = "description"
+        case content = "content"
+        case url = "url"
+        case imageURL = "image_url"
+        case sourceName = "source_name"
+        case domainURL = "domain_url"
+        case publishedAt = "published_at"
+        case sortIndex = "sort_index"
     }
 }
 
@@ -447,4 +488,77 @@ enum NotificationPushRoute: Codable {
     case requestSystemPrompt
     case goToSettings
     case ok
+}
+
+enum InAppNotificationType: String, Codable {
+    case postLiked = "post_liked"
+    case userSubscribed = "user_subscribed"
+    case commentAdded = "comment_added"
+    case commentReply = "comment_reply"
+}
+
+struct InAppNotificationItem: Identifiable, Codable {
+    let id: String
+    let userId: String?
+    let typeRawValue: String?
+    let actorId: String?
+    let postId: String?
+    let dateCreated: Date?
+    let expiresAt: Date?
+
+    var type: InAppNotificationType? {
+        guard let typeRawValue else { return nil }
+        return InAppNotificationType(rawValue: typeRawValue)
+    }
+
+    init(
+        id: String,
+        userId: String?,
+        typeRawValue: String?,
+        actorId: String?,
+        postId: String?,
+        dateCreated: Date?,
+        expiresAt: Date?
+    ) {
+        self.id = id
+        self.userId = userId
+        self.typeRawValue = typeRawValue
+        self.actorId = actorId
+        self.postId = postId
+        self.dateCreated = dateCreated
+        self.expiresAt = expiresAt
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case userId = "user_id"
+        case typeRawValue = "type"
+        case actorId = "actor_id"
+        case postId = "post_id"
+        case dateCreated = "date_created"
+        case expiresAt = "expires_at"
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+
+        id = try container.decodeIfPresent(String.self, forKey: .id) ?? ""
+        userId = try container.decodeIfPresent(String.self, forKey: .userId)
+        typeRawValue = try container.decodeIfPresent(String.self, forKey: .typeRawValue)
+        actorId = try container.decodeIfPresent(String.self, forKey: .actorId)
+        postId = try container.decodeIfPresent(String.self, forKey: .postId)
+        dateCreated = try container.decodeIfPresent(Date.self, forKey: .dateCreated)
+        expiresAt = try container.decodeIfPresent(Date.self, forKey: .expiresAt)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encodeIfPresent(userId, forKey: .userId)
+        try container.encodeIfPresent(typeRawValue, forKey: .typeRawValue)
+        try container.encodeIfPresent(actorId, forKey: .actorId)
+        try container.encodeIfPresent(postId, forKey: .postId)
+        try container.encodeIfPresent(dateCreated, forKey: .dateCreated)
+        try container.encodeIfPresent(expiresAt, forKey: .expiresAt)
+    }
 }

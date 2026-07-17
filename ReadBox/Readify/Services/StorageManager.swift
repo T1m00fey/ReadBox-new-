@@ -142,6 +142,8 @@ extension StorageManager {
 
 extension StorageManager {
     private var sessionKey: String { "readbox_session_id" }
+    private var notificationPermissionStatusKey: String { "readbox_notification_permission_status" }
+    private var trackedFirstActionsKey: String { "readbox_tracked_first_actions" }
 
     func getSessionId() -> String? {
         UserDefaults.standard.string(forKey: sessionKey)
@@ -149,5 +151,32 @@ extension StorageManager {
 
     func setSessionId(_ id: String) {
         UserDefaults.standard.set(id, forKey: sessionKey)
+    }
+
+    func getLastTrackedNotificationPermissionStatus() -> String? {
+        UserDefaults.standard.string(forKey: notificationPermissionStatusKey)
+    }
+
+    func setLastTrackedNotificationPermissionStatus(_ status: String) {
+        UserDefaults.standard.set(status, forKey: notificationPermissionStatusKey)
+    }
+
+    func getTrackedFirstActions() -> [String] {
+        UserDefaults.standard.array(forKey: trackedFirstActionsKey) as? [String] ?? []
+    }
+
+    func hasTrackedFirstAction(_ action: String) -> Bool {
+        getTrackedFirstActions().contains(action)
+    }
+
+    func trackFirstAction(_ action: String) {
+        guard !action.isEmpty else { return }
+
+        var actions = getTrackedFirstActions()
+
+        if !actions.contains(action) {
+            actions.append(action)
+            UserDefaults.standard.set(actions, forKey: trackedFirstActionsKey)
+        }
     }
 }

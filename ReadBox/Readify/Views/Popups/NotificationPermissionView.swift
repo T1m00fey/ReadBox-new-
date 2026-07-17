@@ -9,16 +9,16 @@ import SwiftUI
 
 struct NotificationPermissionView: View {
     @Binding var isPopupPresented: Bool
-    
+
     let route: NotificationPushRoute
-    
+
     var body: some View {
         VStack(spacing: 15) {
             HStack {
                 Text(NSLocalizedString("notificationLabel", comment: ""))
                     .font(.system(size: 27))
                     .fontDesign(.rounded)
-                
+
                 Image(systemName: "bell.badge.fill")
                     .resizable()
                     .scaledToFit()
@@ -26,7 +26,7 @@ struct NotificationPermissionView: View {
                     .foregroundStyle(Color.gray)
             }
             .frame(width: UIScreen.main.bounds.width - 32, alignment: .leading)
-            
+
             Text(NSLocalizedString("pleaseTurnOnYourNotificationsLabel", comment: ""))
                 .multilineTextAlignment(.leading)
                 .font(.system(size: 19))
@@ -34,11 +34,15 @@ struct NotificationPermissionView: View {
                 .fontWeight(.light)
                 .frame(width: UIScreen.main.bounds.width - 32, alignment: .leading)
                 .padding(.bottom, 10)
-            
+
             VStack(spacing: 10) {
                 Button {
                     if route == .requestSystemPrompt {
                         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
+                            Task {
+                                await AnalyticsManager.shared.refreshNotificationPermissionStatus(source: "system_prompt")
+                            }
+
                             if granted {
                                 DispatchQueue.main.async {
                                     isPopupPresented = false
@@ -55,7 +59,7 @@ struct NotificationPermissionView: View {
                             UIApplication.shared.open(url)
                             print("DECIDEEE: go settings 2")
                         }
-                        
+
                         print("DECIDEEE: go settings 3")
                     }
                 } label: {
@@ -69,7 +73,7 @@ struct NotificationPermissionView: View {
                         .background(Color(.label))
                         .clipShape(Capsule())
                 }
-                
+
                 Button {
                     isPopupPresented = false
                 } label: {

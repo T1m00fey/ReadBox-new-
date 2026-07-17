@@ -56,7 +56,7 @@ extension View {
                     .displayMode(.overlay)
             }
     }
-    
+
     @MainActor func trackChangesOnFeedView(
         viewModel: FeedViewModel,
         isWelcomeViewPresented: Bool
@@ -69,18 +69,18 @@ extension View {
             }
             .onChange(of: viewModel.topArticlesIndexes) {
                 guard !viewModel.topArticlesIndexes.isEmpty else { return }
-                
+
                 Task {
-                    do {                        
+                    do {
                         try await viewModel.getTopArticles()
-                        
+
                         withAnimation {
                             viewModel.articles = []
                             viewModel.lastDocument = nil
                             viewModel.isLoadingShowing = true
                         }
                         viewModel.isLoading = true
-                        
+
                         try await viewModel.getArticles()
                     } catch {
                         withAnimation {
@@ -99,20 +99,20 @@ extension View {
 //                        viewModel.lastDocument = nil
 //                        viewModel.isLoadingShowing = true
 //                    }
-//                    
+//
 //                    Task {
 //                        viewModel.isLoading = true
-//                        
+//
 //                        do {
 //                            try await viewModel.getArticles()
-//                            
+//
 //                            return
 //                        } catch {
 ////                                                            withAnimation {
 ////                                                                viewModel.errorText = error.localizedDescription
 ////                                                            }
 //                        }
-//                        
+//
 ////                                                    viewModel.isErrorPopupPresented = true
 //                    }
 //                }
@@ -124,14 +124,14 @@ extension View {
                             if viewModel.topArticlesIndexes == [] {
                                 try await viewModel.getTopIndexes()
                             }
-                            
+
                             return
                         } catch {
                             withAnimation {
                                 viewModel.errorText = error.localizedDescription
                             }
                         }
-                        
+
                         viewModel.isErrorPopupPresented = true
                     }
                 }
@@ -175,7 +175,7 @@ extension View {
                     .presentationDragIndicator(.visible)
             })
     }
-    
+
     func trackChangesOnLikedPosts(
         viewModel: LikedPostsViewModel,
         isWelcomeViewPresented: Bool
@@ -186,21 +186,21 @@ extension View {
                     viewModel.articles = []
                     viewModel.isLoadingShowed = true
                 }
-                
+
                 viewModel.isLoading = true
-                
+
                 if viewModel.user?.likedPosts != nil {
                     viewModel.likedPosts = Array((viewModel.user?.likedPosts ?? []).reversed())
-                    
+
                     if viewModel.likedPosts.count == 0 {
                         withAnimation {
                             viewModel.isLoading = false
                             viewModel.isLoadingShowed = false
                         }
                     }
-                    
+
                 }
-            }            
+            }
             .onChange(of: isWelcomeViewPresented) {
                 if !isWelcomeViewPresented {
                     viewModel.isNeedToReload = true
@@ -218,16 +218,16 @@ extension View {
 //                                viewModel.errorText = error.localizedDescription
 //                            }
                         }
-                        
+
 //                        viewModel.isErrorPopupPresented = true
                     }
                 } else {
                     viewModel.articles = []
                 }
             }
-        
+
     }
-    
+
 }
 
 // MARK: for CreatedPostsView
@@ -254,20 +254,20 @@ extension View {
                         viewModel.isAllLoaded = false
                         viewModel.lastPostSnapshot = nil
                     }
-                    
+
                     Task {
                         do {
                             try await viewModel.getPosts()
                             try await viewModel.getArchivedPost()
-                            
+
                             if viewModel.archivePosts.count <= 0 {
                                 withAnimation {
                                     viewModel.isArchivePresented = false
                                 }
                             }
-                            
+
                             viewModel.isNewPublicationButtonPresented = true
-                            
+
                             withAnimation {
                                 viewModel.isLoading = false
                                 viewModel.isLoadingShowing = false
@@ -327,22 +327,22 @@ extension View {
                 )
             }
     }
-    
+
     private func handleCreatedPostIdChange(
         viewModel: CreatedPostsViewModel,
         hudService: HUDService
     ) {
-        
+
         guard !viewModel.id.isEmpty else {
             viewModel.clearData()
             viewModel.isLoadingPopupPresented = false
             return
         }
-        
+
         let prePost = viewModel.isArchivePresented
         ? viewModel.archivePosts.first { $0.id == viewModel.id }
         : viewModel.posts.first { $0.id == viewModel.id }
-        
+
         switch viewModel.postOption {
         case .localize:
             guard let prePost, let isShortPost = prePost.isShortPost else {
@@ -360,7 +360,7 @@ extension View {
             viewModel.title = ""
             viewModel.text = ""
             StorageManager.shared.deleteText()
-            
+
             Task {
                 do {
                     await viewModel.getMedia(
@@ -368,32 +368,32 @@ extension View {
                         postId: prePost.id,
                         ignoreCache: true
                     )
-                    
+
                     if isShortPost {
                         viewModel.isPostCreateViewPresented = true
                     } else {
                         viewModel.isCreateViewPresented = true
                     }
-                    
+
                     viewModel.isLoadingPopupPresented = false
                 }
             }
-            
+
         case .editing:
             guard let prePost else {
                 viewModel.clearData()
                 return
             }
-            
+
             let isShortPost = prePost.isShortPost ?? false
             viewModel.isLoadingPopupPresented = true
-            
+
             guard let title = prePost.title else {
                 viewModel.isLoadingPopupPresented = false
                 viewModel.clearData()
                 return
             }
-            
+
             if !isShortPost {
                 viewModel.title = title
                 viewModel.isEditing = true
@@ -401,7 +401,7 @@ extension View {
                 viewModel.rootIsPremiumPost = prePost.isPremiumPost ?? false
                 viewModel.rootLang = prePost.originalLanguage ?? "en"
                 viewModel.createIsLocalizedVersion = prePost.isLocalizedVersion ?? false
-                
+
                 Task {
                     do {
                         try await viewModel.getPostToRead(id: viewModel.id)
@@ -410,7 +410,7 @@ extension View {
                             postId: prePost.id,
                             ignoreCache: true
                         )
-                        
+
                         viewModel.isLoadingPopupPresented = false
                         viewModel.isCreateViewPresented = true
                     } catch {
@@ -425,39 +425,39 @@ extension View {
                 viewModel.rootMediaPosition = prePost.mediaPosition ?? 0
                 viewModel.rootIsPremiumPost = prePost.isPremiumPost ?? false
                 viewModel.rootLang = prePost.originalLanguage ?? "en"
-                
+
                 Task {
                     await viewModel.getMedia(
                         mediaCount: prePost.mediaCount ?? 1,
                         postId: prePost.id,
                         ignoreCache: true
                     )
-                    
+
                     viewModel.isLoadingPopupPresented = false
                     viewModel.isPostCreateViewPresented = true
                 }
             }
-            
+
         case .publish, .toArchive:
             viewModel.updateIsArchiveStatus()
             viewModel.postOption = .nothing
-            
+
         case .delete:
             guard let prePost else {
                 viewModel.clearData()
                 return
             }
-            
+
             viewModel.pendingDeletePostId = prePost.id
             viewModel.isDeletePostAlertPresented = true
 
             viewModel.postOption = .nothing
-            
+
         default:
             break
         }
     }
-    
+
     private func performCreatedPostDeletion(
         id: String,
         viewModel: CreatedPostsViewModel,
@@ -483,22 +483,24 @@ extension View {
     ) {
         isConfirmationPopupPresented.wrappedValue = false
         viewModel.isConfirmationPopupPresented = false
-        
+
         if viewModel.addingMode == 1 {
+            AnalyticsManager.shared.logPostCreationStarted()
             viewModel.postId = ""
             viewModel.title = ""
             viewModel.isPostCreateViewPresented = true
         } else if viewModel.addingMode == 2 {
+            AnalyticsManager.shared.logPostCreationStarted()
             viewModel.vibrationsService.softImpact()
             viewModel.title = NSLocalizedString("titlePlaceholder", comment: "")
             viewModel.image = nil
             viewModel.isEditing = false
             viewModel.isCreateViewPresented = true
         }
-        
+
         viewModel.addingMode = 0
     }
-    
+
     func makePopupsForCreatedPostsView(
         viewModel: CreatedPostsViewModel,
         isErrorPopupPresented: Binding<Bool>,

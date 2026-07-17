@@ -27,6 +27,9 @@ struct CreatedPostsView: View {
     @EnvironmentObject var changedPostsManager: ChangedPostsManager
     @EnvironmentObject var subManager: SubscriptionManager
 
+    private let feedSectionSpacing: CGFloat = 8
+    private let sectionBottomPadding: CGFloat = 70
+
     var body: some View {
         NavigationStack {
             ZStack {
@@ -122,8 +125,10 @@ struct CreatedPostsView: View {
                             isPresented: $viewModel.isReadViewPresented,
                             isLocalizedVersion: viewModel.readIsLocalizedVersion,
                             rootId: viewModel.readRootId,
+                            isCommentReadView: viewModel.isReadingReplyComment,
                             replyAuthorName: viewModel.readReplyAuthorName,
-                            replyRootPostId: viewModel.readReplyRootPostId
+                            replyRootPostId: viewModel.readReplyRootPostId,
+                            openCommentsOnAppear: viewModel.shouldOpenCommentsOnRead
                         )
                         .environmentObject(sessionManager)
                         .environmentObject(changedPostsManager)
@@ -176,17 +181,23 @@ struct CreatedPostsView: View {
                         isPresented: $viewModel.isDeletePostAlertPresented
                     ) {
                         Button(LocalizedStringKey("deleteLabel"), role: .destructive) {
+                            let replyId = viewModel.pendingDeleteReplyId
                             let postId = viewModel.pendingDeletePostId
-                            guard !postId.isEmpty else { return }
+                            guard !postId.isEmpty || !replyId.isEmpty else { return }
 
                             Task {
                                 do {
                                     hudService.showLoading(type: .delete)
-                                    try await viewModel.deletePost(id: postId)
+                                    if !replyId.isEmpty {
+                                        try await viewModel.deleteReply(id: replyId)
+                                    } else {
+                                        try await viewModel.deletePost(id: postId)
+                                    }
                                     hudService.showSuccessPopup(type: .delete)
 
                                     await MainActor.run {
                                         viewModel.pendingDeletePostId = ""
+                                        viewModel.pendingDeleteReplyId = ""
                                         viewModel.id = ""
                                     }
                                 } catch {
@@ -195,6 +206,7 @@ struct CreatedPostsView: View {
                                             hudService.showErrorPopup(with: error.localizedDescription)
                                             viewModel.id = ""
                                             viewModel.pendingDeletePostId = ""
+                                            viewModel.pendingDeleteReplyId = ""
                                         }
                                     }
                                 }
@@ -203,6 +215,7 @@ struct CreatedPostsView: View {
 
                         Button(LocalizedStringKey("cancelButton"), role: .cancel) {
                             viewModel.pendingDeletePostId = ""
+                            viewModel.pendingDeleteReplyId = ""
                             viewModel.id = ""
                         }
                     } message: {
@@ -492,21 +505,16 @@ private extension CreatedPostsView {
                 ForEach(0..<4) { num in
                     loadingPostPlaceholder(index: num)
                 }
-                .padding(.top, 20)
             } else if viewModel.posts.count > 0 || viewModel.archivePosts.count > 0 {
                 if !posts.isEmpty {
                     ForEach(posts) { post in
                         postRow(post, section: section, sectionPosts: posts)
                     }
-                    .padding(.top, 20)
                 } else {
                     noPostsView(for: section)
-                        .padding(.top, 20)
                 }
             } else {
-                emptyPublicationsView
-                    .frame(width: UIScreen.main.bounds.width - 32)
-                    .padding(.top, 150)
+                noPostsView(for: section)
             }
         }
     }
@@ -529,10 +537,12 @@ private extension CreatedPostsView {
                     mediaPosition: 0,
                     lastVersionOfAvatar: viewModel.user?.avatarVersion ?? 0,
                     locCount: 0,
+                    isCreatedView: true,
                     isLocalizedVersion: false,
                     isPremiumPost: false,
                     viewsCount: 10,
                     likesCount: 10,
+                    commentsCount: 10,
                     replyAuthorName: "Hello",
                     onReplyTap: {},
                     user: $viewModel.user,
@@ -542,9 +552,10 @@ private extension CreatedPostsView {
                     isChannelViewPresented: .constant(false)
                 )
                 .redacted(reason: .placeholder)
+                .padding(.top, 10)
+                .padding(.bottom, num == 3 ? sectionBottomPadding : feedSectionSpacing)
                 .shimmering()
             }
-            .padding(.top, 20)
         } else if !viewModel.replies.isEmpty {
             ForEach(viewModel.replies) { reply in
                 ArticleView(
@@ -561,13 +572,22 @@ private extension CreatedPostsView {
                     mediaPosition: 0,
                     lastVersionOfAvatar: viewModel.user?.avatarVersion ?? 0,
                     locCount: 0,
+                    isCreatedView: true,
                     isLocalizedVersion: false,
                     isPremiumPost: false,
                     viewsCount: reply.viewsCount ?? 0,
                     likesCount: reply.likesCount ?? 0,
+                    commentsCount: reply.repliesCount ?? 0,
                     replyAuthorName: viewModel.replyAuthorsInfo[reply.rootAuthorId ?? ""]?.name,
                     onReplyTap: {
                         viewModel.openReplyRootPost(reply)
+                    },
+                    onCommentTap: {
+                        viewModel.openReplyComment(reply, openComments: true)
+                    },
+                    isReplyMenuVisible: true,
+                    onDeleteReply: {
+                        viewModel.requestReplyDeletion(reply)
                     },
                     user: $viewModel.user,
                     isZoomableViewPresented: $viewModel.isZoomableImageViewPresented,
@@ -576,15 +596,14 @@ private extension CreatedPostsView {
                     isChannelViewPresented: .constant(false)
                 )
                 .contentShape(Rectangle())
+                .padding(.top, 10)
                 .onTapGesture {
                     viewModel.openReplyComment(reply)
                 }
-                .padding(.bottom, reply.id == viewModel.replies.last?.id ? 70 : 0)
+                .padding(.bottom, reply.id == viewModel.replies.last?.id ? 70 : feedSectionSpacing)
             }
-            .padding(.top, 20)
         } else {
             noPostsView(for: .replies)
-                .padding(.top, 20)
         }
     }
 
@@ -600,6 +619,8 @@ private extension CreatedPostsView {
             selectedId: $viewModel.id
         )
         .redacted(reason: .placeholder)
+        .padding(.top, 10)
+        .padding(.bottom, index == 3 ? sectionBottomPadding : feedSectionSpacing)
         .shimmering()
     }
 
@@ -623,7 +644,10 @@ private extension CreatedPostsView {
             isPremiumPost: post.isPremiumPost ?? false,
             viewsCount: post.viewsCount ?? 0,
             likesCount: post.likesCount ?? 0,
-            user: $viewModel.user,
+            commentsCount: post.repliesCount,
+            onCommentTap: {
+                viewModel.tapGestureHandler(on: post, openComments: true)
+            }, user: $viewModel.user,
             isZoomableViewPresented: $viewModel.isZoomableImageViewPresented,
             zoomableImage: $viewModel.zoomableImage,
             selectedAuthorId: .constant(""),
@@ -631,7 +655,8 @@ private extension CreatedPostsView {
             postOption: $viewModel.postOption,
             selectedId: $viewModel.id
         )
-        .padding(.bottom, post.id == sectionPosts.last?.id ? 70 : 0)
+        .padding(.top, 10)
+        .padding(.bottom, post.id == sectionPosts.last?.id ? 70 : feedSectionSpacing)
         .onTapGesture {
             viewModel.tapGestureHandler(on: post)
         }
@@ -651,83 +676,33 @@ private extension CreatedPostsView {
     }
 
     @ViewBuilder
-    func noPostsView(for section: CreatedPostsSection) -> some View {
-        if section == .replies {
-            VStack(spacing: 20) {
-                Text(LocalizedStringKey("noRepliesAddedLabel"))
-                    .font(.system(size: 26))
-                    .bold()
-                    .fontDesign(.rounded)
-                    .foregroundStyle(Color.gray)
-                    .multilineTextAlignment(.center)
-                    .frame(width: UIScreen.main.bounds.width - 32)
-
-                Text(NSLocalizedString("toPublicationsLabel", comment: ""))
-                    .frame(width: UIScreen.main.bounds.width - 10, height: 50, alignment: .center)
-                    .font(.system(size: 22))
-                    .fontDesign(.rounded)
-                    .background(Color(uiColor: .secondarySystemBackground))
-                    .foregroundStyle(Color(uiColor: .label))
-                    .clipShape(RoundedRectangle(cornerRadius: 15))
-                    .shadow(radius: 1)
-                    .padding(.bottom, 10)
-                    .onTapGesture {
-                        withAnimation {
-                            viewModel.showAllPosts()
-                            VibrationsService.shared.softImpact()
-                        }
-                    }
-                    .frame(width: UIScreen.main.bounds.width - 32)
-            }
-        } else if section == .articles || section == .archive || section == .localizedPublished || section == .localizedArchive {
-            VStack(spacing: 20) {
-                Text(LocalizedStringKey("noArticlesAddedLabel"))
-                    .font(.system(size: 26))
-                    .bold()
-                    .fontDesign(.rounded)
-                    .foregroundStyle(Color.gray)
-                    .multilineTextAlignment(.center)
-                    .frame(width: UIScreen.main.bounds.width - 32)
-
-                Text(NSLocalizedString("toPublicationsLabel", comment: ""))
-                    .frame(width: UIScreen.main.bounds.width - 10, height: 50, alignment: .center)
-                    .font(.system(size: 22))
-                    .fontDesign(.rounded)
-                    .background(Color(uiColor: .secondarySystemBackground))
-                    .foregroundStyle(Color(uiColor: .label))
-                    .clipShape(RoundedRectangle(cornerRadius: 15))
-                    .shadow(radius: 1)
-                    .padding(.bottom, 10)
-                    .onTapGesture {
-                        withAnimation {
-                            viewModel.showAllPosts()
-                            VibrationsService.shared.softImpact()
-                        }
-                    }
-                    .frame(width: UIScreen.main.bounds.width - 32)
-            }
-        } else {
-            emptyPublicationsView
-                .frame(width: UIScreen.main.bounds.width - 32)
-                .padding(.top, 100)
-        }
-    }
-
-    var emptyPublicationsView: some View {
+    func noPostsView(for _: CreatedPostsSection) -> some View {
         VStack(spacing: 20) {
-            Image(systemName: "pencil.and.scribble")
-                .resizable()
-                .scaledToFit()
-                .frame(width: 100)
-                .foregroundStyle(Color.gray)
-
             Text(LocalizedStringKey("noArticlesAddedLabel"))
                 .font(.system(size: 25))
                 .bold()
                 .fontDesign(.rounded)
                 .foregroundStyle(Color.gray)
                 .multilineTextAlignment(.center)
+
+            Text(NSLocalizedString("toPublicationsLabel", comment: ""))
+                .frame(width: UIScreen.main.bounds.width - 10, height: 50, alignment: .center)
+                .font(.system(size: 22))
+                .fontDesign(.rounded)
+                .background(Color(uiColor: .secondarySystemBackground))
+                .foregroundStyle(Color(uiColor: .label))
+                .clipShape(RoundedRectangle(cornerRadius: 15))
+                .shadow(radius: 1)
+                .padding(.bottom, 10)
+                .onTapGesture {
+                    withAnimation {
+                        viewModel.showAllPosts()
+                        VibrationsService.shared.softImpact()
+                    }
+                }
         }
+        .frame(width: UIScreen.main.bounds.width - 32)
+        .padding(.top, 10)
     }
 
     var headerView: some View {

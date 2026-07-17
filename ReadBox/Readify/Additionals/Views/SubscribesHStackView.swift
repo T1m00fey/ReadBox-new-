@@ -14,7 +14,7 @@ struct SubscribesHStackView: View {
     @Binding var selectedAuthorId: String
     @Binding var authorsInfo: [String: PostAuthorInfo]
     @Binding var isChannelViewPresented: Bool
-    
+
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack {
@@ -46,16 +46,16 @@ struct SubscribesHStackView: View {
 struct SubscribeRow: View {
     let channelInfo: ChannelInfo?
     let isLoading: Bool
-    
+
     @State private var ava: UIImage? = nil
-    
+
     var body: some View {
         VStack {
             if isLoading {
                 Circle()
                     .frame(width: 70, height: 70)
                     .foregroundStyle(Color(.systemGray6))
-                
+
                 Text("HelloWorld")
                     .font(.system(size: 13))
                     .redacted(reason: .placeholder)
@@ -64,7 +64,7 @@ struct SubscribeRow: View {
                 if let ava {
                     Image(uiImage: ava)
                         .resizable()
-                        .scaledToFit()
+                        .scaledToFill()
                         .frame(width: 70, height: 70)
                         .clipShape(Circle())
                         .overlay(
@@ -86,7 +86,7 @@ struct SubscribeRow: View {
                                 .foregroundStyle(Color(.systemGray5))
                         )
                 }
-                
+
                 Text(channelInfo?.name ?? NSLocalizedString("notFoundLabel", comment: ""))
                     .font(.system(size: 13))
                     .fontWeight(.semibold)
@@ -98,7 +98,7 @@ struct SubscribeRow: View {
                                     authorId: channelInfo.id,
                                     lastVersion: channelInfo.avatarVersion ?? 0
                                 )
-                                
+
                                 withAnimation {
                                     ava = avatar
                                 }

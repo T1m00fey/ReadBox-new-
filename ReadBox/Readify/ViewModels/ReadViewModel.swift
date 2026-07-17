@@ -7,6 +7,7 @@
 
 import SwiftUI
 import FirebaseStorage
+import FirebaseFirestore
 
 final class ReadViewModel: ObservableObject {
     @Published var isPostLiked = false
@@ -21,25 +22,29 @@ final class ReadViewModel: ObservableObject {
     @Published var isAuthorBlockVisible = true
     @Published var currentIndex = 0
     @Published var zoomableImage: UIImage? = nil
-    @Published var isZoomableViewPresented = false    
+    @Published var isZoomableViewPresented = false
     @Published var selectedImageURL: URL? = nil
     @Published var isSubscribeLoading = false
     @Published var isOriginalArticleLoading = false
     @Published var commentaries: [Comment] = []
     @Published var isCommentariesLoading = false
+    @Published var isLoadingMoreCommentaries = false
     @Published var isCommentSending = false
     @Published var commentAuthorsInfo: [String: PostAuthorInfo] = [:]
-    
+
+    private let commentsPageSize = 20
+    private var lastCommentsDocument: DocumentSnapshot? = nil
+
     let vibrationsService = VibrationsService.shared
-    
+
     func addLikedPost(userId: String, articleId: String) async throws {
         try await UserManager.shared.addLikedPost(id: userId, likedPost: articleId)
     }
-    
+
     func removeLikedPost(userId: String, articleId: String) async throws {
         try await UserManager.shared.removeLikedPost(id: userId, likedPost: articleId)
     }
-    
+
     func updateLikes(at article: String, likesCount: Int) async throws {
         try await ArticlesManager.shared.updateLikes(at: article, likesCount: likesCount)
     }
@@ -50,14 +55,20 @@ final class ReadViewModel: ObservableObject {
         await MainActor.run {
             commentaries = []
             isCommentariesLoading = true
+            isLoadingMoreCommentaries = false
+            lastCommentsDocument = nil
         }
 
         do {
-            let commentaries = try await CommentariesManager.shared.getCommentaries(rootPostId: rootPostId)
+            let (commentaries, lastDocument) = try await CommentariesManager.shared.getCommentariesPage(
+                rootPostId: rootPostId,
+                limit: commentsPageSize
+            )
 
             await MainActor.run {
                 withAnimation {
                     self.commentaries = commentaries
+                    self.lastCommentsDocument = lastDocument
                     self.isCommentariesLoading = false
                 }
             }
@@ -74,7 +85,52 @@ final class ReadViewModel: ObservableObject {
         }
     }
 
-    func sendComment(rootPostId: String, rootAuthorId: String, authorId: String, text: String) async throws {
+    func loadMoreCommentariesIfNeeded(currentComment: Comment, rootPostId: String) {
+        guard !rootPostId.isEmpty else { return }
+        guard currentComment.id == commentaries.last?.id else { return }
+        guard lastCommentsDocument != nil else { return }
+        guard !isCommentariesLoading, !isLoadingMoreCommentaries else { return }
+
+        Task {
+            await MainActor.run {
+                isLoadingMoreCommentaries = true
+            }
+
+            do {
+                let (newCommentaries, lastDocument) = try await CommentariesManager.shared.getCommentariesPage(
+                    rootPostId: rootPostId,
+                    limit: commentsPageSize,
+                    startAfter: lastCommentsDocument
+                )
+
+                await MainActor.run {
+                    withAnimation {
+                        commentaries.append(contentsOf: newCommentaries)
+                        lastCommentsDocument = lastDocument
+                        isLoadingMoreCommentaries = false
+                    }
+                }
+
+                await loadCommentAuthorsIfNeeded(for: newCommentaries)
+            } catch {
+                await MainActor.run {
+                    withAnimation {
+                        isLoadingMoreCommentaries = false
+                        errorText = error.localizedDescription
+                        isErrorPopupPresented = true
+                    }
+                }
+            }
+        }
+    }
+
+    func sendComment(
+        rootPostId: String,
+        rootAuthorId: String,
+        authorId: String,
+        text: String,
+        isReplyToComment: Bool
+    ) async throws {
         guard !rootPostId.isEmpty, !rootAuthorId.isEmpty, !authorId.isEmpty, !text.isEmpty else { return }
 
         await MainActor.run {
@@ -89,7 +145,11 @@ final class ReadViewModel: ObservableObject {
                 text: text
             )
 
-            try? await ArticlesManager.shared.updateCommentsCount(at: rootPostId, isPlus: true)
+            if isReplyToComment {
+                try? await CommentariesManager.shared.updateRepliesCount(at: rootPostId, isPlus: true)
+            } else {
+                try? await ArticlesManager.shared.updateCommentsCount(at: rootPostId, isPlus: true)
+            }
 
             await MainActor.run {
                 withAnimation {
@@ -134,20 +194,20 @@ final class ReadViewModel: ObservableObject {
             }
         }
     }
-    
+
 //    func fetchImages(_ id: String, _ mediaCount: Int) {
 //        let storageRef = Storage.storage().reference()
-//        
+//
 //        for i in 0..<mediaCount {
 //            let cachedImage = StorageManager.shared.getImage(id: "\(id)_\(i)")
-//            
+//
 //            if let cachedImage {
 //                withAnimation {
 //                    images.append(MediaKind(image: cachedImage))
 //                }
 //            } else {
 //                let islandRef = storageRef.child("images/\(id)_\(i).jpg")
-//                
+//
 //                islandRef.getData(maxSize: 1 * 5012 * 5012) { data, error in
 //                    if let data, let image = UIImage(data: data) {
 //                        withAnimation {
@@ -156,7 +216,7 @@ final class ReadViewModel: ObservableObject {
 //                        }
 //                    } else {
 //                        let videoRef = storageRef.child("images/\(id)_\(i).mp4")
-//                        
+//
 //                        videoRef.downloadURL { url, error in
 //                            if let url {
 //                                DispatchQueue.main.async {
@@ -170,22 +230,22 @@ final class ReadViewModel: ObservableObject {
 //                }
 //            }
 //        }
-//        
+//
 //        if images.isEmpty {
 //            fetchImage(byId: id)
 //        }
 //    }
-    
+
 //    private func fetchImage(byId id: String) {
 //        let image = StorageManager.shared.getImage(id: id)
-//        
+//
 //        if let image {
 //            withAnimation {
 //                images.append(MediaKind(image: image))
 //            }
 //        } else {
 //            let imageRef = Storage.storage().reference().child("images/\(id).jpg")
-//            
+//
 //            imageRef.getData(maxSize: 1 * 5012 * 5012) { data, error in
 //                if let data, let image = UIImage(data: data) {
 //                    withAnimation {
@@ -209,14 +269,14 @@ final class ReadViewModel: ObservableObject {
 //            }
 //        }
 //    }
-    
+
     func un_subcribeUser(on authorId: String, isNeedToSubscribe: Bool) async throws {
         try await UserManager.shared.un_subscribeUser(
             on: authorId,
             isNeedToSubscribe: isNeedToSubscribe
         )
     }
-    
+
 //    func getMarkdownText(_ text: String) -> NSAttributedString {
 //        let preMarkdown = text.replacingOccurrences(of: "/n", with: "\n")
 //
@@ -238,11 +298,11 @@ final class ReadViewModel: ObservableObject {
 //
 //        return markdownString.attributedString()
 //    }
-    
+
     func getDateCreated(regDate: Date) -> String {
         let timeInterval = Int(Date().timeIntervalSince(regDate)) / 60 / 60 / 24
         var date = ""
-        
+
         if StorageManager.shared.getLanguage() == "ru" {
             if timeInterval > 30 && timeInterval < 365 {
                 if timeInterval / 30 == 1 {
@@ -275,7 +335,7 @@ final class ReadViewModel: ObservableObject {
                     date = "\(timeInterval) дней назад"
                 }
             }
-            
+
         } else {
             if timeInterval > 30 && timeInterval < 365 {
                 if timeInterval / 30 == 1 {
@@ -299,7 +359,7 @@ final class ReadViewModel: ObservableObject {
                 }
             }
         }
-        
+
         return date
     }
 }
