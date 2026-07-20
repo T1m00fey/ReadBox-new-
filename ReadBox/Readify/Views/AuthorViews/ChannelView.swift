@@ -211,7 +211,6 @@ struct ChannelView: View {
                 if !viewModel.isDataLoaded {
                     viewModel.isLoading = false
                     viewModel.authorId = authorId
-                    viewModel.getViews()
                     viewModel.updatePrimaryLanguage(user: user)
 
                     Task {
@@ -436,6 +435,12 @@ private extension ChannelView {
         .padding(.bottom, post.id == viewModel.currentPosts.last?.id ? 100 : 0)
         .padding(.top, 10)
         .onAppear {
+            if post.authorId != user?.userId {
+                Task {
+                    try? await ArticlesManager.shared.updateViews(at: post.id)
+                }
+            }
+
             if post.id == viewModel.currentPosts.last?.id, !viewModel.isAllLoading {
                 Task {
                     try? await viewModel.loadPosts(by: authorId)
@@ -717,7 +722,6 @@ private extension ChannelView {
 
         Task {
             do {
-                await countPostViewIfNeeded(post)
                 let postToRead = try await ArticlesManager.shared.getPostToRead(id: post.id)
 
                 viewModel.isLoadingPopupPresented = false
@@ -859,19 +863,6 @@ private extension ChannelView {
                     viewModel.isErrorPopupPresented = true
                 }
             }
-        }
-    }
-
-    func countPostViewIfNeeded(_ post: PrePost) async {
-        guard post.authorId != user?.userId else { return }
-        guard !viewModel.views.contains(post.id) else { return }
-
-        do {
-            try await ArticlesManager.shared.updateViews(at: post.id)
-            viewModel.views.append(post.id)
-            viewModel.saveViews()
-        } catch {
-            print("CHANNEL VIEW COUNT ERROR: \(error.localizedDescription)")
         }
     }
 

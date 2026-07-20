@@ -31,7 +31,6 @@ final class SubscribesViewModel: ObservableObject {
     @Published var isLargeHeaderVisible = true
     @Published var primaryLanguage = "en"
     @Published var shouldOpenCommentsOnRead = false
-    @Published var views: [String] = []
 
     private let db = Firestore.firestore()
     private let inQueryLimit = 30
@@ -49,14 +48,6 @@ final class SubscribesViewModel: ObservableObject {
     var isPremiumPost = false
     var isLocalizedVersion = false
     var rootId = ""
-
-    func getViews() {
-        views = StorageManager.shared.getViews()
-    }
-
-    func saveViews() {
-        StorageManager.shared.save(views: views)
-    }
 
     func loadUser() async throws {
         let auth = try AuthenticationManager.shared.getAuthenticatedUser()
@@ -283,25 +274,14 @@ final class SubscribesViewModel: ObservableObject {
         rootId = post.rootId ?? ""
         shouldOpenCommentsOnRead = openComments
 
-        Task {
-            await countPostViewIfNeeded(post)
+        if post.authorId != user?.userId {
+            Task {
+                try? await ArticlesManager.shared.updateViews(at: post.id)
+            }
         }
 
         isLoadingPopupPresented = true
         getPostToRead(id: post.id)
-    }
-
-    func countPostViewIfNeeded(_ post: PrePost) async {
-        guard post.authorId != user?.userId else { return }
-        guard !views.contains(post.id) else { return }
-
-        do {
-            try await ArticlesManager.shared.updateViews(at: post.id)
-            views.append(post.id)
-            saveViews()
-        } catch {
-            print("SUBSCRIBES VIEW COUNT ERROR: \(error.localizedDescription)")
-        }
     }
 }
 
@@ -425,8 +405,6 @@ struct SubscribesView: View {
                 .ignoresSafeArea()
             }
             .onAppear {
-                viewModel.getViews()
-
                 if viewModel.isLoading && viewModel.channels.isEmpty && viewModel.articles.isEmpty {
                     Task {
                         await viewModel.refresh()

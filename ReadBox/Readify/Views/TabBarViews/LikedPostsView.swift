@@ -184,8 +184,6 @@ struct LikedPostsView: View {
                     }
                 })
                 .onAppear {
-                    viewModel.getViews()
-
                     if viewModel.isLoading {
                         viewModel.isLoading = false
 

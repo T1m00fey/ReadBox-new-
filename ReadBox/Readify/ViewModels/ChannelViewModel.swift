@@ -47,7 +47,6 @@ final class ChannelViewModel: ObservableObject {
     @Published var isSubscribed: Bool? = nil
     @Published var postsCount = 0
     @Published var authorDateCreated: Date? = nil
-    @Published var views: [String] = []
     @Published var isLoadingPopupPresented = false
     @Published var isLoadingShowing = true
     @Published var isAllLoading = false
@@ -78,14 +77,6 @@ final class ChannelViewModel: ObservableObject {
     @Published var primaryLanguage = "en"
     @Published var currentSection: ChannelPostsSection = .all
     @Published var isRepliesLoading = false
-
-    func getViews() {
-        views = StorageManager.shared.getViews()
-    }
-
-    func saveViews() {
-        StorageManager.shared.save(views: views)
-    }
 
     func updatePrimaryLanguage(user: DBUser?) {
         let fallbackLanguage = Locale.preferredLanguages.first?.components(separatedBy: "-").first == "ru"

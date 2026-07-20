@@ -29,7 +29,6 @@ final class LikedPostsViewModel: ObservableObject {
     @Published var authorId = ""
     @Published var isLargeHeaderVisible = true
     @Published var shouldOpenCommentsOnRead = false
-    @Published var views: [String] = []
 
     @Published var lastDocument: DocumentSnapshot? = nil
 
@@ -46,14 +45,6 @@ final class LikedPostsViewModel: ObservableObject {
     var isPremiumPost = false
     var isLocalizedVersion = false
     var rootId = ""
-
-    func getViews() {
-        views = StorageManager.shared.getViews()
-    }
-
-    func saveViews() {
-        StorageManager.shared.save(views: views)
-    }
 
     private var db = Firestore.firestore()
 
@@ -192,8 +183,10 @@ final class LikedPostsViewModel: ObservableObject {
         rootId = post.rootId ?? ""
         shouldOpenCommentsOnRead = openComments
 
-        Task {
-            await countPostViewIfNeeded(post)
+        if post.authorId != user?.userId {
+            Task {
+                try? await ArticlesManager.shared.updateViews(at: post.id)
+            }
         }
 
         if user != nil {
@@ -224,16 +217,4 @@ final class LikedPostsViewModel: ObservableObject {
         isLoadingPopupPresented = false
     }
 
-    func countPostViewIfNeeded(_ post: PrePost) async {
-        guard post.authorId != user?.userId else { return }
-        guard !views.contains(post.id) else { return }
-
-        do {
-            try await ArticlesManager.shared.updateViews(at: post.id)
-            views.append(post.id)
-            saveViews()
-        } catch {
-            print("LIKED POSTS VIEW COUNT ERROR: \(error.localizedDescription)")
-        }
-    }
 }
