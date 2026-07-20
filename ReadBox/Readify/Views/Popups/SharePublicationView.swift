@@ -12,11 +12,8 @@ struct SharePublicationView: View {
     let articleView: ArticleView
     let url: URL
 
-    @EnvironmentObject private var sessionManager: SessionManager
-    @EnvironmentObject private var changedPostsManager: ChangedPostsManager
     @EnvironmentObject private var subscriptionManager: SubscriptionManager
 
-    @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
 
     @State private var statusText = ""
@@ -40,7 +37,7 @@ struct SharePublicationView: View {
                         .allowsHitTesting(false)
                 }
                 .frame(
-                    width: previewWidth,
+                    width: contentSize.width * previewScale,
                     height: previewHeight,
                     alignment: .topLeading
                 )
@@ -91,7 +88,10 @@ struct SharePublicationView: View {
             selectedDetent = .height(popupHeight)
         }
         .onAppear {
-            if let image = makePreviewImage() {
+            let renderer = ImageRenderer(content: getExportContent(isPreview: true))
+            renderer.scale = 1
+
+            if let image = renderer.uiImage {
                 contentSize = image.size
             }
         }
@@ -99,26 +99,11 @@ struct SharePublicationView: View {
 }
 
 private extension SharePublicationView {
-    var articleCardBackgroundColor: Color {
-        colorScheme == .dark
-        ? Color(red: 0.08, green: 0.08, blue: 0.085)
-        : Color(red: 0.975, green: 0.975, blue: 0.98)
-    }
-
-    var maxPopupHeight: CGFloat {
-        UIScreen.main.bounds.height - 100
-    }
-
-    var maxPreviewHeight: CGFloat {
-        max(maxPopupHeight - 120, 220)
-    }
-
     var previewScale: CGFloat {
-        min(1, maxPreviewHeight / max(contentSize.height, 1))
-    }
-
-    var previewWidth: CGFloat {
-        contentSize.width * previewScale
+        min(
+            1,
+            max(UIScreen.main.bounds.height - 220, 220) / max(contentSize.height, 1)
+        )
     }
 
     var previewHeight: CGFloat {
@@ -126,21 +111,11 @@ private extension SharePublicationView {
     }
 
     var popupHeight: CGFloat {
-        let statusHeight: CGFloat = statusText.isEmpty ? 0 : 30
-        let controlsHeight: CGFloat = 120
-        let calculatedHeight = previewHeight + controlsHeight + statusHeight
-        return min(max(calculatedHeight, 260), maxPopupHeight)
+        min(
+            max(previewHeight + 120 + (statusText.isEmpty ? 0 : 30), 260),
+            UIScreen.main.bounds.height - 100
+        )
     }
-
-//    var header: some View {
-//        HStack {
-//            Text(NSLocalizedString("shareLabel", comment: ""))
-//                .font(.system(size: 28))
-//
-//            Spacer()
-//        }
-//        .padding(.horizontal, 12)
-//    }
     
     func getExportContent(isPreview: Bool = false) -> some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -149,13 +124,15 @@ private extension SharePublicationView {
             }
 
             articleView
-                .environmentObject(sessionManager)
-                .environmentObject(changedPostsManager)
                 .environmentObject(subscriptionManager)
                 .background {
                     if !isPreview {
                         RoundedRectangle(cornerRadius: 23)
-                            .fill(articleCardBackgroundColor)
+                            .fill(
+                                colorScheme == .dark
+                                ? Color(red: 0.08, green: 0.08, blue: 0.085)
+                                : Color(red: 0.975, green: 0.975, blue: 0.98)
+                            )
                             .shadow(
                                 color: Color.black.opacity(0.10),
                                 radius: 14,
@@ -223,21 +200,11 @@ private extension SharePublicationView {
     }
 
     @MainActor
-    func makeImage() -> UIImage? {
+    func saveImage() {
         let renderer = ImageRenderer(content: getExportContent())
         renderer.scale = 3
-        return renderer.uiImage
-    }
 
-    @MainActor
-    func makePreviewImage() -> UIImage? {
-        let renderer = ImageRenderer(content: getExportContent(isPreview: true))
-        renderer.scale = 1
-        return renderer.uiImage
-    }
-
-    func saveImage() {
-        guard let image = makeImage() else { return }
+        guard let image = renderer.uiImage else { return }
 
         PHPhotoLibrary.requestAuthorization(for: .addOnly) { status in
             guard status == .authorized || status == .limited else {

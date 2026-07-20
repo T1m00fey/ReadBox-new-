@@ -6,16 +6,15 @@
 //
 
 import SwiftUI
-import SwiftfulLoadingIndicators
 import FirebaseStorage
 import PopupView
 import SDWebImage
 import SwiftUIMailView
 
 final class SettingsViewModel: ObservableObject {
-    @Published var avatar2: UIImage? = nil
-    @Published var nameText2 = ""
-    @Published var descriptionText2 = ""
+    @Published var avatarImage: UIImage?
+    @Published var name = ""
+    @Published var description = ""
 
     @Published var sizeOfData: Double = 0
 
@@ -104,7 +103,7 @@ final class SettingsViewModel: ObservableObject {
             }
 
             DispatchQueue.main.async {
-                self.sizeOfData = Double(totalSize) / (1024 * 1024) // MB
+                self.sizeOfData = Double(totalSize) / (1024 * 1024)
             }
         }
     }
@@ -147,10 +146,6 @@ final class SettingsViewModel: ObservableObject {
         userDefaults.synchronize()
     }
 
-//    func deleteAccount(user: DBUser) async throws {
-//        try await AuthenticationManager.shared.delete()
-//        try await UserManager.shared.deleteUser(user: user)
-//    }
 }
 
 struct SettingsView: View {
@@ -165,11 +160,7 @@ struct SettingsView: View {
 
     @StateObject private var viewModel = SettingsViewModel()
 
-    @EnvironmentObject var sessionManager: SessionManager
-
     @Environment(\.openURL) var openURL
-
-    @FocusState var isNameTFFocused: Bool
 
     func settingsListAction(_ id: Int) {
         switch id {
@@ -179,12 +170,12 @@ struct SettingsView: View {
         case 3: viewModel.isMailViewPresented = true
         case 4: if let url = viewModel.privacyURL { openURL(url) }
         case 5: if let url = viewModel.termsURL { openURL(url) }
-        default: print("Error")
+        default: break
         }
     }
 
     func update(withId userId: String) async throws {
-        if viewModel.nameText2.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+        if viewModel.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             withAnimation {
                 viewModel.errorText = NSLocalizedString("nameErrorLabel", comment: "")
                 viewModel.isErrorPopupPresented = true
@@ -199,7 +190,7 @@ struct SettingsView: View {
             let cacheKey = "avatar_\(userId)_\(lastVersionOfAvatar+1)"
             let lastCacheKey = "avatar_\(userId)_\(lastVersionOfAvatar)"
 
-            if let ava = viewModel.avatar2, avatar != viewModel.avatar2 {
+            if let ava = viewModel.avatarImage, avatar != viewModel.avatarImage {
                 let resized = ava.resizedForAvatar(maxDimension: 512)
                 guard let data = resized.jpegData(compressionQuality: 0.7) else { return }
 
@@ -209,18 +200,16 @@ struct SettingsView: View {
                 StorageManager.shared.saveImage(id: cacheKey, image: resized)
                 StorageManager.shared.deleteImage(id: lastCacheKey)
 
-                print("AVAVAVAVAVVA: \(lastVersionOfAvatar)")
                 try await UserManager.shared.setAvatarVersion(id: userId, lastVersion: lastVersionOfAvatar)
                 lastVersionOfAvatar += 1
 
                 await MainActor.run {
                     avatar = resized
                 }
-            } else if viewModel.avatar2 == nil {
+            } else if viewModel.avatarImage == nil {
                 let ref = Storage.storage().reference().child("avatars/\(userId).jpg")
                 do {
                     try await ref.delete()
-                    print("AVAVAVAVAVVA: \(lastVersionOfAvatar)")
                     try await UserManager.shared.setAvatarVersion(id: userId, lastVersion: lastVersionOfAvatar)
                     lastVersionOfAvatar += 1
                     StorageManager.shared.deleteImage(id: lastCacheKey)
@@ -231,8 +220,8 @@ struct SettingsView: View {
                 avatar = nil
             }
 
-            let isNameChanged = nameText != viewModel.nameText2
-            let isDescriptionChanged = descriptionText != viewModel.descriptionText2
+            let isNameChanged = nameText != viewModel.name
+            let isDescriptionChanged = descriptionText != viewModel.description
 
             if isNameChanged || isDescriptionChanged {
                 if isNameChanged {
@@ -240,12 +229,12 @@ struct SettingsView: View {
                 }
                 try await viewModel.changeAuthorName(
                     withId: authorId,
-                    to: viewModel.nameText2,
-                    description: viewModel.descriptionText2
+                    to: viewModel.name,
+                    description: viewModel.description
                 )
 
-                nameText = viewModel.nameText2
-                descriptionText = viewModel.descriptionText2
+                nameText = viewModel.name
+                descriptionText = viewModel.description
             }
 
             withAnimation {
@@ -280,11 +269,11 @@ struct SettingsView: View {
 
                 VisibilityTracker(id: "settingsLabel")
 
-                AvatarControlView(authorId: authorId, avatarImage: $viewModel.avatar2)
+                AvatarControlView(authorId: authorId, avatarImage: $viewModel.avatarImage)
 
-                SettingsTextFieldView(tfPlaceholder: NSLocalizedString("nameLabel", comment: ""), text: $viewModel.nameText2)
+                SettingsTextFieldView(tfPlaceholder: NSLocalizedString("nameLabel", comment: ""), text: $viewModel.name)
 
-                SettingsTextFieldView(tfPlaceholder: NSLocalizedString("descriptionLabel", comment: ""), text: $viewModel.descriptionText2)
+                SettingsTextFieldView(tfPlaceholder: NSLocalizedString("descriptionLabel", comment: ""), text: $viewModel.description)
                     .padding(.top, 10)
 
                 List {
@@ -322,7 +311,6 @@ struct SettingsView: View {
         .onPreferenceChange(VisibilityPreferenceKey.self) { values in
             if let minY = values["settingsLabel"] {
                 let isVisible = minY > 100
-                print("TRECCECEC: \(minY)")
 
                 if viewModel.isSettingsLabelVisible != isVisible {
                     withAnimation(.easeInOut(duration: 0.2)) {
@@ -339,9 +327,9 @@ struct SettingsView: View {
             }
         }
         .onAppear {
-            viewModel.avatar2 = avatar
-            viewModel.nameText2 = nameText
-            viewModel.descriptionText2 = descriptionText
+            viewModel.avatarImage = avatar
+            viewModel.name = nameText
+            viewModel.description = descriptionText
         }
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
@@ -516,9 +504,7 @@ struct SettingsView: View {
             .presentationDragIndicator(.visible)
         })
         .sheet(isPresented: $viewModel.isMailViewPresented, content: {
-            MailView(data: $viewModel.mailData) { result in
-                print(result)
-            }
+            MailView(data: $viewModel.mailData) { _ in }
         })
         .navigationDestination(isPresented: $viewModel.isNewPasswordViewPresented) {
             NewPasswordView(

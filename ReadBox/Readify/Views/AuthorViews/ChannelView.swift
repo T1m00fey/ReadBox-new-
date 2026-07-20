@@ -9,12 +9,11 @@ import SwiftUI
 import PopupView
 import SwiftfulLoadingIndicators
 import Shimmer
-import FirebaseStorage
 
 struct ChannelView: View {
     @StateObject private var viewModel = ChannelViewModel()
     @Namespace private var channelPostsTabsNamespace
-    @State private var pendingDeleteReply: Comment? = nil
+    @State private var pendingDeleteReply: Comment?
     @State private var isDeleteReplyAlertPresented = false
 
     @Environment(\.dismiss) var dismiss
@@ -103,43 +102,6 @@ struct ChannelView: View {
                 LazyVStack(spacing: 10) {
                     headerView
                     publicationsSection
-
-                    //                        if !viewModel.isLoading && !viewModel.isAllLoading && viewModel.posts.count >= 20 {
-                    //                            Button {
-                    //                                Task {
-                    //                                    do {
-                    //                                        try await viewModel.loadPosts(by: authorId)
-                    //                                        return
-                    //                                    } catch {
-                    //                                        withAnimation {
-                    //                                            viewModel.errorText = error.localizedDescription
-                    //                                        }
-                    //                                    }
-                    //
-                    //                                    viewModel.isErrorPopupPresented = true
-                    //                                }
-                    //                            } label: {
-                    //                                HStack {
-                    //                                    Image(systemName: "arrow.down")
-                    //                                        .foregroundStyle(Color(uiColor: .label))
-                    //                                        .font(.title3)
-                    //                                        .fontWeight(.light)
-                    //
-                    //                                    Text(LocalizedStringKey("loadMore"))
-                    //                                        .font(.title3)
-                    //                                        .fontDesign(.rounded)
-                    //                                        .fontWeight(.light)
-                    //                                }
-                    //                                .padding(.horizontal, 16)
-                    //                                .padding(.vertical, 10)
-                    //                                .background(Color(uiColor: .secondarySystemBackground))
-                    //                                .clipShape(RoundedRectangle(cornerRadius: 10))
-                    //                                .shadow(radius: 2)
-                    //                                .padding(.top, 20)
-                    //                            }
-                    //                            .padding(.bottom, 10)
-                    //                        }
-
                 }
                 .padding(.horizontal)
 
@@ -148,7 +110,6 @@ struct ChannelView: View {
             .onPreferenceChange(VisibilityPreferenceKey.self) { values in
                 if let minY = values["publicationsLabel"] {
                     let isVisible = minY > -20
-                    print("TRECCECEC: \(minY)")
 
                     if viewModel.isPublicationsLabelVisible != isVisible {
                         withAnimation(.easeInOut(duration: 0.2)) {
@@ -181,19 +142,6 @@ struct ChannelView: View {
                     .presentationCornerRadius(30)
                     .presentationDragIndicator(.visible)
             })
-//            .popup(isPresented: $viewModel.isNotificationPopupPresented) {
-//                NotificationPermissionView(
-//                    isPopupPresented: $viewModel.isNotificationPopupPresented,
-//                    route: viewModel.pushRoute ?? .goToSettings
-//                )
-//                .shadow(radius: 2)
-//            } customize: {
-//                $0
-//                    .type(.toast)
-//                    .appearFrom(.bottomSlide)
-//                    .dragToDismiss(true)
-//                    .displayMode(.sheet)
-//            }
             .sheet(isPresented: $viewModel.isNotificationPopupPresented, content: {
                 NotificationPermissionView(
                     isPopupPresented: $viewModel.isNotificationPopupPresented,
@@ -428,7 +376,7 @@ private extension ChannelView {
                 postRow(post)
             }
         } else {
-            noPostsView(for: viewModel.currentSection)
+            noPostsView
         }
     }
 
@@ -456,7 +404,6 @@ private extension ChannelView {
         )
         .redacted(reason: .placeholder)
         .padding(.top, index == 0 ? 10 : 0)
-        .padding(.bottom, index == 6 ? 100 : 0)
         .shimmering()
     }
 
@@ -511,7 +458,7 @@ private extension ChannelView {
                 replyRow(reply)
             }
         } else {
-            noPostsView(for: .replies)
+            noPostsView
         }
     }
 
@@ -594,7 +541,7 @@ private extension ChannelView {
         }
     }
 
-    func noPostsView(for section: ChannelPostsSection) -> some View {
+    var noPostsView: some View {
         VStack(spacing: 20) {
             Image(systemName: "pencil.and.scribble")
                 .resizable()
@@ -1022,47 +969,6 @@ private extension ChannelView {
                     }
                 }
                 .frame(width: UIScreen.main.bounds.width - 20, alignment: .leading)
-
-//                if viewModel.isLoading {
-//                    HStack {
-//                        makeNumberView(viewModel.subscribersCount, for: NSLocalizedString("subscribersCountLabel", comment: ""))
-//                            .redacted(reason: .placeholder)
-//                            .shimmering()
-//
-//                        Spacer()
-//
-//                        makeNumberView(viewModel.postsCount, for: NSLocalizedString("publicationsCountLabel", comment: ""))
-//                            .redacted(reason: .placeholder)
-//                            .shimmering()
-//                    }
-//                    .frame(width: UIScreen.main.bounds.width - 30)
-//                } else {
-////                    HStack {
-////                        Text("\(viewModel.subscribersCount) \(NSLocalizedString("subscribersCountLabel", comment: ""))")
-////                            .font(.system(size: 17))
-////                            .foregroundStyle(Color.gray)
-////
-////                        Text("•")
-////                            .font(.system(size: 25))
-////                            .foregroundStyle(Color.gray)
-////
-////                        Text("\(viewModel.postsCount) \(NSLocalizedString("publicationsCountLabel", comment: ""))")
-////                            .font(.system(size: 17))
-////                            .foregroundStyle(Color.gray)
-////
-////                    }
-////                    .frame(width: UIScreen.main.bounds.width - 20, alignment: .leading)
-//
-//                    HStack {
-//                        makeNumberView(viewModel.subscribersCount, for: NSLocalizedString("subscribersCountLabel", comment: ""))
-//
-//                        Spacer()
-//
-//                        makeNumberView(viewModel.postsCount, for: NSLocalizedString("publicationsCountLabel", comment: ""))
-//                    }
-//                    .frame(width: UIScreen.main.bounds.width - 30)
-//                }
-
             }
 
             if let isSubscribed = viewModel.isSubscribed {
@@ -1093,12 +999,6 @@ private extension ChannelView {
             .padding(.bottom, -15)
         }
         .padding(.vertical, 15)
-//        .background(
-//            RoundedRectangle(cornerRadius: 25)
-//                .foregroundStyle(Color(.secondarySystemBackground))
-////                .shadow(radius: 1)
-//                .frame(width: UIScreen.main.bounds.width)
-//        )
     }
 
     var channelDescriptionAttributedString: AttributedString {
@@ -1110,26 +1010,6 @@ private extension ChannelView {
         }
 
         return attributedString
-    }
-
-    @ViewBuilder
-    func makeNumberView(_ num: Int, for text: String) -> some View {
-        VStack {
-            Text("\(num)")
-                .font(.system(size: 19))
-                .frame(width: (UIScreen.main.bounds.width - 25) / 2 - 30)
-                .fontDesign(.rounded)
-
-            Text(text)
-                .font(.system(size: 16))
-                .frame(width: (UIScreen.main.bounds.width - 25) / 2 - 30)
-                .foregroundStyle(Color.gray)
-        }
-        .padding()
-        .background(
-            RoundedRectangle(cornerRadius: 20)
-                .foregroundStyle(Color(.systemBackground))
-        )
     }
 
 //    var headerView: some View {

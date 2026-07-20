@@ -7,6 +7,7 @@
 
 import SwiftUI
 import PopupView
+import Shimmer
 import SwiftfulLoadingIndicators
 
 struct NotificationsView: View {
@@ -17,43 +18,41 @@ struct NotificationsView: View {
     @EnvironmentObject var subManager: SubscriptionManager
 
     var body: some View {
-        ZStack {
-            ScrollView(showsIndicators: false) {
-                LazyVStack(spacing: 0) {
-                    if viewModel.isLoading {
-                        ForEach(0..<8, id: \.self) { _ in
-                            notificationPlaceholder
-                        }
-                    } else if viewModel.notifications.isEmpty {
-                        emptyView
-                    } else {
-                        ForEach(viewModel.notifications) { notification in
-                            NotificationRowView(
-                                notification: notification,
-                                actorInfo: viewModel.actorInfo[notification.actorId ?? ""],
-                                articleTitle: viewModel.articleTitles[notification.postId ?? ""],
-                                isShortPost: viewModel.postKinds[notification.postId ?? ""],
-                                onAuthorTap: {
-                                    viewModel.openAuthorChannel(for: notification)
-                                }
-                            )
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 10)
-                            .contentShape(Rectangle())
-                            .onTapGesture {
-                                Task {
-                                    await viewModel.open(notification)
-                                }
+        ScrollView(showsIndicators: false) {
+            LazyVStack(spacing: 0) {
+                if viewModel.isLoading {
+                    ForEach(0..<8, id: \.self) { _ in
+                        notificationPlaceholder
+                    }
+                } else if viewModel.notifications.isEmpty {
+                    emptyView
+                } else {
+                    ForEach(viewModel.notifications) { notification in
+                        NotificationRowView(
+                            notification: notification,
+                            actorInfo: viewModel.actorInfo[notification.actorId ?? ""],
+                            articleTitle: viewModel.articleTitles[notification.postId ?? ""],
+                            isShortPost: viewModel.postKinds[notification.postId ?? ""],
+                            onAuthorTap: {
+                                viewModel.openAuthorChannel(for: notification)
                             }
-
-                            Divider()
-                                .padding(.leading, 72)
+                        )
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 10)
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            Task {
+                                await viewModel.open(notification)
+                            }
                         }
+
+                        Divider()
+                            .padding(.leading, 72)
                     }
                 }
-                .padding(.top, 12)
-                .padding(.bottom, 24)
             }
+            .padding(.top, 12)
+            .padding(.bottom, 24)
         }
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -61,7 +60,7 @@ struct NotificationsView: View {
                 HStack(spacing: 8) {
                     Text(LocalizedStringKey("notificationLabel"))
 
-                    if viewModel.isRefreshingInBackground {
+                    if viewModel.isRefreshing {
                         LoadingIndicator(
                             animation: .circleRunner,
                             color: Color(uiColor: .label),
@@ -127,7 +126,7 @@ struct NotificationsView: View {
             ChannelView(
                 user: $viewModel.user,
                 authorId: viewModel.authorId,
-                authorName: viewModel.actorInfo[viewModel.authorId]?.name ?? NSLocalizedString("notFoundLabel", comment: ""),
+                authorName: viewModel.actorInfo[viewModel.authorId]?.name ?? "",
                 isCheckmark: viewModel.actorInfo[viewModel.authorId]?.isCheckmark ?? false,
                 lastVersionOfAvatar: viewModel.actorInfo[viewModel.authorId]?.avatarVersion ?? 0,
                 isPremiumViewPresented: .constant(false)
@@ -187,13 +186,13 @@ private extension NotificationsView {
 }
 
 private struct NotificationRowView: View {
-    let notification: InAppNotificationItem
+    let notification: PersonalNotificationItem
     let actorInfo: PostAuthorInfo?
     let articleTitle: String?
     let isShortPost: Bool?
     let onAuthorTap: () -> Void
 
-    @State private var avatar: UIImage? = nil
+    @State private var avatar: UIImage?
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
@@ -206,15 +205,23 @@ private struct NotificationRowView: View {
             VStack(alignment: .leading, spacing: 4) {
                 HStack(alignment: .center, spacing: 8) {
                     HStack(alignment: .center, spacing: 0) {
-                        Text(actorInfo?.name ?? NSLocalizedString("notFoundLabel", comment: ""))
-                            .font(.system(size: 16))
-                            .fontWeight(.semibold)
-                            .lineLimit(1)
+                        if let name = actorInfo?.name, !name.isEmpty {
+                            Text(name)
+                                .font(.system(size: 16))
+                                .fontWeight(.semibold)
+                                .lineLimit(1)
 
-                        if actorInfo?.isCheckmark == true {
-                            Image(systemName: "checkmark.seal.fill")
-                                .foregroundStyle(Color.blue)
-                                .font(.system(size: 13))
+                            if actorInfo?.isCheckmark == true {
+                                Image(systemName: "checkmark.seal.fill")
+                                    .foregroundStyle(Color.blue)
+                                    .font(.system(size: 13))
+                            }
+                        } else {
+                            Text("Hello, world")
+                                .font(.system(size: 16))
+                                .fontWeight(.semibold)
+                                .redacted(reason: .placeholder)
+                                .shimmering()
                         }
                     }
                     .contentShape(Rectangle())
@@ -236,8 +243,9 @@ private struct NotificationRowView: View {
                     .foregroundStyle(Color(.label))
                     .multilineTextAlignment(.leading)
 
-                if let secondaryText, !secondaryText.isEmpty {
-                    Text(secondaryText)
+                if let articleTitle,
+                   !articleTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    Text(articleTitle)
                         .font(.system(size: 14))
                         .foregroundStyle(Color.gray)
                         .lineLimit(2)
@@ -253,11 +261,6 @@ private struct NotificationRowView: View {
 }
 
 private extension NotificationRowView {
-    var secondaryText: String? {
-        let currentArticleTitle = articleTitle?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        return currentArticleTitle.isEmpty ? nil : currentArticleTitle
-    }
-
     var notificationText: String {
         switch notification.type {
         case .postLiked:

@@ -9,12 +9,12 @@ import SwiftUI
 
 @MainActor
 final class NotificationsViewModel: ObservableObject {
-    @Published var notifications: [InAppNotificationItem] = []
+    @Published var notifications: [PersonalNotificationItem] = []
     @Published var actorInfo: [String: PostAuthorInfo] = [:]
     @Published var articleTitles: [String: String] = [:]
     @Published var postKinds: [String: Bool] = [:]
     @Published var isLoading = true
-    @Published var isRefreshingInBackground = false
+    @Published var isRefreshing = false
     @Published var errorText = ""
     @Published var isErrorPopupPresented = false
     @Published var user: DBUser? = nil
@@ -22,7 +22,7 @@ final class NotificationsViewModel: ObservableObject {
     @Published var isReadViewPresented = false
     @Published var isChannelViewPresented = false
 
-    var hasLoadedOnce = false
+    private var hasLoadedOnce = false
 
     var title = ""
     var text = ""
@@ -39,7 +39,6 @@ final class NotificationsViewModel: ObservableObject {
     var isLocalizedVersion = false
     var rootId = ""
 
-    private let userDefaults = UserDefaults.standard
     private let notificationsCacheKeyPrefix = "notifications.cache.items."
     private let actorInfoCacheKeyPrefix = "notifications.cache.actorInfo."
     private let articleTitlesCacheKeyPrefix = "notifications.cache.articleTitles."
@@ -49,83 +48,78 @@ final class NotificationsViewModel: ObservableObject {
         guard !hasLoadedOnce else { return }
 
         hasLoadedOnce = true
-        do {
-            let authDataResult = try AuthenticationManager.shared.getAuthenticatedUser()
-            loadCachedContent(for: authDataResult.uid)
-            await refresh(showSkeletons: notifications.isEmpty)
-        } catch {
-            await refresh(showSkeletons: notifications.isEmpty)
+
+        if let userId = try? AuthenticationManager.shared.getAuthenticatedUser().uid {
+            loadCachedContent(for: userId)
         }
+
+        await refresh()
     }
 
     func refresh() async {
-        await refresh(showSkeletons: notifications.isEmpty)
-    }
-
-    func refresh(showSkeletons: Bool) async {
-        if showSkeletons {
-            withAnimation {
-                isLoading = true
-                isRefreshingInBackground = false
-                errorText = ""
-                isErrorPopupPresented = false
-            }
+        if notifications.isEmpty {
+            isLoading = true
         } else {
-            withAnimation {
-                isLoading = false
-                isRefreshingInBackground = true
-                errorText = ""
-                isErrorPopupPresented = false
-            }
+            isRefreshing = true
         }
 
+        errorText = ""
+        isErrorPopupPresented = false
+
         do {
-            let authDataResult = try AuthenticationManager.shared.getAuthenticatedUser()
-            let user = try await UserManager.shared.getUser(userId: authDataResult.uid)
-            let notifications = try await NotificationsManager.shared.getNotifications(for: authDataResult.uid)
+            let userId = try AuthenticationManager.shared.getAuthenticatedUser().uid
+            let notifications = try await NotificationsManager.shared.getNotifications(for: userId)
+
+            withAnimation {
+                self.notifications = notifications
+                self.isLoading = false
+            }
+
+            saveCachedValue(notifications, forKey: notificationsCacheKeyPrefix + userId)
 
             await loadActorInfo(for: notifications)
             await loadArticleTitles(for: notifications)
+            let user = try await UserManager.shared.getUser(userId: userId)
 
             saveCachedContent(
                 notifications: notifications,
                 actorInfo: actorInfo,
                 articleTitles: articleTitles,
                 postKinds: postKinds,
-                userId: authDataResult.uid
+                userId: userId
             )
 
             withAnimation {
                 self.user = user
-                self.notifications = notifications
-                self.isLoading = false
-                self.isRefreshingInBackground = false
+                self.isRefreshing = false
             }
         } catch {
             withAnimation {
                 errorText = error.localizedDescription
                 isErrorPopupPresented = true
                 isLoading = false
-                isRefreshingInBackground = false
+                isRefreshing = false
             }
         }
     }
 
-    private func loadActorInfo(for notifications: [InAppNotificationItem]) async {
+    private func loadActorInfo(for notifications: [PersonalNotificationItem]) async {
         let actorIds = Set(
             notifications
                 .compactMap(\.actorId)
                 .filter { !$0.isEmpty }
         )
 
-        for actorId in actorIds where actorInfo[actorId] == nil {
+        for actorId in actorIds {
             if let info = try? await UserManager.shared.getPostAuthorInfo(for: actorId) {
-                actorInfo[actorId] = info
+                withAnimation {
+                    actorInfo[actorId] = info
+                }
             }
         }
     }
 
-    private func loadArticleTitles(for notifications: [InAppNotificationItem]) async {
+    private func loadArticleTitles(for notifications: [PersonalNotificationItem]) async {
         let postIds = Set(
             notifications
                 .compactMap(\.postId)
@@ -141,34 +135,26 @@ final class NotificationsViewModel: ObservableObject {
     }
 
     private func loadCachedContent(for userId: String) {
-        if let cachedActorInfo: [String: PostAuthorInfo] = loadCachedValue(forKey: actorInfoCacheKeyPrefix + userId) {
-            actorInfo = cachedActorInfo
+        if let value: [String: PostAuthorInfo] = loadCachedValue(forKey: actorInfoCacheKeyPrefix + userId) {
+            actorInfo = value
         }
 
-        if let cachedArticleTitles: [String: String] = loadCachedValue(forKey: articleTitlesCacheKeyPrefix + userId) {
-            articleTitles = cachedArticleTitles
+        if let value: [String: String] = loadCachedValue(forKey: articleTitlesCacheKeyPrefix + userId) {
+            articleTitles = value
         }
 
-        if let cachedPostKinds: [String: Bool] = loadCachedValue(forKey: postKindsCacheKeyPrefix + userId) {
-            postKinds = cachedPostKinds
+        if let value: [String: Bool] = loadCachedValue(forKey: postKindsCacheKeyPrefix + userId) {
+            postKinds = value
         }
 
-        if let cachedNotifications: [InAppNotificationItem] = loadCachedValue(forKey: notificationsCacheKeyPrefix + userId),
-           hasActorInfo(for: cachedNotifications) {
-            notifications = cachedNotifications
+        if let value: [PersonalNotificationItem] = loadCachedValue(forKey: notificationsCacheKeyPrefix + userId) {
+            notifications = value
             isLoading = false
         }
     }
 
-    private func hasActorInfo(for notifications: [InAppNotificationItem]) -> Bool {
-        notifications.allSatisfy { notification in
-            guard let actorId = notification.actorId, !actorId.isEmpty else { return true }
-            return actorInfo[actorId] != nil
-        }
-    }
-
     private func saveCachedContent(
-        notifications: [InAppNotificationItem],
+        notifications: [PersonalNotificationItem],
         actorInfo: [String: PostAuthorInfo],
         articleTitles: [String: String],
         postKinds: [String: Bool],
@@ -182,15 +168,15 @@ final class NotificationsViewModel: ObservableObject {
 
     private func saveCachedValue<T: Codable>(_ value: T, forKey key: String) {
         guard let data = try? JSONEncoder().encode(value) else { return }
-        userDefaults.set(data, forKey: key)
+        UserDefaults.standard.set(data, forKey: key)
     }
 
     private func loadCachedValue<T: Codable>(forKey key: String) -> T? {
-        guard let data = userDefaults.data(forKey: key) else { return nil }
+        guard let data = UserDefaults.standard.data(forKey: key) else { return nil }
         return try? JSONDecoder().decode(T.self, from: data)
     }
 
-    func open(_ notification: InAppNotificationItem) async {
+    func open(_ notification: PersonalNotificationItem) async {
         if let postId = notification.postId, !postId.isEmpty {
             await openArticle(id: postId)
             return
@@ -203,7 +189,7 @@ final class NotificationsViewModel: ObservableObject {
         isChannelViewPresented = true
     }
 
-    func openAuthorChannel(for notification: InAppNotificationItem) {
+    func openAuthorChannel(for notification: PersonalNotificationItem) {
         let actorId = notification.actorId ?? ""
         guard !actorId.isEmpty else { return }
 

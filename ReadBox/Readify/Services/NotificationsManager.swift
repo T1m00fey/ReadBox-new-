@@ -14,7 +14,7 @@ final class NotificationsManager {
 
     private let notificationsCollection = Firestore.firestore().collection("notifications")
 
-    func getNotifications(for userId: String) async throws -> [InAppNotificationItem] {
+    func getNotifications(for userId: String) async throws -> [PersonalNotificationItem] {
         let snapshot = try await notificationsCollection
             .whereField("user_id", isEqualTo: userId)
             .getDocuments()
@@ -24,13 +24,13 @@ final class NotificationsManager {
             .sorted { ($0.dateCreated ?? .distantPast) > ($1.dateCreated ?? .distantPast) }
     }
 
-    private func makeNotificationItem(from document: QueryDocumentSnapshot) -> InAppNotificationItem? {
+    private func makeNotificationItem(from document: QueryDocumentSnapshot) -> PersonalNotificationItem? {
         let data = document.data()
 
         let dateCreated = (data["date_created"] as? Timestamp)?.dateValue()
         let expiresAt = (data["expires_at"] as? Timestamp)?.dateValue()
 
-        return InAppNotificationItem(
+        return PersonalNotificationItem(
             id: document.documentID,
             userId: data["user_id"] as? String,
             typeRawValue: data["type"] as? String,

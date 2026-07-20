@@ -6,11 +6,9 @@
 //
 
 import SwiftUI
-import FirebaseStorage
 import SwiftfulLoadingIndicators
 import Shimmer
 import TipKit
-import PopupView
 
 struct FeedView: View {
     @Binding var isWelcomeViewPresented: Bool
@@ -40,16 +38,14 @@ struct FeedView: View {
                         TabView {
 
                             if viewModel.isLoadingShowing {
-                                ForEach(0..<1) { num in
-                                    TopArticleView(
-                                        id: String(num),
-                                        title: "",
-                                        isArchive: false,
-                                        isPremiumPost: false,
-                                        isAccessToPremiumDenied: false
-                                    )
-                                    .redacted(reason: .placeholder)
-                                }
+                                TopArticleView(
+                                    id: "0",
+                                    title: "",
+                                    isArchive: false,
+                                    isPremiumPost: false,
+                                    isAccessToPremiumDenied: false
+                                )
+                                .redacted(reason: .placeholder)
                             } else {
                                 ForEach(viewModel.topArticles) { post in
                                     if post.id != "" {
@@ -148,7 +144,6 @@ struct FeedView: View {
                                     isChannelViewPresented: $viewModel.isChannelViewPresented
                                 )
                                 .onAppear {
-                                    print("👀 VIEW \(post.id)")
                                     viewModel.onPostAppearing(post: post)
                                     AnalyticsManager.shared.logFeedImpression(
                                         publicationId: post.id,
@@ -204,7 +199,6 @@ struct FeedView: View {
             .onPreferenceChange(VisibilityPreferenceKey.self) { values in
                 if let minY = values["headerTracker"] {
                     let isVisible = minY > 60
-                    print("TRECCECEC: \(minY)")
 
                     if viewModel.isLargeHeaderVisible != isVisible {
                         withAnimation(.easeInOut(duration: 0.2)) {
@@ -229,8 +223,6 @@ struct FeedView: View {
                         try? await viewModel.loadUser()
                     }
                 }
-
-                viewModel.getViews()
 
             }
             .navigationDestination(isPresented: $viewModel.isReadViewPresented, destination: {

@@ -49,7 +49,6 @@ enum CreatedPostsSection: Int, CaseIterable {
 final class CreatedPostsViewModel: ObservableObject {
     @Published var isErrorPopupPresented = false
     @Published var errorText = ""
-    @Published var articlesIndexes: [String] = []
     @Published var posts: [PrePost] = []
     @Published var archivePosts: [PrePost] = []
     @Published var replies: [Comment] = []
@@ -57,7 +56,6 @@ final class CreatedPostsViewModel: ObservableObject {
     @Published var isDescriptionPopupPresented = false
     @Published var isReadViewPresented = false
     @Published var shouldOpenCommentsOnRead = false
-    @Published var isNewNameAlertPresented = false
     @Published var isSuccessPopupPresented = false
     @Published var isCreateViewPresented = false
     @Published var isArchivePresented = false
@@ -68,7 +66,6 @@ final class CreatedPostsViewModel: ObservableObject {
     @Published var postOption: PostOptions = .nothing
     @Published var isNewPublicationButtonPresented = false
     @Published var isButtonEnabled = false
-    @Published var isChannelViewPresented = false
     @Published var isSettingViewPresented = false
     @Published var isNeedToReload = false
     @Published var isLoading = true
@@ -82,7 +79,6 @@ final class CreatedPostsViewModel: ObservableObject {
     @Published var avatarImage: UIImage? = nil
     @Published var isZoomableImageViewPresented = false
     @Published var zoomableImage: UIImage? = nil
-    @Published var isVideoCover = false
     @Published var videoURL: URL? = nil
     @Published var addingMode = 0
     @Published var isConfirmationPopupPresented = false
@@ -138,8 +134,6 @@ final class CreatedPostsViewModel: ObservableObject {
     var rootIsPremiumPost = false
     var createIsLocalizedVersion = false
 
-    var alertText = ""
-
     func clearData() {
         postOption = .nothing
         id = ""
@@ -184,10 +178,6 @@ final class CreatedPostsViewModel: ObservableObject {
         }
     }
 
-    func getBottomPadding(by id: String) -> CGFloat {
-        currentPosts.last?.id == id ? 70 : 10
-    }
-
     func loadUser() async throws {
         let authDataResult = try AuthenticationManager.shared.getAuthenticatedUser()
         let user = try await UserManager.shared.getUser(userId: authDataResult.uid)
@@ -203,10 +193,6 @@ final class CreatedPostsViewModel: ObservableObject {
         avatarVersion = user?.avatarVersion ?? 0
 
         self.user = user
-    }
-
-    func getAuthorIsCheckmarkStatus(id: String) async throws -> Bool {
-        try await UserManager.shared.getIsCheckmarkStatus(id: id) ?? false
     }
 
     func getPrePost(id: String) async throws -> PrePost {
@@ -698,14 +684,6 @@ final class CreatedPostsViewModel: ObservableObject {
         }
     }
 
-    var hasLocalizedPosts: Bool {
-        !localizedPosts.isEmpty || !localizedArchivePosts.isEmpty
-    }
-
-    var hasRegularArchivePosts: Bool {
-        !regularArchivePosts.isEmpty
-    }
-
     var currentSection: CreatedPostsSection {
         if isArchivePresented && isLocalizedPostsPresented {
             .localizedArchive
@@ -985,9 +963,4 @@ extension CreatedPostsViewModel {
         } catch { /* nothing */ }
     }
 
-    private func isNotFound(_ error: Error) -> Bool {
-        let ns = error as NSError
-        return ns.domain == StorageErrorDomain
-            && StorageErrorCode(rawValue: ns.code) == .objectNotFound
-    }
 }

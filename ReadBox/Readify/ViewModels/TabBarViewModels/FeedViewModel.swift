@@ -17,42 +17,27 @@ final class FeedViewModel: ObservableObject {
     @Published var isErrorPopupPresented = false
     @Published var isDescriptionPopupPresented = false
     @Published var isReadViewPresented = false
-    @Published var fromIndex = -1
-    @Published var maxIndex = ""
-    @Published var likedPosts: [String] = []
     @Published var primaryLanguage = ""
-    @Published var loadCount = 0
-//    @Published var authorsNames: [String: String] = [:]
-//    @Published var authorsCheckmarks: [String: Bool] = [:]
-//    @Published var authorsAvaVersion: [String: Int] = [:]
     @Published var authorsInfo: [String: PostAuthorInfo] = [:]
     @Published var isChannelViewPresented = false
     @Published var isLoading = true
-    @Published var height: CGFloat = 0.0
-    @Published var views: [String] = []
     @Published var isLoadingPopupPresented = false
     @Published var isLoadingShowing = true
-    //    @Published var relevantVersion: AppVersion? = nil
-//    @Published var isVersionPopupViewPresented = false
-//    @Published var isBlur = false
     @Published var lastDocument: DocumentSnapshot? = nil
     @Published var isZoomableImageViewPresented = false
     @Published var zoomableImage: UIImage? = nil
     @Published var shouldOpenCommentsOnRead = false
 
     @Published var isLargeHeaderVisible = true
-//    @Published var isUpdatePopupDidPresneted = false
     @Published var authorId = ""
 
     @Published var user: DBUser? = nil
 
     var title = ""
-    var image = UIImage()
     var dateCreated = Date()
     var text = ""
     var likesCount = 0
     var id = ""
-    var userId = ""
     var isArchive = false
     var mediaCount = 0
     var mediaVersion = 0
@@ -64,48 +49,12 @@ final class FeedViewModel: ObservableObject {
 
     private var db = Firestore.firestore()
 
-    func getViews() {
-        views = StorageManager.shared.getViews()
-    }
-
-    func saveViews() {
-        StorageManager.shared.save(views: views)
-    }
-
     func loadUser() async throws {
         let authDataResult = try AuthenticationManager.shared.getAuthenticatedUser()
         let user = try await UserManager.shared.getUser(userId: authDataResult.uid)
 
         self.user = user
     }
-
-//    func getRelevantVersion() {
-//        Task {
-//            do {
-//                relevantVersion = try? await VersionManager.shared.getRelevantVersion()
-//
-//                if let currentVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String, let relevantVersion {
-//
-//                    if relevantVersion.appVersion != currentVersion && !isUpdatePopupDidPresneted {
-//                        isVersionPopupViewPresented = true
-//                        isUpdatePopupDidPresneted = true
-//
-//                        if let isCritical = relevantVersion.isCritical {
-//                            withAnimation {
-//                                isBlur = isCritical ? true : false
-//                            }
-//                        }
-//                    } else {
-//                        withAnimation {
-//                            isBlur = false
-//                        }
-//                    }
-//
-//                }
-//
-//            }
-//        }
-//    }
 
     func refresh() {
         primaryLanguage = StorageManager.shared.getLanguage() ?? "en"
@@ -130,24 +79,8 @@ final class FeedViewModel: ObservableObject {
         }
     }
 
-    func getAuthorName(id: String) async throws -> String {
-        try await UserManager.shared.getAuthorName(id: id) ?? ""
-    }
-
-    func getAuthorIsCheckmarkStatus(id: String) async throws -> Bool {
-        try await UserManager.shared.getIsCheckmarkStatus(id: id) ?? false
-    }
-
-    func getMaxIndex() async throws {
-        maxIndex = try await ArticlesManager.shared.getMaxIndex() ?? "10"
-    }
-
     func getArticle(id: String) async throws -> PrePost {
         try await ArticlesManager.shared.getPrePost(id: id)
-    }
-
-    func getOriginalLanguageOfArticle(id: String) async throws -> String {
-        try await ArticlesManager.shared.getOriginalLanguageOfArticle(id: id)
     }
 
     func getTopArticles() async throws {
@@ -275,28 +208,18 @@ final class FeedViewModel: ObservableObject {
     func onPostAppearing(post: PrePost) {
         if !authorsInfo.keys.contains(post.authorId ?? "") {
             Task {
-                do {
-                    let info = try await UserManager.shared.getPostAuthorInfo(for: post.authorId ?? "")
+                if let info = try? await UserManager.shared.getPostAuthorInfo(for: post.authorId ?? "") {
 
                     withAnimation {
                         authorsInfo[post.authorId ?? ""] = info
                     }
-                } catch {
-                    //                                                    withAnimation {
-                    //                                                        viewModel.errorText = error.localizedDescription
-                    //                                                        viewModel.isErrorPopupPresented = true
-                    //                                                    }
                 }
             }
         }
 
         if articles.last == post && lastDocument != nil {
             Task {
-                do {
-                    try await getArticles()
-                } catch {
-                    print("ERROR TO FETCH MORE POSTS: \(error.localizedDescription)")
-                }
+                try? await getArticles()
             }
         }
 
@@ -310,9 +233,7 @@ final class FeedViewModel: ObservableObject {
     }
 
     func tapGestureHandler(on post: PrePost, openComments: Bool = false) {
-        // 1. Базовые данные для ReadView
         title = post.title ?? NSLocalizedString("notFoundLabel", comment: "")
-        image = StorageManager.shared.getImage(id: post.id) ?? UIImage()
         likesCount = post.likesCount ?? 0
         id = post.id
         authorId = post.authorId ?? ""
@@ -325,24 +246,12 @@ final class FeedViewModel: ObservableObject {
         isLocalizedVersion = post.isLocalizedVersion ?? false
         rootId = post.rootId ?? ""
 
-        if post.isArchive ?? true {
-            image = UIImage()
-        }
-
-        // 2. Проверка пользователя
-        guard let user else {
+        guard user != nil else {
             withAnimation {
                 errorText = NSLocalizedString("loadDataErrorText", comment: "")
                 isErrorPopupPresented = true
             }
             return
-        }
-
-        if likedPosts.isEmpty {
-            likedPosts = user.likedPosts ?? []
-        }
-        if userId.isEmpty {
-            userId = user.userId
         }
 
         shouldOpenCommentsOnRead = openComments

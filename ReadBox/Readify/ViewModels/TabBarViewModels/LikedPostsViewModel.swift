@@ -17,7 +17,6 @@ final class LikedPostsViewModel: ObservableObject {
     @Published var isDescriptionPopupPresented = false
     @Published var user: DBUser? = nil
     @Published var likedPosts: [String] = []
-    @Published var fromIndex = ""
     @Published var authorsInfo: [String: PostAuthorInfo] = [:]
     @Published var indexesNeedToLoad: [String] = []
     @Published var isLoading = true
@@ -35,12 +34,10 @@ final class LikedPostsViewModel: ObservableObject {
     @Published var lastDocument: DocumentSnapshot? = nil
 
     var title = ""
-    var image = UIImage()
     var dateCreated = Date()
     var text = ""
     var likesCount = 0
     var id = ""
-    var userId = ""
     var isArchive = false
     var mediaCount = 0
     var mediaVersion = 0
@@ -75,18 +72,6 @@ final class LikedPostsViewModel: ObservableObject {
             isLoadingPopupPresented = false
             isReadViewPresented = true
         }
-    }
-
-    func getPrePost(id: String) async throws -> PrePost {
-        try await ArticlesManager.shared.getPrePost(id: id)
-    }
-
-    func getAuthorName(id: String) async throws -> String {
-        try await UserManager.shared.getUser(userId: id)?.name ?? ""
-    }
-
-    func getAuthorIsCheckmarkStatus(id: String) async throws -> Bool {
-        try await UserManager.shared.getUser(userId: id)?.isCheckmark ?? false
     }
 
     func loadUser() async throws {
@@ -176,17 +161,11 @@ final class LikedPostsViewModel: ObservableObject {
     func onPostAppearing(_ post: PrePost) {
         if !authorsInfo.keys.contains(post.authorId ?? "") && post.authorId != nil {
             Task {
-                do {
-                    let info = try await UserManager.shared.getPostAuthorInfo(for: post.authorId ?? "")
+                if let info = try? await UserManager.shared.getPostAuthorInfo(for: post.authorId ?? "") {
 
                     withAnimation {
                         authorsInfo[post.authorId ?? ""] = info
                     }
-                } catch {
-//                                            withAnimation {
-//                                                viewModel.errorText = error.localizedDescription
-//                                                viewModel.isErrorPopupPresented = true
-//                                            }
                 }
             }
         }
@@ -200,7 +179,6 @@ final class LikedPostsViewModel: ObservableObject {
 
     func tapGestureHandler(on post: PrePost, openComments: Bool = false) {
         title = post.title ?? NSLocalizedString("notFoundLabel", comment: "")
-        image = StorageManager.shared.getImage(id: post.id) ?? UIImage()
         likesCount = post.likesCount ?? 0
         id = post.id
         authorId = post.authorId ?? ""
@@ -223,17 +201,12 @@ final class LikedPostsViewModel: ObservableObject {
                 likedPosts = user?.likedPosts ?? []
             }
 
-            if userId == "" {
-                userId = user?.userId ?? ""
-            }
-
             Task {
                 do {
                     isLoadingPopupPresented = true
                     getPostToRead(id: post.id)
 
                     if post.isArchive ?? true {
-                        image = UIImage()
                         text = ""
                     }
 

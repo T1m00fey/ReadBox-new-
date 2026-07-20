@@ -6,9 +6,6 @@
 //
 
 import SwiftUI
-import FirebaseStorage
-import PopupView
-import UserNotifications
 
 final class SessionManager: ObservableObject {
     @Published var sessionId: String = UUID().uuidString
@@ -33,12 +30,10 @@ struct RootView: View {
     @State private var authorName: String? = ""
     @State private var isCheckmark: Bool? = false
     @State private var lastVersionOfAvatar: Int? = 0
-    @State private var likedPosts: [String] = []
     @State private var isChannelViewPresented = false
     @State private var isWelcomeViewPresented = false
     @State private var authorId = ""
     @State private var isLoadingPopupPresented = false
-    @State private var isDescriptionPopupPresented = false
     @State private var isNotificationPopupPresented = false
     @State private var isConfirmationPopupPresented = false
     @State private var isPremiumViewPresented = false
@@ -55,8 +50,6 @@ struct RootView: View {
     @StateObject var sessionManager = SessionManager()
     @StateObject var changedPostsManager = ChangedPostsManager()
     @StateObject var sub = SubscriptionManager()
-
-    @Environment(\.dismiss) var dismiss
 
     private var screenWidth = UIScreen.main.bounds.width
 
@@ -145,73 +138,14 @@ struct RootView: View {
             .onChange(of: isWelcomeViewPresented) {
                 if !isWelcomeViewPresented {
                     Task {
-                        let authUser = try? AuthenticationManager.shared.getAuthenticatedUser()
-                        if let authUser {
-                            AnalyticsManager.shared.setAuthenticatedUser(id: authUser.uid)
-                        }
-                        let user = try? await UserManager.shared.getUser(userId: authUser?.uid ?? "")
-
-                        try? await UserManager.shared.set(
-                            fcmToken: StorageManager.shared.getFcmToken(),
-                            to: user?.userId ?? ""
-                        )
-
-                        if let appVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String {
-                            try? await UserManager.shared.set(
-                                appVersion: appVersion,
-                                to: user?.userId ?? ""
-                            )
-                        }
-
-                        try? await UserManager.shared.setOriginalLanguage(to: user?.userId ?? "")
-
-                        if StorageManager.shared.getLanguage() == "en" && !(user?.subscribes?.contains (
-                            "qDWmcGOLPGVAzJth2I8G2cwcp9x1"
-                        ) ?? true) {
-
-                            try? await UserManager.shared.un_subscribeUser(
-                                on: "qDWmcGOLPGVAzJth2I8G2cwcp9x1",
-                                isNeedToSubscribe: true
-                            )
-
-                        } else if StorageManager.shared.getLanguage() == "ru" && !(user?.subscribes?.contains(
-                            "se8Any2drmcQg1sFoLXYXo4ttYt2"
-                        ) ?? true) {
-
-                            try? await UserManager.shared.un_subscribeUser(
-                                on: "se8Any2drmcQg1sFoLXYXo4ttYt2",
-                                isNeedToSubscribe: true
-                            )
-
-                        }
+                        await loadAuthenticatedUser(shouldSubscribeToDefaultChannel: true)
                     }
                 }
             }
             .task { sub.start() }
             .onAppear {
                 Task {
-                    if let authUser = try? AuthenticationManager.shared.getAuthenticatedUser() {
-                        AnalyticsManager.shared.setAuthenticatedUser(id: authUser.uid)
-                        isWelcomeViewPresented = false
-                        user = try? await UserManager.shared.getUser(userId: authUser.uid)
-
-                        try? await UserManager.shared.set(
-                            fcmToken: StorageManager.shared.getFcmToken(),
-                            to: user?.userId ?? ""
-                        )
-
-                        try? await UserManager.shared.setOriginalLanguage(to: user?.userId ?? "")
-
-                        if let appVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String {
-                            try? await UserManager.shared.set(
-                                appVersion: appVersion,
-                                to: user?.userId ?? ""
-                            )
-                        }
-                    } else {
-                        AnalyticsManager.shared.clearAuthenticatedUser()
-                        isWelcomeViewPresented = true
-                    }
+                    await loadAuthenticatedUser(shouldSubscribeToDefaultChannel: false)
                 }
 
                 checkAppVersion()
@@ -346,7 +280,10 @@ private extension RootView {
     }
 
     func handleRemoteNotification(_ userInfo: [AnyHashable: Any]) {
-        if let channelId = channelIdToOpen(from: userInfo) {
+        if let route = userInfo["route"] as? String,
+           route == "channel",
+           let channelId = userInfo["channelId"] as? String,
+           !channelId.isEmpty {
             StorageManager.shared.deletePendingNotificationChannelId()
 
             Task {
@@ -369,15 +306,45 @@ private extension RootView {
         }
     }
 
-    func channelIdToOpen(from userInfo: [AnyHashable: Any]) -> String? {
-        guard let route = userInfo["route"] as? String,
-              route == "channel",
-              let channelId = userInfo["channelId"] as? String,
-              !channelId.isEmpty else {
-            return nil
+    @MainActor
+    func loadAuthenticatedUser(shouldSubscribeToDefaultChannel: Bool) async {
+        guard let authUser = try? AuthenticationManager.shared.getAuthenticatedUser() else {
+            AnalyticsManager.shared.clearAuthenticatedUser()
+            isWelcomeViewPresented = true
+            return
         }
 
-        return channelId
+        AnalyticsManager.shared.setAuthenticatedUser(id: authUser.uid)
+        isWelcomeViewPresented = false
+        user = try? await UserManager.shared.getUser(userId: authUser.uid)
+
+        try? await UserManager.shared.set(
+            fcmToken: StorageManager.shared.getFcmToken(),
+            to: user?.userId ?? ""
+        )
+        try? await UserManager.shared.setOriginalLanguage(to: user?.userId ?? "")
+
+        if let appVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String {
+            try? await UserManager.shared.set(
+                appVersion: appVersion,
+                to: user?.userId ?? ""
+            )
+        }
+
+        guard shouldSubscribeToDefaultChannel else { return }
+        guard let language = StorageManager.shared.getLanguage(),
+              language == "en" || language == "ru" else { return }
+
+        let channelId = language == "en"
+            ? "qDWmcGOLPGVAzJth2I8G2cwcp9x1"
+            : "se8Any2drmcQg1sFoLXYXo4ttYt2"
+
+        if !(user?.subscribes?.contains(channelId) ?? true) {
+            try? await UserManager.shared.un_subscribeUser(
+                on: channelId,
+                isNeedToSubscribe: true
+            )
+        }
     }
 
     func handlePendingNotificationArticleIfNeeded() {
@@ -473,7 +440,6 @@ private extension RootView {
                 lastVersionOfAvatar = loadedLastVersionOfAvatar
                 authorId = loadedAuthorId
                 user = loadedUser
-                likedPosts = loadedUser?.likedPosts ?? []
             }
 
             if let loadedUser,

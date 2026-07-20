@@ -56,7 +56,6 @@ struct ArticleView: View {
 
     @State private var images: [MediaKind?] = []
 
-    @EnvironmentObject var sessionManager: SessionManager
     @EnvironmentObject var subscriptionMnaager: SubscriptionManager
     @Environment(\.colorScheme) private var colorScheme
 
@@ -186,15 +185,14 @@ struct ArticleView: View {
                         avatarSlotView
                     }
 
-                    HStack(spacing: authorSectionSpacing) {
-                        VStack(alignment: .leading, spacing: authorTextStackSpacing) {
+                    HStack(spacing: 5) {
+                        VStack(alignment: .leading, spacing: replyTitle == nil ? 1 : 0) {
                             if let replyTitle {
                                 Text(replyTitle)
-                                    .font(.system(size: replyTitleFontSize))
+                                    .font(.system(size: 12))
                                     .foregroundStyle(Color.gray)
                                     .lineLimit(1)
                                     .frame(maxWidth: .infinity, alignment: .leading)
-                                    .padding(.bottom, isReplyArticleCard ? 0 : 1)
                                     .onTapGesture {
                                         onReplyTap?()
                                     }
@@ -202,7 +200,7 @@ struct ArticleView: View {
 
                             HStack(spacing: 0) {
                                 Text(authorName)
-                                    .font(.system(size: authorNameFontSize))
+                                    .font(.system(size: 16))
                                 //                            .font(.custom("Mulish", size: 18))
                                     .lineLimit(1)
 //                                .underline()
@@ -216,26 +214,26 @@ struct ArticleView: View {
                                 if isCheckmark {
                                     Image(systemName: "checkmark.seal.fill")
                                         .foregroundStyle(Color.blue)
-                                        .font(.system(size: authorCheckmarkFontSize))
+                                        .font(.system(size: 14))
                                         .padding(.top, 1)
                                 }
 
-                                if isReplyArticleCard, let articleDateText {
+                                if replyTitle != nil, let articleDateText {
                                     Text(" · ")
-                                        .font(.system(size: authorDateFontSize))
+                                        .font(.system(size: 11))
                                         .foregroundStyle(Color.gray)
 
                                     Text(articleDateText)
-                                        .font(.system(size: authorDateFontSize))
+                                        .font(.system(size: 11))
                                         .foregroundStyle(Color.gray)
                                         .lineLimit(1)
                                 }
                             }
                             .frame(maxWidth: .infinity, alignment: .leading)
 
-                            if !isReplyArticleCard, let articleDateText {
+                            if replyTitle == nil, let articleDateText {
                                 Text("\(articleDateText)")
-                                    .font(.system(size: authorDateFontSize))
+                                    .font(.system(size: 11))
                                     .foregroundStyle(Color.gray)
                                     .lineLimit(1)
                                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -350,7 +348,7 @@ struct ArticleView: View {
                 }
             }
             .frame(width: UIScreen.main.bounds.width - 42, height: 40, alignment: .leading)
-            .padding(.top, authorSectionTopPadding)
+            .padding(.top, mediaCount == 0 && hasTitleText && replyTitle != nil ? 10 : 12)
             .padding(.bottom, 2)
 //            .padding(.vertical, 3)
 
@@ -429,8 +427,11 @@ struct ArticleView: View {
 
                     if hasTitleText && (mediaPosition == 0 || !isShortPost) && !(isShortPost && isAccessToPremiumDenied() && isPremiumPost) {
                         titleSectionView
-                            .padding(.top, titleSectionTopPadding)
-                            .padding(.bottom, titleSectionBottomPadding)
+                            .padding(.top, mediaCount > 0 ? 6 : 0)
+                            .padding(
+                                .bottom,
+                                shouldShowExpandButton ? 0 : (isShortPost ? 10 : 20)
+                            )
                     }
 
                     if isShortPost || isCreatedView {
@@ -594,7 +595,7 @@ struct ArticleView: View {
         .sheet(isPresented: $isSharePopupPresented) {
             SharePublicationView(
                 articleView: shareArticleView,
-                url: shareURL
+                url: URL(string: "https://readbox.online/posts/?index=\(id)")!
             )
             .presentationCornerRadius(30)
             .presentationDragIndicator(.visible)
@@ -604,10 +605,6 @@ struct ArticleView: View {
 }
 
 private extension ArticleView {
-    var shareURL: URL {
-        URL(string: "https://readbox.online/posts/?index=\(id)")!
-    }
-
     var shareArticleView: ArticleView {
         ArticleView(
             id: id,
@@ -629,19 +626,15 @@ private extension ArticleView {
             likesCount: likesCount,
             commentsCount: commentsCount,
             onCommentTap: {},
-            exportMediaImage: shareMediaImage,
+            exportMediaImage: StorageManager.shared.getImage(id: "\(id)_0")
+                ?? StorageManager.shared.getImage(id: "\(id)_0_preview")
+                ?? StorageManager.shared.getImage(id: id),
             user: .constant(user),
             isZoomableViewPresented: .constant(false),
             zoomableImage: .constant(nil),
             selectedAuthorId: .constant(""),
             isChannelViewPresented: .constant(false)
         )
-    }
-
-    var shareMediaImage: UIImage? {
-        StorageManager.shared.getImage(id: "\(id)_0")
-            ?? StorageManager.shared.getImage(id: "\(id)_0_preview")
-            ?? StorageManager.shared.getImage(id: id)
     }
 
     func presentSharePopup() {
@@ -726,7 +719,7 @@ private extension ArticleView {
                     .scaledToFill()
             }
         }
-        .frame(width: authorAvatarSize, height: authorAvatarSize)
+        .frame(width: 40, height: 40)
         .clipShape(Circle())
         .contentShape(Circle())
         .onTapGesture {
@@ -787,54 +780,6 @@ private extension ArticleView {
         !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
-    var hasMediaContent: Bool {
-        return mediaCount > 0
-    }
-
-    var isTextOnlyPost: Bool {
-        !hasMediaContent && hasTitleText
-    }
-
-    var hasReplyTitle: Bool {
-        replyTitle != nil
-    }
-
-    var authorSectionTopPadding: CGFloat {
-        isTextOnlyPost && hasReplyTitle ? 10 : 12
-    }
-
-    var isReplyArticleCard: Bool {
-        hasReplyTitle
-    }
-
-    var authorAvatarSize: CGFloat {
-        40
-    }
-
-    var authorSectionSpacing: CGFloat {
-        5
-    }
-
-    var authorTextStackSpacing: CGFloat {
-        isReplyArticleCard ? 0 : 1
-    }
-
-    var authorNameFontSize: CGFloat {
-        16
-    }
-
-    var authorDateFontSize: CGFloat {
-        11
-    }
-
-    var authorCheckmarkFontSize: CGFloat {
-        14
-    }
-
-    var replyTitleFontSize: CGFloat {
-        12
-    }
-
     var mediaBottomPadding: CGFloat {
         if mediaPosition == 1 && isShortPost && hasTitleText {
             return 10
@@ -842,18 +787,6 @@ private extension ArticleView {
 
         if isShortPost && !hasTitleText {
             return 5
-        }
-
-        return 0
-    }
-
-    var titleSectionBottomPadding: CGFloat {
-        return shouldShowExpandButton ? 0 : (isShortPost ? 10 : 20)
-    }
-
-    var titleSectionTopPadding: CGFloat {
-        if hasMediaContent {
-            return 6
         }
 
         return 0

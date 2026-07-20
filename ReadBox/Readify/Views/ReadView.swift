@@ -10,7 +10,6 @@ import PopupView
 import MarkdownUI
 import SwiftfulLoadingIndicators
 import SDWebImageSwiftUI
-import FirebaseStorage
 import UIKit
 
 struct ReadView: View {
@@ -80,8 +79,6 @@ struct ReadView: View {
     @StateObject var viewModel = ReadViewModel()
 
     @FocusState private var isCommentInputFocused: Bool
-
-    @Namespace var namespace
 
     @EnvironmentObject var sessionManager: SessionManager
     @EnvironmentObject var changedPostsManager: ChangedPostsManager
@@ -1375,7 +1372,7 @@ private extension ReadView {
     }
 
     var shareURL: URL? {
-        return URL(string: "https://readbox.online/posts/?index=\(currentId)")
+        URL(string: "https://readbox.online/posts/?index=\(currentId)")
     }
 
     var shareArticleView: ArticleView {
@@ -1399,19 +1396,15 @@ private extension ReadView {
             likesCount: currentLikesCount,
             commentsCount: currentPrePost?.commentsCount ?? viewModel.commentaries.count,
             onCommentTap: {},
-            exportMediaImage: shareMediaImage,
+            exportMediaImage: StorageManager.shared.getImage(id: "\(currentId)_0")
+                ?? StorageManager.shared.getImage(id: "\(currentId)_0_preview")
+                ?? StorageManager.shared.getImage(id: currentId),
             user: .constant(user),
             isZoomableViewPresented: .constant(false),
             zoomableImage: .constant(nil),
             selectedAuthorId: .constant(""),
             isChannelViewPresented: .constant(false)
         )
-    }
-
-    var shareMediaImage: UIImage? {
-        StorageManager.shared.getImage(id: "\(currentId)_0")
-            ?? StorageManager.shared.getImage(id: "\(currentId)_0_preview")
-            ?? StorageManager.shared.getImage(id: currentId)
     }
 
     func formattedReadDate(_ date: Date) -> String {
@@ -1496,24 +1489,6 @@ private extension ReadView {
 
     var shouldShowToolbarMenu: Bool {
         !currentText.isEmpty || canSwitchArticleLanguage
-    }
-
-    @ViewBuilder
-    var originalArticleButton: some View {
-        if viewModel.isOriginalArticleLoading {
-            LoadingIndicator(
-                animation: .circleRunner,
-                color: Color(uiColor: .label),
-                size: .small,
-                speed: .fast
-            )
-        } else {
-            Button {
-                toggleArticleLanguage()
-            } label: {
-                Image("switchLanguageIcon")
-            }
-        }
     }
 
     @ViewBuilder

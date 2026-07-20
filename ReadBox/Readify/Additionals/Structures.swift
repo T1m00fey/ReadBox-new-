@@ -454,35 +454,35 @@ struct CommentsCount: Codable {
     }
 }
 
-struct WorldNewsItem: Identifiable, Codable {
-    let id: String
-    let provider: String?
-    let language: String?
-    let title: String?
-    let descriptionText: String?
-    let content: String?
-    let url: String?
-    let imageURL: String?
-    let sourceName: String?
-    let domainURL: String?
-    let publishedAt: Date?
-    let sortIndex: Int?
-
-    enum CodingKeys: String, CodingKey {
-        case id = "id"
-        case provider = "provider"
-        case language = "language"
-        case title = "title"
-        case descriptionText = "description"
-        case content = "content"
-        case url = "url"
-        case imageURL = "image_url"
-        case sourceName = "source_name"
-        case domainURL = "domain_url"
-        case publishedAt = "published_at"
-        case sortIndex = "sort_index"
-    }
-}
+//struct WorldNewsItem: Identifiable, Codable {
+//    let id: String
+//    let provider: String?
+//    let language: String?
+//    let title: String?
+//    let descriptionText: String?
+//    let content: String?
+//    let url: String?
+//    let imageURL: String?
+//    let sourceName: String?
+//    let domainURL: String?
+//    let publishedAt: Date?
+//    let sortIndex: Int?
+//
+//    enum CodingKeys: String, CodingKey {
+//        case id = "id"
+//        case provider = "provider"
+//        case language = "language"
+//        case title = "title"
+//        case descriptionText = "description"
+//        case content = "content"
+//        case url = "url"
+//        case imageURL = "image_url"
+//        case sourceName = "source_name"
+//        case domainURL = "domain_url"
+//        case publishedAt = "published_at"
+//        case sortIndex = "sort_index"
+//    }
+//}
 
 enum NotificationPushRoute: Codable {
     case requestSystemPrompt
@@ -497,7 +497,7 @@ enum InAppNotificationType: String, Codable {
     case commentReply = "comment_reply"
 }
 
-struct InAppNotificationItem: Identifiable, Codable {
+struct PersonalNotificationItem: Identifiable, Codable {
     let id: String
     let userId: String?
     let typeRawValue: String?

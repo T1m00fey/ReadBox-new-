@@ -7,8 +7,6 @@
 
 import SwiftUI
 import Firebase
-import FirebaseStorage
-import SwiftfulLoadingIndicators
 
 enum ChannelPostsSection: Int, CaseIterable {
     case all
@@ -81,37 +79,6 @@ final class ChannelViewModel: ObservableObject {
     @Published var currentSection: ChannelPostsSection = .all
     @Published var isRepliesLoading = false
 
-    @ViewBuilder
-    func buildSubscribeButtonView(_ isSubscribed: Bool) -> some View {
-        if isSubscribeLoading {
-            LoadingIndicator(
-                animation: .circleRunner,
-                color: isSubscribed
-                ? Color(.label)
-                : Color(.systemBackground),
-                size: .small,
-                speed: .fast
-            )
-            .padding(.vertical, 2)
-            .frame(maxWidth: .infinity)
-        } else {
-            Text(
-                isSubscribed
-                ? NSLocalizedString("youSubscribedLabel", comment: "")
-                : NSLocalizedString("subscribeLabel", comment: "")
-            )
-            .foregroundStyle(
-                isSubscribed
-                ? Color(.label)
-                : Color(.systemBackground)
-            )
-            .font(.system(size: 18))
-            .fontDesign(.rounded)
-            .padding(.vertical, 2)
-            .frame(maxWidth: .infinity)
-        }
-    }
-
     func getViews() {
         views = StorageManager.shared.getViews()
     }
@@ -148,10 +115,6 @@ final class ChannelViewModel: ObservableObject {
 
     func getPostsCount(authorId: String) async throws {
         postsCount = try await UserManager.shared.getPostsCount(authorId: authorId)
-    }
-
-    func getAuthorDateCreated(authorId: String) async throws {
-        authorDateCreated = try await UserManager.shared.getUser(userId: authorId)?.dateCreated
     }
 
     func loadAuthorInfo(authorId: String) async throws {

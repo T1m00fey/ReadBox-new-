@@ -6,8 +6,6 @@
 //
 
 import SwiftUI
-import PopupView
-import FirebaseStorage
 import SwiftfulLoadingIndicators
 import Shimmer
 import TipKit
@@ -263,38 +261,6 @@ struct CreatedPostsView: View {
                         VStack {
                             Spacer()
 
-//                            if #available(iOS 26.0, *) {
-//                                Button {
-//                                    isConfirmationPopupPresented = true
-//                                } label: {
-//                                    Text(NSLocalizedString("newPublicationLabel", comment: ""))
-//                                        .font(.system(size: 19))
-//                                        .fontDesign(.rounded)
-//                                        .foregroundStyle(Color(.systemBackground))
-//                                        .popoverTip(AuthorMultiLanguageTip())
-//                                        .frame(maxWidth: .infinity, alignment: .center)
-//                                        .frame(height: 35)
-//                                }
-//                                .tint(Color(.label))
-//                                .buttonStyle(.glassProminent)
-//                                .padding(.bottom, 10)
-//                                .padding(.horizontal, 22.5)
-//                            } else {
-//                                Text(NSLocalizedString("newPublicationLabel", comment: ""))
-//                                    .frame(width: UIScreen.main.bounds.width - 10, height: 50, alignment: .center)
-//                                    .font(.system(size: 19))
-//                                    .fontDesign(.rounded)
-//                                    .background(Color(uiColor: .label))
-//                                    .foregroundStyle(Color(uiColor: .systemBackground))
-//                                    .clipShape(RoundedRectangle(cornerRadius: 15))
-//                                    .shadow(radius: 3)
-//                                    .padding(.bottom, 10)
-//                                    .popoverTip(AuthorMultiLanguageTip())
-//                                    .onTapGesture {
-//                                        isConfirmationPopupPresented = true
-//                                    }
-//                            }
-
                             Text(NSLocalizedString("newPublicationLabel", comment: ""))
                                 .frame(
                                     width: UIScreen.main.bounds.width - 45,
@@ -383,18 +349,6 @@ private extension CreatedPostsView {
                 .glassEffect(.regular)
             } else {
                 Text(viewModel.currentSectionTitle)
-            }
-        }
-    }
-
-    @ViewBuilder
-    func toolbarMenuLabel(title: String, systemImage: String, isSelected: Bool) -> some View {
-        HStack {
-            Image(systemName: systemImage)
-            Text(title)
-
-            if isSelected {
-                Image(systemName: "checkmark")
             }
         }
     }
@@ -511,10 +465,10 @@ private extension CreatedPostsView {
                         postRow(post, section: section, sectionPosts: posts)
                     }
                 } else {
-                    noPostsView(for: section)
+                    noPostsView
                 }
             } else {
-                noPostsView(for: section)
+                noPostsView
             }
         }
     }
@@ -603,7 +557,7 @@ private extension CreatedPostsView {
                 .padding(.bottom, reply.id == viewModel.replies.last?.id ? 70 : feedSectionSpacing)
             }
         } else {
-            noPostsView(for: .replies)
+            noPostsView
         }
     }
 
@@ -675,8 +629,7 @@ private extension CreatedPostsView {
         }
     }
 
-    @ViewBuilder
-    func noPostsView(for _: CreatedPostsSection) -> some View {
+    var noPostsView: some View {
         VStack(spacing: 20) {
             Text(LocalizedStringKey("noArticlesAddedLabel"))
                 .font(.system(size: 25))
