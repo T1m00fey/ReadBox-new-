@@ -22,7 +22,7 @@ final class NotificationsViewModel: ObservableObject {
     @Published var isReadViewPresented = false
     @Published var isChannelViewPresented = false
 
-    private var hasLoadedOnce = false
+    private var loadedUserId = ""
 
     var title = ""
     var text = ""
@@ -45,13 +45,17 @@ final class NotificationsViewModel: ObservableObject {
     private let postKindsCacheKeyPrefix = "notifications.cache.postKinds."
 
     func loadIfNeeded() async {
-        guard !hasLoadedOnce else { return }
+        guard let userId = try? AuthenticationManager.shared.getAuthenticatedUser().uid else { return }
+        guard loadedUserId != userId else { return }
 
-        hasLoadedOnce = true
+        loadedUserId = userId
+        notifications = []
+        actorInfo = [:]
+        articleTitles = [:]
+        postKinds = [:]
+        isLoading = true
 
-        if let userId = try? AuthenticationManager.shared.getAuthenticatedUser().uid {
-            loadCachedContent(for: userId)
-        }
+        loadCachedContent(for: userId)
 
         await refresh()
     }

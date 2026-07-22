@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex, nofollow">
+    <title>Laynor — App Store Screenshots</title>
+    <link rel="icon" href="../images/laynor-logo.png">
+    <link rel="stylesheet" href="./styles.css?v=3">
+</head>
+<body>
+    <header class="editor-header">
+        <a class="editor-brand" href="../">
+            <span class="brand-mark"><img src="../images/laynor-logo.png" alt=""></span>
+            <span><b>Laynor</b><small>App Store Studio</small></span>
+        </a>
+
+        <div class="editor-actions">
+            <label class="language-control">
+                <span>Язык</span>
+                <select id="languageSelect">
+                    <option value="ru">Русский</option>
+                    <option value="en">English</option>
+                </select>
+            </label>
+            <button id="clearButton" class="secondary-control" type="button">Очистить скрины</button>
+        </div>
+    </header>
+
+    <main class="studio">
+        <section class="intro">
+            <p class="eyebrow">APP STORE PREVIEW</p>
+            <h1>Скриншоты Laynor</h1>
+            <p>Загрузите готовый PNG-макет телефона вместе со скриншотом приложения. Первая карточка уже содержит макет клавиатуры. Все карточки экспортируются в размере App Store для iPhone 6,9″ — 1320 × 2868.</p>
+        </section>
+
+        <section class="shot-grid" id="shotGrid">
+            <article class="shot-wrapper">
+                <div class="store-shot theme-blue" data-shot="1">
+                    <div class="ambient ambient-one"></div>
+                    <header class="shot-heading">
+                        <img src="../images/laynor-logo.png" alt="" class="shot-logo">
+                        <p class="shot-kicker" data-copy="kicker">Laynor</p>
+                        <h2 data-copy="shot1Title">Пишите проще.<br>В любом приложении.</h2>
+                        <p data-copy="shot1Text">AI-помощник прямо в вашей клавиатуре.</p>
+                    </header>
+                    <div class="keyboard-showcase">
+                        <div class="keyboard-toolbar">
+                            <span class="mini-brand"><img src="../images/laynor-logo.png" alt=""></span>
+                            <span class="toolbar-pill muted-pill">↶&nbsp;&nbsp;↷</span>
+                            <span class="toolbar-pill">✦ <b data-copy="rewrite">Переписать</b></span>
+                            <span class="toolbar-pill">✓ <b data-copy="correct">Исправить</b></span>
+                        </div>
+                        <div class="key-row row-one" data-key-row="0"><span>Й</span><span>Ц</span><span>У</span><span>К</span><span>Е</span><span>Н</span><span>Г</span><span>Ш</span><span>Щ</span><span>З</span><span>Х</span></div>
+                        <div class="key-row row-two" data-key-row="1"><span>Ф</span><span>Ы</span><span>В</span><span>А</span><span>П</span><span>Р</span><span>О</span><span>Л</span><span>Д</span><span>Ж</span><span>Э</span></div>
+                        <div class="key-row row-three" data-key-row="2"><span>⇧</span><span>Я</span><span>Ч</span><span>С</span><span>М</span><span>И</span><span>Т</span><span>Ь</span><span>Б</span><span>Ю</span><span>⌫</span></div>
+                        <div class="key-row bottom-row"><span>123</span><span class="space-key" data-copy="space">пробел</span><span>↵</span></div>
+                    </div>
+                </div>
+                <div class="shot-tools"><span>01</span><button type="button" class="export-button">Экспорт PNG</button></div>
+                <input class="file-input" type="file" accept="image/png,image/jpeg,image/webp" hidden>
+            </article>
+
+            <article class="shot-wrapper">
+                <div class="store-shot theme-violet" data-shot="2">
+                    <div class="ambient ambient-two"></div>
+                    <header class="shot-heading">
+                        <h2 data-copy="shot2Title">Из наброска —<br>в готовый текст.</h2>
+                        <p data-copy="shot2Text">Laynor перепишет мысль естественно и по-человечески.</p>
+                    </header>
+                    <div class="feature-chip"><span>✦</span><b data-copy="rewrite">Переписать</b></div>
+                    <button class="artwork-frame" type="button" aria-label="Добавить макет телефона">
+                        <span class="screen-placeholder"><span class="plus">＋</span><b data-copy="addMockup">Добавить макет телефона</b><small data-copy="tapHint">PNG с телефоном и скриншотом</small></span>
+                        <img class="uploaded-screen" alt="Макет телефона">
+                    </button>
+                </div>
+                <div class="shot-tools"><span>02</span><button type="button" class="upload-button">Добавить макет</button><button type="button" class="export-button">Экспорт PNG</button></div>
+                <input class="file-input" type="file" accept="image/png,image/jpeg,image/webp" hidden>
+            </article>
+
+            <article class="shot-wrapper">
+                <div class="store-shot theme-clean" data-shot="3">
+                    <div class="ambient ambient-three"></div>
+                    <header class="shot-heading">
+                        <h2 data-copy="shot3Title">Без ошибок.<br>Без переписывания.</h2>
+                        <p data-copy="shot3Text">Исправляет орфографию и пунктуацию, сохраняя ваши слова.</p>
+                    </header>
+                    <div class="feature-chip check-chip"><span>✓</span><b data-copy="correct">Исправить</b></div>
+                    <button class="artwork-frame" type="button" aria-label="Добавить макет телефона">
+                        <span class="screen-placeholder"><span class="plus">＋</span><b data-copy="addMockup">Добавить макет телефона</b><small data-copy="tapHint">PNG с телефоном и скриншотом</small></span>
+                        <img class="uploaded-screen" alt="Макет телефона">
+                    </button>
+                </div>
+                <div class="shot-tools"><span>03</span><button type="button" class="upload-button">Добавить макет</button><button type="button" class="export-button">Экспорт PNG</button></div>
+                <input class="file-input" type="file" accept="image/png,image/jpeg,image/webp" hidden>
+            </article>
+
+            <article class="shot-wrapper">
+                <div class="store-shot theme-command" data-shot="4">
+                    <div class="ambient ambient-four"></div>
+                    <header class="shot-heading">
+                        <h2 data-copy="shot4Title">Любая задача.<br>Одной командой.</h2>
+                        <p data-copy="shot4Text">Сократите, переведите или подготовьте ответ своими словами.</p>
+                    </header>
+                    <div class="feature-chip command-chip"><span>AI</span><b data-copy="customCommand">Своя команда</b></div>
+                    <button class="artwork-frame" type="button" aria-label="Добавить макет телефона">
+                        <span class="screen-placeholder"><span class="plus">＋</span><b data-copy="addMockup">Добавить макет телефона</b><small data-copy="tapHint">PNG с телефоном и скриншотом</small></span>
+                        <img class="uploaded-screen" alt="Макет телефона">
+                    </button>
+                </div>
+                <div class="shot-tools"><span>04</span><button type="button" class="upload-button">Добавить макет</button><button type="button" class="export-button">Экспорт PNG</button></div>
+                <input class="file-input" type="file" accept="image/png,image/jpeg,image/webp" hidden>
+            </article>
+
+            <article class="shot-wrapper">
+                <div class="store-shot theme-final" data-shot="5">
+                    <div class="ambient ambient-five"></div>
+                    <header class="shot-heading">
+                        <img src="../images/laynor-logo.png" alt="" class="shot-logo final-logo">
+                        <h2 data-copy="shot5Title">Всегда там,<br>где вы пишете.</h2>
+                        <p data-copy="shot5Text">Сообщения, почта, заметки и другие приложения.</p>
+                    </header>
+                    <button class="artwork-frame" type="button" aria-label="Добавить макет телефона">
+                        <span class="screen-placeholder"><span class="plus">＋</span><b data-copy="addMockup">Добавить макет телефона</b><small data-copy="tapHint">PNG с телефоном и скриншотом</small></span>
+                        <img class="uploaded-screen" alt="Макет телефона">
+                    </button>
+                </div>
+                <div class="shot-tools"><span>05</span><button type="button" class="upload-button">Добавить макет</button><button type="button" class="export-button">Экспорт PNG</button></div>
+                <input class="file-input" type="file" accept="image/png,image/jpeg,image/webp" hidden>
+            </article>
+        </section>
+    </main>
+
+    <script src="./app.js?v=3"></script>
+</body>
+</html>

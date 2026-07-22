@@ -15,6 +15,7 @@ struct FeedView: View {
     @Binding var selectedTab: TabType
     @Binding var isConfirmationViewPresented: Bool
     @Binding var isPremiumViewPresented: Bool
+    @ObservedObject var notificationsViewModel: NotificationsViewModel
     @State private var isNotificationsViewPresented = false
 
     @StateObject var viewModel = FeedViewModel()
@@ -272,7 +273,7 @@ struct FeedView: View {
                 }
             })
             .navigationDestination(isPresented: $isNotificationsViewPresented) {
-                NotificationsView()
+                NotificationsView(viewModel: notificationsViewModel)
                     .environmentObject(sessionManager)
                     .environmentObject(changedPostsManager)
                     .environmentObject(subManager)
@@ -363,6 +364,14 @@ private extension FeedView {
                 .resizable()
                 .scaledToFit()
                 .frame(width: 19)
+                .overlay(alignment: .topTrailing) {
+                    if !notificationsViewModel.notifications.isEmpty {
+                        Circle()
+                            .fill(Color.red)
+                            .frame(width: 7, height: 7)
+                            .offset(x: 2, y: -1)
+                    }
+                }
         }
         .buttonStyle(.plain)
         .padding(.trailing, 14)

@@ -11,7 +11,7 @@ import Shimmer
 import SwiftfulLoadingIndicators
 
 struct NotificationsView: View {
-    @StateObject private var viewModel = NotificationsViewModel()
+    @ObservedObject var viewModel: NotificationsViewModel
 
     @EnvironmentObject var sessionManager: SessionManager
     @EnvironmentObject var changedPostsManager: ChangedPostsManager

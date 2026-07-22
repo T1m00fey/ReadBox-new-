@@ -50,6 +50,7 @@ struct RootView: View {
     @StateObject var sessionManager = SessionManager()
     @StateObject var changedPostsManager = ChangedPostsManager()
     @StateObject var sub = SubscriptionManager()
+    @StateObject var notificationsViewModel = NotificationsViewModel()
 
     private var screenWidth = UIScreen.main.bounds.width
 
@@ -61,7 +62,8 @@ struct RootView: View {
                             isWelcomeViewPresented: $isWelcomeViewPresented,
                             selectedTab: $selectedTab,
                             isConfirmationViewPresented: $isConfirmationPopupPresented,
-                            isPremiumViewPresented: $isPremiumViewPresented
+                            isPremiumViewPresented: $isPremiumViewPresented,
+                            notificationsViewModel: notificationsViewModel
                         )
                         .tag(TabType.feed)
                         .tabItem {
@@ -139,6 +141,7 @@ struct RootView: View {
                 if !isWelcomeViewPresented {
                     Task {
                         await loadAuthenticatedUser(shouldSubscribeToDefaultChannel: true)
+                        await notificationsViewModel.loadIfNeeded()
                     }
                 }
             }
@@ -146,6 +149,10 @@ struct RootView: View {
             .onAppear {
                 Task {
                     await loadAuthenticatedUser(shouldSubscribeToDefaultChannel: false)
+                }
+
+                Task {
+                    await notificationsViewModel.loadIfNeeded()
                 }
 
                 checkAppVersion()
