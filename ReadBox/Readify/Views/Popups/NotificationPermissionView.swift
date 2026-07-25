@@ -37,30 +37,29 @@ struct NotificationPermissionView: View {
 
             VStack(spacing: 10) {
                 Button {
-                    if route == .requestSystemPrompt {
-                        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
-                            Task {
-                                await AnalyticsManager.shared.refreshNotificationPermissionStatus(source: "system_prompt")
+                    Task {
+                        switch route {
+                        case .requestSystemPrompt:
+                            let isAllowed = (try? await UNUserNotificationCenter.current().requestAuthorization(
+                                options: [.alert, .sound, .badge]
+                            )) ?? false
+
+                            if isAllowed {
+                                isPopupPresented = false
                             }
 
-                            if granted {
-                                DispatchQueue.main.async {
-                                    isPopupPresented = false
-                                }
+                            await AnalyticsManager.shared.refreshNotificationPermissionStatus(
+                                source: "system_prompt"
+                            )
+                        case .goToSettings:
+                            if let url = URL(string: UIApplication.openNotificationSettingsURLString) {
+                                await UIApplication.shared.open(url)
+                            } else if let url = URL(string: UIApplication.openSettingsURLString) {
+                                await UIApplication.shared.open(url)
                             }
+                        case .ok:
+                            isPopupPresented = false
                         }
-                    } else if route == .goToSettings {
-                        print("DECIDEEE: go settings")
-                        if let url = URL(string: UIApplication.openNotificationSettingsURLString),
-                           UIApplication.shared.canOpenURL(url) {
-                            print("DECIDEEE: go settings 1")
-                            UIApplication.shared.open(url)
-                        } else if let url = URL(string: UIApplication.openSettingsURLString) {
-                            UIApplication.shared.open(url)
-                            print("DECIDEEE: go settings 2")
-                        }
-
-                        print("DECIDEEE: go settings 3")
                     }
                 } label: {
                     Text(NSLocalizedString("turnOnLabel", comment: ""))
@@ -86,7 +85,3 @@ struct NotificationPermissionView: View {
         }
     }
 }
-
-//#Preview {
-//    NotificationPermissionView()
-//}

@@ -27,7 +27,6 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
     }
 
     func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
-        print("Device Token: \(deviceToken.map { String(format: "%02.2hhx", $0) }.joined())")
         Messaging.messaging().apnsToken = deviceToken
     }
 
@@ -36,7 +35,6 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         didReceiveRemoteNotification userInfo: [AnyHashable : Any],
         fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void
     ) {
-        print("📨 didReceiveRemoteNotification userInfo = \(userInfo)")
         completionHandler(.noData)
     }
 
@@ -48,37 +46,28 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
                                 didReceive response: UNNotificationResponse,
                                 withCompletionHandler completionHandler: @escaping () -> Void) {
         let userInfo = response.notification.request.content.userInfo
-        print("📨 [UNUserNotificationCenter] didReceive, userInfo = \(userInfo)")
-
-        if let route = userInfo["route"] as? String,
-           route == "channel",
-           let channelId = userInfo["channelId"] as? String,
-           !channelId.isEmpty {
-            AnalyticsManager.shared.logPushOpen(
-                destination: "channel",
-                authorId: channelId,
-                pushStyle: userInfo["push_style"] as? String
-            )
-        } else if let type = userInfo["type"] as? String,
-                  type == "new_post",
-                  let articleId = userInfo["articleId"] as? String,
-                  !articleId.isEmpty {
-            AnalyticsManager.shared.logPushOpen(
-                destination: "article",
-                articleId: articleId,
-                pushStyle: userInfo["push_style"] as? String
-            )
-        }
 
         if let type = userInfo["type"] as? String,
            type == "new_post",
            let articleId = userInfo["articleId"] as? String,
            !articleId.isEmpty {
+            AnalyticsManager.shared.logPushOpen(
+                destination: "article",
+                articleId: articleId,
+                pushStyle: userInfo["push_style"] as? String
+            )
+
             StorageManager.shared.setPendingNotificationArticleId(articleId)
         } else if let route = userInfo["route"] as? String,
                   route == "channel",
                   let channelId = userInfo["channelId"] as? String,
                   !channelId.isEmpty {
+            AnalyticsManager.shared.logPushOpen(
+                destination: "channel",
+                authorId: channelId,
+                pushStyle: userInfo["push_style"] as? String
+            )
+
             StorageManager.shared.setPendingNotificationChannelId(channelId)
         }
 
@@ -89,13 +78,9 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
     }
 
     @objc func messaging(_ messaging: Messaging, didReceiveRegistrationToken fcmToken: String?) {
-        print("Firebase token: \(String(describing: fcmToken))")
-
         let originalLanguage = Locale.preferredLanguages.first?.components(separatedBy: "-").first == "ru"
             ? "ru"
             : "en"
-
-        print("Original language: \(originalLanguage)")
 
         StorageManager.shared.set(fcmToken: fcmToken ?? "")
 

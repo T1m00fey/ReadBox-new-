@@ -36,6 +36,14 @@ $body = preg_replace(
     $body
 );
 
+if (strpos($body, '/analytics.js') === false) {
+    $body = str_replace(
+        '</head>',
+        '<script src="/analytics.js?v=1"></script></head>',
+        $body
+    );
+}
+
 http_response_code($status);
 header('Content-Type: ' . $contentType);
 echo $body;

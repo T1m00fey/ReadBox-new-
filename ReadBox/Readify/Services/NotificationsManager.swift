@@ -20,15 +20,12 @@ final class NotificationsManager {
             .getDocuments()
 
         return snapshot.documents
-            .compactMap(makeNotificationItem)
+            .map(makeNotificationItem)
             .sorted { ($0.dateCreated ?? .distantPast) > ($1.dateCreated ?? .distantPast) }
     }
 
-    private func makeNotificationItem(from document: QueryDocumentSnapshot) -> PersonalNotificationItem? {
+    private func makeNotificationItem(from document: QueryDocumentSnapshot) -> PersonalNotificationItem {
         let data = document.data()
-
-        let dateCreated = (data["date_created"] as? Timestamp)?.dateValue()
-        let expiresAt = (data["expires_at"] as? Timestamp)?.dateValue()
 
         return PersonalNotificationItem(
             id: document.documentID,
@@ -36,8 +33,24 @@ final class NotificationsManager {
             typeRawValue: data["type"] as? String,
             actorId: data["actor_id"] as? String,
             postId: data["post_id"] as? String,
-            dateCreated: dateCreated,
-            expiresAt: expiresAt
+            dateCreated: (data["date_created"] as? Timestamp)?.dateValue(),
+            expiresAt: (data["expires_at"] as? Timestamp)?.dateValue(),
+            isRead: data["is_read"] as? Bool ?? false
         )
+    }
+
+    func markAsRead(ids: [String]) async throws {
+        guard !ids.isEmpty else { return }
+
+        let batch = Firestore.firestore().batch()
+
+        for id in ids {
+            batch.updateData(
+                ["is_read": true],
+                forDocument: notificationsCollection.document(id)
+            )
+        }
+
+        try await batch.commit()
     }
 }

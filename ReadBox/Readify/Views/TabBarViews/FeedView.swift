@@ -365,11 +365,20 @@ private extension FeedView {
                 .scaledToFit()
                 .frame(width: 19)
                 .overlay(alignment: .topTrailing) {
-                    if !notificationsViewModel.notifications.isEmpty {
-                        Circle()
-                            .fill(Color.red)
-                            .frame(width: 7, height: 7)
-                            .offset(x: 2, y: -1)
+                    if notificationsViewModel.unreadCount > 0 {
+                        Text(
+                            notificationsViewModel.unreadCount > 99
+                            ? "99+"
+                            : "\(notificationsViewModel.unreadCount)"
+                        )
+                        .font(.system(size: 8))
+                        .fontWeight(.semibold)
+                        .foregroundStyle(Color.white)
+                        .padding(.horizontal, 3)
+                        .frame(minWidth: 13, minHeight: 13)
+                        .background(Color.red)
+                        .clipShape(Capsule())
+                        .offset(x: 7, y: -6)
                     }
                 }
         }

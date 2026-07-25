@@ -23,6 +23,8 @@ enum TabType {
 }
 
 struct RootView: View {
+    @Environment(\.scenePhase) private var scenePhase
+
     @State private var isReadViewPresented = false
     @State private var user: DBUser? = nil
     @State private var prePost: PrePost? = nil
@@ -141,7 +143,7 @@ struct RootView: View {
                 if !isWelcomeViewPresented {
                     Task {
                         await loadAuthenticatedUser(shouldSubscribeToDefaultChannel: true)
-                        await notificationsViewModel.loadIfNeeded()
+                        await notificationsViewModel.loadNotifications()
                     }
                 }
             }
@@ -151,13 +153,16 @@ struct RootView: View {
                     await loadAuthenticatedUser(shouldSubscribeToDefaultChannel: false)
                 }
 
-                Task {
-                    await notificationsViewModel.loadIfNeeded()
-                }
-
                 checkAppVersion()
                 handlePendingNotificationArticleIfNeeded()
                 handlePendingNotificationChannelIfNeeded()
+            }
+            .onChange(of: scenePhase, initial: true) {
+                guard scenePhase == .active else { return }
+
+                Task {
+                    await notificationsViewModel.loadNotifications()
+                }
             }
             .onOpenURL { url in
                 handleOpenURL(url)

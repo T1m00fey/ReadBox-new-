@@ -271,8 +271,11 @@ h2 { margin: 0; font-size: clamp(38px, 5vw, 64px); line-height: 1; letter-spacin
     overflow: hidden;
 }
 .privacy-card .eyebrow, .privacy-card p { color: #aaaab4; }
-.privacy-card > div:last-child > p:last-child { max-width: 650px; margin: 24px 0 0; font-size: 18px; line-height: 1.55; }
+.privacy-card > div:last-child > p:not(.eyebrow) { max-width: 650px; margin: 24px 0 0; font-size: 18px; line-height: 1.55; }
 .privacy-mark { align-self: start; color: var(--accent); font-size: clamp(100px, 17vw, 220px); line-height: .5; transform: rotate(-16deg); }
+.privacy-links { margin-top: 30px; display: flex; gap: 10px; flex-wrap: wrap; }
+.privacy-links a { min-height: 44px; padding: 0 18px; border: 1px solid rgba(255, 255, 255, 0.13); border-radius: 999px; background: rgba(255, 255, 255, 0.07); color: #f6f6f8; display: inline-flex; align-items: center; text-decoration: none; font-size: 14px; transition: background-color 180ms ease, transform 180ms ease; }
+.privacy-links a:hover { background: rgba(255, 255, 255, 0.12); transform: translateY(-1px); }
 
 .final-cta { padding: clamp(110px, 17vw, 210px) 20px; text-align: center; }
 .cta-logo { width: 108px; height: 108px; margin-bottom: 25px; object-fit: contain; }

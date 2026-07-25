@@ -34,7 +34,9 @@ struct NotificationsView: View {
                             articleTitle: viewModel.articleTitles[notification.postId ?? ""],
                             isShortPost: viewModel.postKinds[notification.postId ?? ""],
                             onAuthorTap: {
-                                viewModel.openAuthorChannel(for: notification)
+                                Task {
+                                    await viewModel.openAuthorChannel(for: notification)
+                                }
                             }
                         )
                         .padding(.horizontal, 16)
@@ -72,7 +74,14 @@ struct NotificationsView: View {
             }
         }
         .task {
-            await viewModel.loadIfNeeded()
+            await viewModel.markNotificationsAsRead()
+        }
+        .onChange(of: viewModel.unreadCount) {
+            guard viewModel.unreadCount > 0 else { return }
+
+            Task {
+                await viewModel.markNotificationsAsRead()
+            }
         }
         .refreshable {
             await viewModel.refresh()
@@ -97,26 +106,26 @@ struct NotificationsView: View {
         }
         .navigationDestination(isPresented: $viewModel.isReadViewPresented) {
             ReadView(
-                id: viewModel.id,
-                title: viewModel.title,
-                text: viewModel.text,
-                dateCreated: viewModel.dateCreated,
-                likesCount: viewModel.likesCount,
+                id: viewModel.prePost?.id ?? "",
+                title: viewModel.prePost?.title ?? NSLocalizedString("notFoundLabel", comment: ""),
+                text: viewModel.postToRead?.text ?? NSLocalizedString("notFoundLabel", comment: ""),
+                dateCreated: viewModel.postToRead?.dateCreated ?? Date(),
+                likesCount: viewModel.prePost?.likesCount ?? 0,
                 authorId: viewModel.authorId,
                 authorName: viewModel.actorInfo[viewModel.authorId]?.name ?? "",
                 isCheckmark: viewModel.actorInfo[viewModel.authorId]?.isCheckmark ?? false,
-                isArchive: viewModel.isArchive,
-                mediaCount: viewModel.mediaCount,
-                mediaVersion: viewModel.mediaVersion,
-                mediaPosition: viewModel.mediaPosition,
+                isArchive: viewModel.prePost?.isArchive ?? false,
+                mediaCount: viewModel.prePost?.mediaCount ?? 0,
+                mediaVersion: viewModel.prePost?.mediaVersion ?? 0,
+                mediaPosition: viewModel.prePost?.mediaPosition ?? 0,
                 lastVersionOfAvatar: viewModel.actorInfo[viewModel.authorId]?.avatarVersion ?? 0,
-                articleLanguage: viewModel.articleLanguage,
-                isPremiumPost: viewModel.isPremiumPost,
+                articleLanguage: viewModel.prePost?.originalLanguage ?? "",
+                isPremiumPost: viewModel.prePost?.isPremiumPost ?? false,
                 user: $viewModel.user,
                 isChannelViewPresented: $viewModel.isChannelViewPresented,
                 isPresented: $viewModel.isReadViewPresented,
-                isLocalizedVersion: viewModel.isLocalizedVersion,
-                rootId: viewModel.rootId
+                isLocalizedVersion: viewModel.prePost?.isLocalizedVersion ?? false,
+                rootId: viewModel.prePost?.rootId ?? ""
             )
             .environmentObject(sessionManager)
             .environmentObject(changedPostsManager)

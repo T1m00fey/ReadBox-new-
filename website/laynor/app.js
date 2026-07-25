@@ -39,7 +39,8 @@ const translations = {
         ctaText: "Скоро в App Store.",
         contact: "Связаться с нами",
         madeBy: "Продукт",
-        privacyLink: "Конфиденциальность"
+        privacyLink: "Конфиденциальность",
+        termsLink: "Условия использования"
     },
     en: {
         pageTitle: "Laynor — AI inside your keyboard",
@@ -81,7 +82,8 @@ const translations = {
         ctaText: "Coming soon to the App Store.",
         contact: "Contact us",
         madeBy: "A product by",
-        privacyLink: "Privacy"
+        privacyLink: "Privacy",
+        termsLink: "Terms of Use"
     }
 };
 

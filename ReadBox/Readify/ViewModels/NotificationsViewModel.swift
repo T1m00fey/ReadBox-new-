@@ -7,6 +7,13 @@
 
 import SwiftUI
 
+private struct NotificationsCache: Codable {
+    let notifications: [PersonalNotificationItem]
+    let actorInfo: [String: PostAuthorInfo]
+    let articleTitles: [String: String]
+    let postKinds: [String: Bool]
+}
+
 @MainActor
 final class NotificationsViewModel: ObservableObject {
     @Published var notifications: [PersonalNotificationItem] = []
@@ -24,38 +31,27 @@ final class NotificationsViewModel: ObservableObject {
 
     private var loadedUserId = ""
 
-    var title = ""
-    var text = ""
-    var dateCreated = Date()
-    var likesCount = 0
-    var id = ""
     var authorId = ""
-    var isArchive = false
-    var mediaCount = 0
-    var mediaVersion = 0
-    var mediaPosition = 0
-    var articleLanguage = ""
-    var isPremiumPost = false
-    var isLocalizedVersion = false
-    var rootId = ""
+    var prePost: PrePost?
+    var postToRead: PostToRead?
 
-    private let notificationsCacheKeyPrefix = "notifications.cache.items."
-    private let actorInfoCacheKeyPrefix = "notifications.cache.actorInfo."
-    private let articleTitlesCacheKeyPrefix = "notifications.cache.articleTitles."
-    private let postKindsCacheKeyPrefix = "notifications.cache.postKinds."
+    var unreadCount: Int {
+        notifications.filter { !$0.isRead }.count
+    }
 
-    func loadIfNeeded() async {
+    func loadNotifications() async {
         guard let userId = try? AuthenticationManager.shared.getAuthenticatedUser().uid else { return }
-        guard loadedUserId != userId else { return }
 
-        loadedUserId = userId
-        notifications = []
-        actorInfo = [:]
-        articleTitles = [:]
-        postKinds = [:]
-        isLoading = true
+        if loadedUserId != userId {
+            loadedUserId = userId
+            notifications = []
+            actorInfo = [:]
+            articleTitles = [:]
+            postKinds = [:]
+            isLoading = true
 
-        loadCachedContent(for: userId)
+            loadCache()
+        }
 
         await refresh()
     }
@@ -79,24 +75,16 @@ final class NotificationsViewModel: ObservableObject {
                 self.isLoading = false
             }
 
-            saveCachedValue(notifications, forKey: notificationsCacheKeyPrefix + userId)
-
+            saveCache()
             await loadActorInfo(for: notifications)
             await loadArticleTitles(for: notifications)
-            let user = try await UserManager.shared.getUser(userId: userId)
-
-            saveCachedContent(
-                notifications: notifications,
-                actorInfo: actorInfo,
-                articleTitles: articleTitles,
-                postKinds: postKinds,
-                userId: userId
-            )
+            user = try await UserManager.shared.getUser(userId: userId)
 
             withAnimation {
-                self.user = user
                 self.isRefreshing = false
             }
+
+            saveCache()
         } catch {
             withAnimation {
                 errorText = error.localizedDescription
@@ -138,46 +126,60 @@ final class NotificationsViewModel: ObservableObject {
         }
     }
 
-    private func loadCachedContent(for userId: String) {
-        if let value: [String: PostAuthorInfo] = loadCachedValue(forKey: actorInfoCacheKeyPrefix + userId) {
-            actorInfo = value
+    private func loadCache() {
+        guard let data = UserDefaults.standard.data(forKey: "notifications.cache.\(loadedUserId)"),
+              let cache = try? JSONDecoder().decode(NotificationsCache.self, from: data) else {
+            return
         }
 
-        if let value: [String: String] = loadCachedValue(forKey: articleTitlesCacheKeyPrefix + userId) {
-            articleTitles = value
-        }
-
-        if let value: [String: Bool] = loadCachedValue(forKey: postKindsCacheKeyPrefix + userId) {
-            postKinds = value
-        }
-
-        if let value: [PersonalNotificationItem] = loadCachedValue(forKey: notificationsCacheKeyPrefix + userId) {
-            notifications = value
-            isLoading = false
-        }
+        notifications = cache.notifications
+        actorInfo = cache.actorInfo
+        articleTitles = cache.articleTitles
+        postKinds = cache.postKinds
+        isLoading = false
     }
 
-    private func saveCachedContent(
-        notifications: [PersonalNotificationItem],
-        actorInfo: [String: PostAuthorInfo],
-        articleTitles: [String: String],
-        postKinds: [String: Bool],
-        userId: String
-    ) {
-        saveCachedValue(notifications, forKey: notificationsCacheKeyPrefix + userId)
-        saveCachedValue(actorInfo, forKey: actorInfoCacheKeyPrefix + userId)
-        saveCachedValue(articleTitles, forKey: articleTitlesCacheKeyPrefix + userId)
-        saveCachedValue(postKinds, forKey: postKindsCacheKeyPrefix + userId)
+    private func saveCache() {
+        guard !loadedUserId.isEmpty else { return }
+
+        let cache = NotificationsCache(
+            notifications: notifications,
+            actorInfo: actorInfo,
+            articleTitles: articleTitles,
+            postKinds: postKinds
+        )
+
+        guard let data = try? JSONEncoder().encode(cache) else { return }
+        UserDefaults.standard.set(data, forKey: "notifications.cache.\(loadedUserId)")
     }
 
-    private func saveCachedValue<T: Codable>(_ value: T, forKey key: String) {
-        guard let data = try? JSONEncoder().encode(value) else { return }
-        UserDefaults.standard.set(data, forKey: key)
-    }
+    func markNotificationsAsRead() async {
+        let ids = notifications
+            .filter { !$0.isRead }
+            .map(\.id)
 
-    private func loadCachedValue<T: Codable>(forKey key: String) -> T? {
-        guard let data = UserDefaults.standard.data(forKey: key) else { return nil }
-        return try? JSONDecoder().decode(T.self, from: data)
+        guard !ids.isEmpty else { return }
+
+        for index in notifications.indices where ids.contains(notifications[index].id) {
+            notifications[index].isRead = true
+        }
+
+        saveCache()
+
+        do {
+            try await NotificationsManager.shared.markAsRead(ids: ids)
+        } catch {
+            for index in notifications.indices where ids.contains(notifications[index].id) {
+                notifications[index].isRead = false
+            }
+
+            saveCache()
+
+            withAnimation {
+                errorText = error.localizedDescription
+                isErrorPopupPresented = true
+            }
+        }
     }
 
     func open(_ notification: PersonalNotificationItem) async {
@@ -189,13 +191,21 @@ final class NotificationsViewModel: ObservableObject {
         let actorId = notification.actorId ?? ""
         guard !actorId.isEmpty else { return }
 
+        if let userId = try? AuthenticationManager.shared.getAuthenticatedUser().uid {
+            user = try? await UserManager.shared.getUser(userId: userId)
+        }
+
         authorId = actorId
         isChannelViewPresented = true
     }
 
-    func openAuthorChannel(for notification: PersonalNotificationItem) {
+    func openAuthorChannel(for notification: PersonalNotificationItem) async {
         let actorId = notification.actorId ?? ""
         guard !actorId.isEmpty else { return }
+
+        if let userId = try? AuthenticationManager.shared.getAuthenticatedUser().uid {
+            user = try? await UserManager.shared.getUser(userId: userId)
+        }
 
         authorId = actorId
         isChannelViewPresented = true
@@ -206,20 +216,9 @@ final class NotificationsViewModel: ObservableObject {
             let prePost = try await ArticlesManager.shared.getPrePost(id: articleId)
             let post = try await ArticlesManager.shared.getPostToRead(id: articleId)
 
-            title = prePost.title ?? NSLocalizedString("notFoundLabel", comment: "")
-            text = post.text ?? NSLocalizedString("notFoundLabel", comment: "")
-            dateCreated = post.dateCreated ?? Date()
-            likesCount = prePost.likesCount ?? 0
-            id = prePost.id
             authorId = prePost.authorId ?? ""
-            isArchive = prePost.isArchive ?? false
-            mediaCount = prePost.mediaCount ?? 0
-            mediaVersion = prePost.mediaVersion ?? 0
-            mediaPosition = prePost.mediaPosition ?? 0
-            articleLanguage = prePost.originalLanguage ?? ""
-            isPremiumPost = prePost.isPremiumPost ?? false
-            isLocalizedVersion = prePost.isLocalizedVersion ?? false
-            rootId = prePost.rootId ?? ""
+            self.prePost = prePost
+            self.postToRead = post
 
             if authorId != "", actorInfo[authorId] == nil {
                 actorInfo[authorId] = try? await UserManager.shared.getPostAuthorInfo(for: authorId)

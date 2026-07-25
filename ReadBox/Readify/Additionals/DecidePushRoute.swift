@@ -5,29 +5,19 @@
 //  Created by Macbook Pro on 07.11.2025.
 //
 
-import SwiftUI
+import UserNotifications
 
 func decidePushRoute() async -> NotificationPushRoute {
-    await withCheckedContinuation { cont in
-        UNUserNotificationCenter.current().getNotificationSettings { s in
-            let route: NotificationPushRoute
-            
-            switch s.authorizationStatus {
-            case .notDetermined:
-                route = .requestSystemPrompt
-                print("DECIDE 1: \(route)")
-            case .denied:
-                route = .goToSettings
-                print("DECIDE 2: \(route)")
-            case .authorized, .provisional, .ephemeral:
-                route = .ok
-            @unknown default:
-                route = .goToSettings
-            }
-            
-            print("DECIDE: \(route)")
-            
-            cont.resume(returning: route)
-        }
+    let settings = await UNUserNotificationCenter.current().notificationSettings()
+
+    switch settings.authorizationStatus {
+    case .notDetermined:
+        return .requestSystemPrompt
+    case .denied:
+        return .goToSettings
+    case .authorized, .provisional, .ephemeral:
+        return .ok
+    @unknown default:
+        return .goToSettings
     }
 }

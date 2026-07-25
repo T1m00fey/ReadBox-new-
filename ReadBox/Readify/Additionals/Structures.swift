@@ -505,6 +505,7 @@ struct PersonalNotificationItem: Identifiable, Codable {
     let postId: String?
     let dateCreated: Date?
     let expiresAt: Date?
+    var isRead: Bool
 
     var type: InAppNotificationType? {
         guard let typeRawValue else { return nil }
@@ -518,7 +519,8 @@ struct PersonalNotificationItem: Identifiable, Codable {
         actorId: String?,
         postId: String?,
         dateCreated: Date?,
-        expiresAt: Date?
+        expiresAt: Date?,
+        isRead: Bool
     ) {
         self.id = id
         self.userId = userId
@@ -527,6 +529,7 @@ struct PersonalNotificationItem: Identifiable, Codable {
         self.postId = postId
         self.dateCreated = dateCreated
         self.expiresAt = expiresAt
+        self.isRead = isRead
     }
 
     enum CodingKeys: String, CodingKey {
@@ -537,6 +540,7 @@ struct PersonalNotificationItem: Identifiable, Codable {
         case postId = "post_id"
         case dateCreated = "date_created"
         case expiresAt = "expires_at"
+        case isRead = "is_read"
     }
 
     init(from decoder: Decoder) throws {
@@ -549,16 +553,6 @@ struct PersonalNotificationItem: Identifiable, Codable {
         postId = try container.decodeIfPresent(String.self, forKey: .postId)
         dateCreated = try container.decodeIfPresent(Date.self, forKey: .dateCreated)
         expiresAt = try container.decodeIfPresent(Date.self, forKey: .expiresAt)
-    }
-
-    func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(id, forKey: .id)
-        try container.encodeIfPresent(userId, forKey: .userId)
-        try container.encodeIfPresent(typeRawValue, forKey: .typeRawValue)
-        try container.encodeIfPresent(actorId, forKey: .actorId)
-        try container.encodeIfPresent(postId, forKey: .postId)
-        try container.encodeIfPresent(dateCreated, forKey: .dateCreated)
-        try container.encodeIfPresent(expiresAt, forKey: .expiresAt)
+        isRead = try container.decodeIfPresent(Bool.self, forKey: .isRead) ?? false
     }
 }
