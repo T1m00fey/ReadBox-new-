@@ -58,10 +58,8 @@ final class ArticlesManager {
     }
 
     func updateViews(at id: String) async throws {
-        let viewsCount = try await articleDocument(id: id).getDocument(as: ViewsCount.self).viewsCount
-
         let data: [String: Any] = [
-            "views_count": viewsCount + 1
+            "views_count": FieldValue.increment(Int64(1))
         ]
 
         try await articleDocument(id: id).updateData(data)
